@@ -22,9 +22,9 @@ end
 
 
 [mesh]
-    naca0012q_coarse.msh
-    naca0012q_mid.msh
-    naca0012q_fine.msh
+    ../../../../examples/rans/naca0012q_coarse.msh
+    ../../../../examples/rans/naca0012q_mid.msh
+    ../../../../examples/rans/naca0012q_fine.msh
 end
 
 
