@@ -1,0 +1,31 @@
+
+
+[gas]
+    gamma   1.4
+    R       0.71428571428
+end
+
+
+[farfield]
+    T 1
+    mach 0.8
+    angle 0.02181662
+    p 1
+end
+
+
+[solver]
+    type implicit
+    second_order true
+    relaxation 0.8
+end
+
+
+[mesh]
+    naca0012q_coarse.msh
+    naca0012q_mid.msh
+    naca0012q_fine.msh
+end
+
+
+
