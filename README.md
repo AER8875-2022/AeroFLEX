@@ -1,6 +1,3 @@
-# RANS
+# AeroFLEX
 
-Implicit Multigrid-Initialized RANS solver project. For now, it's only an Euler solver.
-
-![circle-mach-2](./naca0012.png)
-
+Aeroelastic CFD program applied to aircrafts written in C++
