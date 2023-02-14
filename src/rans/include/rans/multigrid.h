@@ -157,8 +157,8 @@ Eigen::SparseMatrix<double> multigrid<solverType>::gen_mapper(const uint i) {
 
 
 template<>
-int multigrid<explicitSolver>::run_solver(
-    explicitSolver& s,
+int multigrid<explicitSolver<inviscid>>::run_solver(
+    explicitSolver<inviscid>& s,
     farfield_conditions vars_far,
     const double start_cfl,
     const uint max_iters,
@@ -217,8 +217,8 @@ int multigrid<explicitSolver>::run_solver(
 }
 
 template<>
-int multigrid<implicitSolver>::run_solver(
-    implicitSolver& s,
+int multigrid<implicitSolver<inviscid>>::run_solver(
+    implicitSolver<inviscid>& s,
     farfield_conditions vars_far,
     const double start_cfl,
     const uint max_iters,
@@ -277,7 +277,7 @@ int multigrid<implicitSolver>::run_solver(
 }
 
 template<>
-explicitSolver& multigrid<explicitSolver>::run(farfield_conditions vars_far, const bool reinit, const double relaxation) {
+explicitSolver<inviscid>& multigrid<explicitSolver<inviscid>>::run(farfield_conditions vars_far, const bool reinit, const double relaxation) {
     const uint max_iters = 30000;
     residuals.resize(max_iters / 10);
     if (reinit) solvers[0].init(vars_far);
@@ -313,7 +313,7 @@ explicitSolver& multigrid<explicitSolver>::run(farfield_conditions vars_far, con
 }
 
 template<>
-implicitSolver& multigrid<implicitSolver>::run(farfield_conditions vars_far, const bool reinit, const double relaxation) {
+implicitSolver<inviscid>& multigrid<implicitSolver<inviscid>>::run(farfield_conditions vars_far, const bool reinit, const double relaxation) {
     const uint max_iters = 300;
     residuals.resize(max_iters);
     if (reinit) solvers[0].init(vars_far);

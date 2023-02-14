@@ -71,7 +71,6 @@ protected:
 
     std::vector<std::unique_ptr<flux>> edges_flux_functions;
 
-
     void set_mesh_and_gas(const mesh& m_in, const gas& g_in);
 
     void set_walls_from_internal(Eigen::VectorXd&);
@@ -91,6 +90,9 @@ public:
     solver(const mesh& m_in, const gas& g_in);
 
     solver(const solver& s) : solver(s.get_cmesh(), s.get_gas()) {}
+
+    template<class flux_type>
+    void make_fluxes();
 
     void set_cfl(const double& cfl_in);
 
@@ -123,7 +125,6 @@ public:
 
 };
 
-
 void solver::set_mesh_and_gas(const mesh& m_in, const gas& g_in) {
     second_order = true;
 
@@ -131,32 +132,6 @@ void solver::set_mesh_and_gas(const mesh& m_in, const gas& g_in) {
     g = g_in;
 
     int N = m.cellsAreas.size();
-
-    // Fill edges flux functions
-    std::vector<int> edges_flux_to_add(m.edgesCells.cols());
-    std::fill(edges_flux_to_add.begin(), edges_flux_to_add.end(), 0);
-
-    for (int b=0; b<m.boundaryEdges.size(); ++b) {
-        const uint& e = m.boundaryEdges[b];
-        if (m.boundaryEdgesPhysicals[b] == "farfield") {
-            edges_flux_to_add[e] = 1;
-        } else if (m.boundaryEdgesPhysicals[b] == "wall") {
-            edges_flux_to_add[e] = 2;
-        }
-    }
-
-    edges_flux_functions.reserve(m.edgesCells.cols());
-    for (int e=0; e<m.edgesCells.cols(); ++e) {
-        double& nx = m.edgesNormalsX[e];
-        double& ny = m.edgesNormalsY[e];
-        if (edges_flux_to_add[e] == 0) {
-            edges_flux_functions.emplace_back(std::make_unique<internal_flux<inviscid>>(g, nx, ny));
-        } else if (edges_flux_to_add[e] == 1) {
-            edges_flux_functions.emplace_back(std::make_unique<farfield_flux<inviscid>>(g, nx, ny));
-        } else if (edges_flux_to_add[e] == 2) {
-            edges_flux_functions.emplace_back(std::make_unique<slip_wall_flux<inviscid>>(g, nx, ny));
-        }
-    }
 
     q.resize(4*N);
     qW.resize(4*N);
@@ -171,6 +146,37 @@ void solver::set_mesh_and_gas(const mesh& m_in, const gas& g_in) {
     limiters.resize(4*N);
     q_min.resize(4*N);
     q_max.resize(4*N);
+}
+
+
+template<class flux_type>
+void solver::make_fluxes() {
+
+    // Fill edges flux functions
+    std::vector<int> edges_flux_to_add(m.edgesCells.cols());
+    std::fill(edges_flux_to_add.begin(), edges_flux_to_add.end(), 0);
+
+    for (int b=0; b<m.boundaryEdges.size(); ++b) {
+        const uint& e = m.boundaryEdges[b];
+        if (m.boundaryEdgesPhysicals[b] == "farfield") {
+            edges_flux_to_add[e] = 1;
+        } else if (m.boundaryEdgesPhysicals[b] == "wall") {
+            edges_flux_to_add[e] = 2;
+        }
+    }
+    
+    edges_flux_functions.reserve(m.edgesCells.cols());
+    for (int e=0; e<m.edgesCells.cols(); ++e) {
+        double& nx = m.edgesNormalsX[e];
+        double& ny = m.edgesNormalsY[e];
+        if (edges_flux_to_add[e] == 0) {
+            edges_flux_functions.emplace_back(std::make_unique<internal_flux<flux_type>>(g, nx, ny));
+        } else if (edges_flux_to_add[e] == 1) {
+            edges_flux_functions.emplace_back(std::make_unique<farfield_flux<flux_type>>(g, nx, ny));
+        } else if (edges_flux_to_add[e] == 2) {
+            edges_flux_functions.emplace_back(std::make_unique<slip_wall_flux<flux_type>>(g, nx, ny));
+        }
+    }
 }
 
 solver::solver(const mesh& m_in, const gas& g_in) {
@@ -329,7 +335,6 @@ void solver::calc_gradients(const Eigen::VectorXd& q_) {
         gy.segment(4*i, 4) *= 0;
     }
 }
-
 
 
 void solver::calc_limiters(const Eigen::VectorXd& q_) {
@@ -543,7 +548,7 @@ solution solver::get_solution() {
 
 
 
-
+template<class flux_type>
 class explicitSolver : public solver {
 
     std::vector<double> alpha = {0.25, 0.5, 1.};
@@ -555,6 +560,7 @@ public:
 
     explicitSolver(const mesh& m_in, const gas& g_in) {
         set_mesh_and_gas(m_in, g_in);
+        make_fluxes<flux_type>();
         print_interval = 100;
         qk.resize(q.size());
     }
@@ -568,7 +574,8 @@ public:
 };
 
 
-void explicitSolver::calc_residual(const Eigen::VectorXd& q_) {
+template<class flux_type>
+void explicitSolver<flux_type>::calc_residual(const Eigen::VectorXd& q_) {
     #pragma omp parallel for
     for (int i=0; i<qW.size(); ++i) {
         qW(i) = 0;
@@ -621,7 +628,8 @@ void explicitSolver::calc_residual(const Eigen::VectorXd& q_) {
 }
 
 
-double explicitSolver::solve(const double relaxation, const double tol) {
+template<class flux_type>
+double explicitSolver<flux_type>::solve(const double relaxation, const double tol) {
     calc_dt();
 
     #pragma omp parallel for
@@ -668,7 +676,7 @@ double explicitSolver::solve(const double relaxation, const double tol) {
 
 
 
-
+template<class flux_type>
 class implicitSolver : public solver {
 
     // The right hand side vectors
@@ -714,6 +722,7 @@ public:
 
     implicitSolver(const mesh& m_in, const gas& g_in) {
         set_mesh_and_gas(m_in, g_in);
+        make_fluxes<flux_type>();
         print_interval = 1;
 
         // Linear solver parameters
@@ -780,15 +789,15 @@ public:
 };
 
 
-
-void implicitSolver::fill() {
+template<class flux_type>
+void implicitSolver<flux_type>::fill() {
     // Fill the jacobian matrix
     fillRhoLHS();
 }
 
 
-
-void implicitSolver::fillRhoLHS() {
+template<class flux_type>
+void implicitSolver<flux_type>::fillRhoLHS() {
 
     calc_dt();
 
@@ -883,8 +892,8 @@ void implicitSolver::fillRhoLHS() {
 
 
 
-
-void implicitSolver::fillRhoRHS() {
+template<class flux_type>
+void implicitSolver<flux_type>::fillRhoRHS() {
 
     calc_dt();
 
@@ -961,8 +970,8 @@ void implicitSolver::fillRhoRHS() {
 
 
 
-
-int implicitSolver::compute() {
+template<class flux_type>
+int implicitSolver<flux_type>::compute() {
     rho_solver.compute(RhoMatrix);
 
     if (rho_solver.info() != 0) {
@@ -972,7 +981,8 @@ int implicitSolver::compute() {
 }
 
 
-double implicitSolver::solve(
+template<class flux_type>
+double implicitSolver<flux_type>::solve(
     const double relaxation,
     const double tol
 ) {
