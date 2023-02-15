@@ -12,8 +12,6 @@
 
 #include <future>
 #include <thread>
-#include <vector>
-#include <atomic>
 
 using namespace rans;
 
@@ -32,8 +30,8 @@ class Aero {
 		// Signal routing
 		bool signal_status_busy = false;
 		bool signal_status_ready = true;
-		SignalHandler &signal_gui;
-		Aero(Rans &rans, SignalHandler &signal_gui) : rans(rans), signal_gui(signal_gui) {};
+		GUIHandler &gui;
+		Aero(Rans &rans, GUIHandler &gui) : rans(rans), gui(gui) {};
 };
 
 template <class T>
@@ -74,22 +72,22 @@ void ButtonLayer::OnUIRender() {
 		};
 
 		if (ImGui::Button("Stop Simulation", ImVec2(-1.0f, 0.0f)) && aero.signal_status_busy) {
-			aero.signal_gui.stop = true;
+			aero.gui.signal.stop = true;
 		};
 
 		if (ImGui::Button("Pause", ImVec2(-1.0f, 0.0f)) && aero.signal_status_busy) {
-			aero.signal_gui.pause = true;
+			aero.gui.signal.pause = true;
 		};
 
 		if (ImGui::Button("Resume", ImVec2(-1.0f, 0.0f)) && aero.signal_status_busy) {
-			aero.signal_gui.pause = false;
+			aero.gui.signal.pause = false;
 		};
 
 		if (!aero.signal_status_ready && is_future_done(aero.future_solve)) {
 			aero.future_solve.get();
 			aero.signal_status_ready = true;
 			aero.signal_status_busy = false;
-			aero.signal_gui.stop = false;
+			aero.gui.signal.stop = false;
 		}
 
 		ImGui::End();
@@ -151,7 +149,7 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, Aero& aero)
 namespace FlexGUI {
 	int Main(int argc, char** argv)
 	{
-		SignalHandler signal_gui;
+		GUIHandler gui;
 
 		// Temporary
 		Settings data = parse(argc, argv, __FILE__);
@@ -166,11 +164,11 @@ namespace FlexGUI {
 		}
 
 		// Initialize modules with signal routing
-		Rans rans(signal_gui);
+		Rans rans(gui);
 		rans.data = data;
 
 		// Initialize main application with the modules
-		Aero aero(rans, signal_gui);
+		Aero aero(rans, gui);
 
 		while (g_ApplicationRunning)
 		{

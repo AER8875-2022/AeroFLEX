@@ -15,6 +15,7 @@
 
 #include <rans/multigrid.h>
 #include <rans/post.h>
+#include "common_aeroflex.hpp"
 
 namespace rans {
 
@@ -28,9 +29,9 @@ class Rans {
     std::vector<mesh> ms;
     bool mesh_loaded = false;
 
-    SignalHandler &signal_gui;
+    GUIHandler &gui;
 
-    Rans(SignalHandler &signal_gui) : signal_gui(signal_gui) {};
+    Rans(GUIHandler &gui) : gui(gui) {};
 
     void input();
     void solve();
@@ -48,11 +49,14 @@ void Rans::input() {
 
 template<class T>
 void Rans::run() {
-    multigrid<T> multi(ms, data.bcs, data.g, data.second_order, signal_gui, residuals, iters);
+    multigrid<T> multi(ms, data.g, data.second_order, gui, residuals, iters);
+    gui.event.rans_preprocess = true;
 
-    rans::solver& s = multi.run(true, data.relaxation);
+    rans::solver& s = multi.run(data.vars_far, true, data.relaxation);
+    gui.event.rans_solve = true;
 
     save(data.outfilename, s);
+    gui.event.rans_postprocess = true;
     std::cout << "Saved results to file " << data.outfilename << "\n" << std::endl;
 }
 
