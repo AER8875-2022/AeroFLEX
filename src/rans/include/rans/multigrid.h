@@ -39,14 +39,14 @@ class multigrid {
 
 public:
 
-    multigrid(std::vector<mesh> ms, gas g, bool second_order, GUIHandler &gui, std::vector<double> &residuals, std::atomic<int> &iters);
+    multigrid(std::vector<mesh> ms, std::map<std::string, boundary_condition> bcs, gas g, bool second_order, GUIHandler &gui, std::vector<double> &residuals, std::atomic<int> &iters);
 
     solverType& run(const bool reinit=true, const double relaxation=1);
 
 };
 
 template<class solverType>
-multigrid<solverType>::multigrid(std::vector<mesh> ms, gas g, bool second_order, GUIHandler &gui, std::vector<double> &residuals, std::atomic<int> &iters) : gui(gui), residuals(residuals), iters(iters) {
+multigrid<solverType>::multigrid(std::vector<mesh> ms, std::map<std::string, boundary_condition> bcs, gas g, bool second_order, GUIHandler &gui, std::vector<double> &residuals, std::atomic<int> &iters) : gui(gui), residuals(residuals), iters(iters) {
 
     solvers.reserve(ms.size());
     for (auto& mi : ms) {
