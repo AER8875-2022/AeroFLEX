@@ -49,7 +49,7 @@ template<class solverType>
 multigrid<solverType>::multigrid(std::vector<mesh> ms, gas g, bool second_order, SignalHandler &signal_gui, std::vector<double> &residuals, std::atomic<int> &iters) : signal_gui(signal_gui), residuals(residuals), iters(iters) {
 
     for (auto& mi : ms) {
-        solvers.push_back(solverType(mi, g));
+        solvers.push_back(solverType(mi, g, "laminar"));
         solvers[solvers.size()-1].set_second_order(second_order);
     }
 
@@ -157,8 +157,8 @@ Eigen::SparseMatrix<double> multigrid<solverType>::gen_mapper(const uint i) {
 
 
 template<>
-int multigrid<explicitSolver<inviscid>>::run_solver(
-    explicitSolver<inviscid>& s,
+int multigrid<explicitSolver>::run_solver(
+    explicitSolver& s,
     farfield_conditions vars_far,
     const double start_cfl,
     const uint max_iters,
@@ -217,8 +217,8 @@ int multigrid<explicitSolver<inviscid>>::run_solver(
 }
 
 template<>
-int multigrid<implicitSolver<inviscid>>::run_solver(
-    implicitSolver<inviscid>& s,
+int multigrid<implicitSolver>::run_solver(
+    implicitSolver& s,
     farfield_conditions vars_far,
     const double start_cfl,
     const uint max_iters,
@@ -277,7 +277,7 @@ int multigrid<implicitSolver<inviscid>>::run_solver(
 }
 
 template<>
-explicitSolver<inviscid>& multigrid<explicitSolver<inviscid>>::run(farfield_conditions vars_far, const bool reinit, const double relaxation) {
+explicitSolver& multigrid<explicitSolver>::run(farfield_conditions vars_far, const bool reinit, const double relaxation) {
     const uint max_iters = 30000;
     residuals.resize(max_iters / 10);
     if (reinit) solvers[0].init(vars_far);
@@ -313,7 +313,7 @@ explicitSolver<inviscid>& multigrid<explicitSolver<inviscid>>::run(farfield_cond
 }
 
 template<>
-implicitSolver<inviscid>& multigrid<implicitSolver<inviscid>>::run(farfield_conditions vars_far, const bool reinit, const double relaxation) {
+implicitSolver& multigrid<implicitSolver>::run(farfield_conditions vars_far, const bool reinit, const double relaxation) {
     const uint max_iters = 300;
     residuals.resize(max_iters);
     if (reinit) solvers[0].init(vars_far);

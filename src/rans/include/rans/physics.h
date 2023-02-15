@@ -35,7 +35,9 @@ public:
 
     bool two_sided;
 
-    flux(gas& g, double& nx, double& ny) : g(g), nx(nx), ny(ny) {}
+    int viscous_type;
+
+    flux(gas& g, double& nx, double& ny, int viscous_type) : g(g), nx(nx), ny(ny), viscous_type(viscous_type) {}
 
     virtual Eigen::VectorXd operator()(
         const Eigen::VectorXd& q_L,
@@ -49,21 +51,14 @@ public:
 
 };
 
-// Classes for template specializations
-class inviscid {
-};
-class viscous {
-};
 
-
-template <class kind>
 class internal_flux : public flux {
 private:
     double entropy_correction(const double& l, const double& d) const {
         return l > d ? l : (l*l + d*d)/(2*d);
     }
 public:
-    internal_flux(gas& g, double& nx, double& ny) : flux(g, nx, ny) {
+    internal_flux(gas& g, double& nx, double& ny, int viscous_type) : flux(g, nx, ny, viscous_type) {
         two_sided = true;
     }
     inline Eigen::VectorXd operator()(
@@ -71,15 +66,11 @@ public:
         const Eigen::VectorXd& q_R,
         const double& nu_L = 0,
         const double& nu_R = 0
-    ) {
-        throw std::logic_error( "default flux called" );
-        return Eigen::VectorXd(4);
-    }
+    );
 };
 
 
-template<>
-inline Eigen::VectorXd internal_flux<inviscid>::operator()(
+inline Eigen::VectorXd internal_flux::operator()(
     const Eigen::VectorXd& q_L,
     const Eigen::VectorXd& q_R,
     const double& nu_L,
@@ -145,16 +136,21 @@ inline Eigen::VectorXd internal_flux<inviscid>::operator()(
     f(2) -= 0.5*(kF1*(v-c*ny) + kF234_0*v      + kF234_1*(vR - vL - (VR-VL)*ny)             + kF5*(v+c*ny));
     f(3) -= 0.5*(kF1*(h-c*V)    + kF234_0*q2*0.5 + kF234_1*(u*(uR-uL) + v*(vR-vL) - V*(VR-VL))  + kF5*(h+c*V)); 
 
+    if (viscous_type == 1) {
+        // Laminar viscosity model
+    } else if (viscous_type == 2) {
+        // SA model
+    }
+
     return f;
 }
 
 
-template <class kind>
 class slip_wall_flux : public flux {
 protected:
-    internal_flux<kind> invf;
+    internal_flux invf;
 public:
-    slip_wall_flux(gas& g, double& nx, double& ny) : flux(g, nx, ny), invf(g, nx, ny) {
+    slip_wall_flux(gas& g, double& nx, double& ny, int viscous_type) : flux(g, nx, ny, viscous_type), invf(g, nx, ny, viscous_type) {
         two_sided = false;
     }
 
@@ -189,12 +185,11 @@ public:
 };
 
 
-template <class kind>
 class farfield_flux : public flux {
 protected:
-    internal_flux<kind> invf;
+    internal_flux invf;
 public:
-    farfield_flux(gas& g, double& nx, double& ny) : flux(g, nx, ny), invf(g, nx, ny) {
+    farfield_flux(gas& g, double& nx, double& ny, int viscous_type) : flux(g, nx, ny, viscous_type), invf(g, nx, ny, viscous_type) {
         two_sided = false;
     }
 

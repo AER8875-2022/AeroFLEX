@@ -58,9 +58,9 @@ void Rans::run() {
 
 void Rans::solve() {
     if (data.solver_type == "implicit") {
-        run<implicitSolver<inviscid>>();
+        run<implicitSolver>();
     } else if (data.solver_type == "explicit") {
-        run<explicitSolver<inviscid>>();
+        run<explicitSolver>();
     }
 };
 

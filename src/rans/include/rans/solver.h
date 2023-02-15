@@ -83,15 +83,19 @@ protected:
 
     uint print_interval;
 
+    std::string viscosity_model;
+
 public:
 
     solver() {}
 
-    solver(const mesh& m_in, const gas& g_in);
+    solver(const mesh& m_in, const gas& g_in, std::string viscosity_model) : viscosity_model(viscosity_model) {
+        set_mesh_and_gas(m_in, g_in);
+        make_fluxes();
+    }
 
-    solver(const solver& s) : solver(s.get_cmesh(), s.get_gas()) {}
+    solver(const solver& s) : solver(s.get_cmesh(), s.get_gas(), s.get_viscosity_model()) {}
 
-    template<class flux_type>
     void make_fluxes();
 
     void set_cfl(const double& cfl_in);
@@ -106,6 +110,8 @@ public:
     Eigen::VectorXd& get_q();
     gas& get_gas() {return g;}
     const gas& get_gas() const {return g;}
+
+    std::string get_viscosity_model() const {return viscosity_model;}
 
     void zero_bcs();
     void bcs_from_internal();
@@ -149,8 +155,14 @@ void solver::set_mesh_and_gas(const mesh& m_in, const gas& g_in) {
 }
 
 
-template<class flux_type>
 void solver::make_fluxes() {
+
+    int viscosity_int = 0;
+    if (viscosity_model == "laminar") {
+        viscosity_int = 1;
+    } else if (viscosity_model == "spalart-allmaras") {
+        viscosity_int = 2;
+    }
 
     // Fill edges flux functions
     std::vector<int> edges_flux_to_add(m.edgesCells.cols());
@@ -170,17 +182,13 @@ void solver::make_fluxes() {
         double& nx = m.edgesNormalsX[e];
         double& ny = m.edgesNormalsY[e];
         if (edges_flux_to_add[e] == 0) {
-            edges_flux_functions.emplace_back(std::make_unique<internal_flux<flux_type>>(g, nx, ny));
+            edges_flux_functions.emplace_back(std::make_unique<internal_flux>(g, nx, ny, viscosity_int));
         } else if (edges_flux_to_add[e] == 1) {
-            edges_flux_functions.emplace_back(std::make_unique<farfield_flux<flux_type>>(g, nx, ny));
+            edges_flux_functions.emplace_back(std::make_unique<farfield_flux>(g, nx, ny, viscosity_int));
         } else if (edges_flux_to_add[e] == 2) {
-            edges_flux_functions.emplace_back(std::make_unique<slip_wall_flux<flux_type>>(g, nx, ny));
+            edges_flux_functions.emplace_back(std::make_unique<slip_wall_flux>(g, nx, ny, viscosity_int));
         }
     }
-}
-
-solver::solver(const mesh& m_in, const gas& g_in) {
-    set_mesh_and_gas(m_in, g_in);
 }
 
 
@@ -548,7 +556,6 @@ solution solver::get_solution() {
 
 
 
-template<class flux_type>
 class explicitSolver : public solver {
 
     std::vector<double> alpha = {0.25, 0.5, 1.};
@@ -558,14 +565,13 @@ class explicitSolver : public solver {
 
 public:
 
-    explicitSolver(const mesh& m_in, const gas& g_in) {
-        set_mesh_and_gas(m_in, g_in);
-        make_fluxes<flux_type>();
+    explicitSolver(const mesh& m_in, const gas& g_in, std::string viscosity_model) 
+    : solver(m_in, g_in, viscosity_model) {
         print_interval = 100;
         qk.resize(q.size());
     }
 
-    explicitSolver(const explicitSolver& s) : explicitSolver(s.get_cmesh(), s.get_gas()) {}
+    explicitSolver(const explicitSolver& s) : explicitSolver(s.get_cmesh(), s.get_gas(), s.get_viscosity_model()) {}
 
     void fill() {}
     int compute() {return 0;}
@@ -574,8 +580,7 @@ public:
 };
 
 
-template<class flux_type>
-void explicitSolver<flux_type>::calc_residual(const Eigen::VectorXd& q_) {
+void explicitSolver::calc_residual(const Eigen::VectorXd& q_) {
     #pragma omp parallel for
     for (int i=0; i<qW.size(); ++i) {
         qW(i) = 0;
@@ -628,8 +633,7 @@ void explicitSolver<flux_type>::calc_residual(const Eigen::VectorXd& q_) {
 }
 
 
-template<class flux_type>
-double explicitSolver<flux_type>::solve(const double relaxation, const double tol) {
+double explicitSolver::solve(const double relaxation, const double tol) {
     calc_dt();
 
     #pragma omp parallel for
@@ -676,7 +680,6 @@ double explicitSolver<flux_type>::solve(const double relaxation, const double to
 
 
 
-template<class flux_type>
 class implicitSolver : public solver {
 
     // The right hand side vectors
@@ -720,9 +723,8 @@ class implicitSolver : public solver {
 
 public:
 
-    implicitSolver(const mesh& m_in, const gas& g_in) {
-        set_mesh_and_gas(m_in, g_in);
-        make_fluxes<flux_type>();
+    implicitSolver(const mesh& m_in, const gas& g_in, std::string viscosity_model) 
+    : solver(m_in, g_in, viscosity_model) {
         print_interval = 1;
 
         // Linear solver parameters
@@ -779,7 +781,7 @@ public:
         #endif
     }
 
-    implicitSolver(const implicitSolver& s) : implicitSolver(s.get_cmesh(), s.get_gas()) {}
+    implicitSolver(const implicitSolver& s) : implicitSolver(s.get_cmesh(), s.get_gas(), s.get_viscosity_model()) {}
 
 
     void fill();
@@ -789,15 +791,13 @@ public:
 };
 
 
-template<class flux_type>
-void implicitSolver<flux_type>::fill() {
+void implicitSolver::fill() {
     // Fill the jacobian matrix
     fillRhoLHS();
 }
 
 
-template<class flux_type>
-void implicitSolver<flux_type>::fillRhoLHS() {
+void implicitSolver::fillRhoLHS() {
 
     calc_dt();
 
@@ -892,8 +892,7 @@ void implicitSolver<flux_type>::fillRhoLHS() {
 
 
 
-template<class flux_type>
-void implicitSolver<flux_type>::fillRhoRHS() {
+void implicitSolver::fillRhoRHS() {
 
     calc_dt();
 
@@ -970,8 +969,7 @@ void implicitSolver<flux_type>::fillRhoRHS() {
 
 
 
-template<class flux_type>
-int implicitSolver<flux_type>::compute() {
+int implicitSolver::compute() {
     rho_solver.compute(RhoMatrix);
 
     if (rho_solver.info() != 0) {
@@ -981,8 +979,7 @@ int implicitSolver<flux_type>::compute() {
 }
 
 
-template<class flux_type>
-double implicitSolver<flux_type>::solve(
+double implicitSolver::solve(
     const double relaxation,
     const double tol
 ) {
