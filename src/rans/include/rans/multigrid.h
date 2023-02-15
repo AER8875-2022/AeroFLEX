@@ -25,7 +25,7 @@ namespace rans {
 
 template<class solverType>
 class multigrid {
-    SignalHandler &signal_gui;
+    GUIHandler &gui;
     std::vector<double> &residuals;
     std::atomic<int> &iters;
 
@@ -39,14 +39,14 @@ class multigrid {
 
 public:
 
-    multigrid(std::vector<mesh> ms, gas g, bool second_order, SignalHandler &signal_gui, std::vector<double> &residuals, std::atomic<int> &iters);
+    multigrid(std::vector<mesh> ms, gas g, bool second_order, GUIHandler &gui, std::vector<double> &residuals, std::atomic<int> &iters);
 
     solverType& run(farfield_conditions vars_far, const bool reinit=true, const double relaxation=1);
 
 };
 
 template<class solverType>
-multigrid<solverType>::multigrid(std::vector<mesh> ms, gas g, bool second_order, SignalHandler &signal_gui, std::vector<double> &residuals, std::atomic<int> &iters) : signal_gui(signal_gui), residuals(residuals), iters(iters) {
+multigrid<solverType>::multigrid(std::vector<mesh> ms, gas g, bool second_order, GUIHandler &gui, std::vector<double> &residuals, std::atomic<int> &iters) : gui(gui), residuals(residuals), iters(iters) {
 
     for (auto& mi : ms) {
         solvers.push_back(solverType(mi, g));
@@ -176,7 +176,7 @@ int multigrid<explicitSolver<inviscid>>::run_solver(
 
     double err_0 = 0;
     do {
-        while (signal_gui.pause) std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        while (gui.signal.pause) std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
         if (i % s.get_print_interval() == 0) std::cout << "Iteration " << i << " " << std::flush;
         s.set_cfl(cfl);
@@ -211,7 +211,7 @@ int multigrid<explicitSolver<inviscid>>::run_solver(
         }
 
         i++;
-    } while ((err > tolerance) && (i < max_iters) && !signal_gui.stop);
+    } while ((err > tolerance) && (i < max_iters) && !gui.signal.stop);
 
     return 0;
 }
@@ -236,7 +236,7 @@ int multigrid<implicitSolver<inviscid>>::run_solver(
 
     double err_0 = s.get_uniform_residual(vars_far);
     do {
-        while (signal_gui.pause) std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        while (gui.signal.pause) std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
         if (i % s.get_print_interval() == 0) std::cout << "Iteration " << i << " " << std::flush;
         s.set_cfl(cfl);
@@ -271,7 +271,7 @@ int multigrid<implicitSolver<inviscid>>::run_solver(
         iters++;
         // do-while c'est cursed
         // Do smt if max iters is reached
-    } while ((err > tolerance) && (i < max_iters) && !signal_gui.stop);
+    } while ((err > tolerance) && (i < max_iters) && !gui.signal.stop);
 
     return 0;
 }
@@ -340,7 +340,7 @@ implicitSolver<inviscid>& multigrid<implicitSolver<inviscid>>::run(farfield_cond
 
         int state = run_solver(solvers[i], vars_far, start_cfl, max_iters, tolerance, relaxation);
 
-        if (state || signal_gui.stop) return solvers[i];
+        if (state || gui.signal.stop) return solvers[i];
     }
 
     std::cout << std::endl;
