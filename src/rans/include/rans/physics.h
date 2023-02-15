@@ -26,6 +26,64 @@
 namespace rans {
 
 
+/*
+    Gradient pressure calculations
+*/
+// Helper function for pressure gradient calc
+inline void calc_grad_p(Eigen::VectorXd& gp, const Eigen::VectorXd& q, const Eigen::VectorXd& gx, const Eigen::VectorXd& gy, const gas& g) {
+    // p = (g-1)*rhoe - (g-1)*0.5/rho*(rhou*rhou + rhov*rhov))
+    // p = (g-1)*rhoe - (g-1)*0.5*rhou*rhou/rho - (g-1)*0.5/rho*rhov*rhov
+    // dp = 0.5*(g-1)*( 2*drhoe - rhou*rhou/rho - rhov*rhov/rho)
+    gp(0) = 2.*gx(3);
+    gp(0) -= gx(1)*q(1)/q(0) + q(1)*(gx(1)*q(0) - gx(0)*q(1))/(q(0)*q(0));
+    gp(0) -= gx(2)*q(2)/q(0) + q(2)*(gx(2)*q(0) - gx(0)*q(2))/(q(0)*q(0));
+    gp(0) *= 0.5*(g.gamma - 1);
+
+    gp(1) = 2.*gy(3);
+    gp(1) -= gy(1)*q(1)/q(0) + q(1)*(gy(1)*q(0) - gy(0)*q(1))/(q(0)*q(0));
+    gp(1) -= gy(2)*q(2)/q(0) + q(2)*(gy(2)*q(0) - gy(0)*q(2))/(q(0)*q(0));
+    gp(1) *= 0.5*(g.gamma - 1);
+}
+// Helper function for pressure calc
+inline double calc_p(const Eigen::VectorXd& q, const gas& g) {
+    // p = rho * r * t
+    // t = (1/r) * p/rho
+    // t = (consts::gamma - 1)/r*(q(3)/q(0) - 0.5/(q(0)*q(0))*(q(1)*q(1) + q(2)*q(2)))
+    return (g.gamma - 1)*(q(3) - 0.5/q(0)*(q(1)*q(1) + q(2)*q(2)));
+}
+// Helper function for temperature gradient calc
+inline void calc_grad_temp(Eigen::VectorXd& gt, const Eigen::VectorXd& q, const Eigen::VectorXd& gx, const Eigen::VectorXd& gy, const gas& g) {
+    // t = (1/r) * p/rho
+    // dt = (1/r)*( (dp*rho - drho*p)/(rho*rho) )
+    Eigen::VectorXd gp(2);
+    const double p = calc_p(q, g);
+    calc_grad_p(gp, q, gx, gy, g);
+
+    gt(0) = (1./g.R)*(
+        (gp(0)*q(0) - gx(0)*p)/(q(0)*q(0))
+    );
+    gt(1) = (1./g.R)*(
+        (gp(1)*q(0) - gy(0)*p)/(q(0)*q(0))
+    );
+}
+// Compute gradient of velocity u
+inline void calc_grad_u(Eigen::VectorXd& gu, const Eigen::VectorXd& q, const Eigen::VectorXd& gx, const Eigen::VectorXd& gy, const gas& g) {
+    // u = rhou/rho
+    // du = (rho*drhou - rhou*drho)/(rho*rho)
+    gu(0) = (q(0)*gx(1) - q(1)*gx(0))/(q(0)*q(0));
+    gu(1) = (q(0)*gy(1) - q(1)*gy(0))/(q(0)*q(0));
+}
+// Compute gradient of velocity v
+inline void calc_grad_v(Eigen::VectorXd& gv, const Eigen::VectorXd& q, const Eigen::VectorXd& gx, const Eigen::VectorXd& gy, const gas& g) {
+    // v = rhov/rho
+    // dv = (rho*drhov - rhov*drho)/(rho*rho)
+    gv(0) = (q(0)*gx(2) - q(2)*gx(0))/(q(0)*q(0));
+    gv(1) = (q(0)*gy(2) - q(2)*gy(0))/(q(0)*q(0));
+}
+
+
+
+
 // Crude evaluation using first-order scalar dissipation upwind scheme
 class flux {
 public:
@@ -42,6 +100,8 @@ public:
     virtual Eigen::VectorXd operator()(
         const Eigen::VectorXd& q_L,
         const Eigen::VectorXd& q_R,
+        const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
+        const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
         const double& nu_L = 0,
         const double& nu_R = 0
     ) {
@@ -64,6 +124,8 @@ public:
     inline Eigen::VectorXd operator()(
         const Eigen::VectorXd& q_L,
         const Eigen::VectorXd& q_R,
+        const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
+        const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
         const double& nu_L = 0,
         const double& nu_R = 0
     );
@@ -73,6 +135,8 @@ public:
 inline Eigen::VectorXd internal_flux::operator()(
     const Eigen::VectorXd& q_L,
     const Eigen::VectorXd& q_R,
+    const Eigen::VectorXd& gx,
+    const Eigen::VectorXd& gy,
     const double& nu_L,
     const double& nu_R
 ) {
@@ -138,6 +202,37 @@ inline Eigen::VectorXd internal_flux::operator()(
 
     if (viscous_type == 1) {
         // Laminar viscosity model
+
+        // Central values
+        Eigen::VectorXd qc(4);
+        for (uint i=0; i<4; ++i) {
+            qc(i) = 0.5*(q_L(i) + q_R(i));
+        }
+
+        // Temperature gradient
+        Eigen::VectorXd gradT(2);
+        calc_grad_temp(gradT, qc, gx, gy, g);
+        Eigen::VectorXd gradu(2);
+        Eigen::VectorXd gradv(2);
+        calc_grad_u(gradu, qc, gx, gy, g);
+        calc_grad_v(gradv, qc, gx, gy, g);
+
+        // Viscous stresses
+        const double div_v = gradu(0) + gradv(1);
+        const double tau_xx = 2. * g.mu_L * (gradu(0) - div_v/3.);
+        const double tau_yy = 2. * g.mu_L * (gradv(1) - div_v/3.);
+        const double tau_xy = g.mu_L * (gradu(1) + gradv(0));
+
+        Eigen::VectorXd phi(2);
+        const double k = 1* g.mu_L / g.Pr_L;
+        phi(0) = qc(1)/qc(0)*tau_xx + qc(2)/qc(0)*tau_xy + k*gradT(0);
+        phi(1) = qc(1)/qc(0)*tau_xy + qc(2)/qc(0)*tau_yy + k*gradT(1);
+
+        // Viscous fluxes
+        f(1) -= nx*tau_xx + ny*tau_xy;
+        f(2) -= nx*tau_xy + ny*tau_yy;
+        f(3) -= nx*phi(0) + ny*phi(1);
+
     } else if (viscous_type == 2) {
         // SA model
     }
@@ -157,6 +252,8 @@ public:
     inline Eigen::VectorXd operator()(
         const Eigen::VectorXd& q_L,
         const Eigen::VectorXd& _q_bc,
+        const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
+        const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
         const double& nu_L = 0,
         const double& nu_R = 0
     ) {
@@ -185,6 +282,40 @@ public:
 };
 
 
+
+
+class wall_flux : public flux {
+protected:
+    internal_flux invf;
+public:
+    wall_flux(gas& g, double& nx, double& ny, int viscous_type) : flux(g, nx, ny, viscous_type), invf(g, nx, ny, viscous_type) {
+        two_sided = false;
+    }
+
+    inline Eigen::VectorXd operator()(
+        const Eigen::VectorXd& q_L,
+        const Eigen::VectorXd& _q_bc,
+        const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
+        const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
+        const double& nu_L = 0,
+        const double& nu_R = 0
+    ) {
+
+        Eigen::VectorXd q_R(4);
+
+        // q_L is the internal field
+
+        q_R(0) =   q_L(0);
+        q_R(1) = - q_L(1);
+        q_R(2) = - q_L(2);
+        q_R(3) =   q_L(3);
+
+        return invf(q_L, q_R);
+    }
+};
+
+
+
 class farfield_flux : public flux {
 protected:
     internal_flux invf;
@@ -196,6 +327,8 @@ public:
     inline Eigen::VectorXd operator()(
         const Eigen::VectorXd& q_L,
         const Eigen::VectorXd& q_bc,
+        const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
+        const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
         const double& nu_L = 0,
         const double& nu_R = 0
     ) {
@@ -290,7 +423,7 @@ inline Eigen::MatrixXd calc_convective_jacobian(
 ) {
     Eigen::MatrixXd J(8, 8);
 
-    const Eigen::VectorXd f = flux_function(q_L, q_R, nu_L, nu_R);
+    const Eigen::VectorXd f = flux_function(q_L, q_R, Eigen::VectorXd::Zero(4), Eigen::VectorXd::Zero(4), nu_L, nu_R);
 
     for (int i=0; i<4; ++i) {
         // Part of q_L
@@ -298,7 +431,7 @@ inline Eigen::MatrixXd calc_convective_jacobian(
             const double update = std::max(1e-6, abs(q_L(i))*1e-6);
 
             q_L(i) += update;
-            const Eigen::VectorXd fp = flux_function(q_L, q_R, nu_L, nu_R);
+            const Eigen::VectorXd fp = flux_function(q_L, q_R, Eigen::VectorXd::Zero(4), Eigen::VectorXd::Zero(4), nu_L, nu_R);
             q_L(i) -= update;
 
             J.block(0, i, 4, 1) = (fp  - f)/update;
@@ -310,7 +443,7 @@ inline Eigen::MatrixXd calc_convective_jacobian(
             const double update = std::max(1e-6, abs(q_R(i))*1e-6);
 
             q_R(i) += update;
-            const Eigen::VectorXd fp = flux_function(q_L, q_R, nu_L, nu_R);
+            const Eigen::VectorXd fp = flux_function(q_L, q_R, Eigen::VectorXd::Zero(4), Eigen::VectorXd::Zero(4), nu_L, nu_R);
             q_R(i) -= update;
 
             J.block(0, i+4, 4, 1) = (fp  - f)/update;

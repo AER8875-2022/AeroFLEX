@@ -48,9 +48,9 @@ void Rans::input() {
 
 template<class T>
 void Rans::run() {
-    multigrid<T> multi(ms, data.g, data.second_order, signal_gui, residuals, iters);
+    multigrid<T> multi(ms, data.bcs, data.g, data.second_order, signal_gui, residuals, iters);
 
-    rans::solver& s = multi.run(data.vars_far, true, data.relaxation);
+    rans::solver& s = multi.run(true, data.relaxation);
 
     save(data.outfilename, s);
     std::cout << "Saved results to file " << data.outfilename << "\n" << std::endl;

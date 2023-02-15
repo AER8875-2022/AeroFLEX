@@ -35,21 +35,23 @@ class multigrid {
 
     Eigen::SparseMatrix<double> gen_mapper(const uint i);
 
-    int run_solver(solverType& s, farfield_conditions vars_far, double start_cfl=40, const uint max_iters=300, double tolerance=1e-6, const double relaxation=1);
+    int run_solver(solverType& s, double start_cfl=40, const uint max_iters=300, double tolerance=1e-6, const double relaxation=1);
 
 public:
 
-    multigrid(std::vector<mesh> ms, gas g, bool second_order, SignalHandler &signal_gui, std::vector<double> &residuals, std::atomic<int> &iters);
+    multigrid(std::vector<mesh> ms, std::map<std::string, boundary_condition> bcs, gas g, bool second_order, SignalHandler &signal_gui, std::vector<double> &residuals, std::atomic<int> &iters);
 
-    solverType& run(farfield_conditions vars_far, const bool reinit=true, const double relaxation=1);
+    solverType& run(const bool reinit=true, const double relaxation=1);
 
 };
 
 template<class solverType>
-multigrid<solverType>::multigrid(std::vector<mesh> ms, gas g, bool second_order, SignalHandler &signal_gui, std::vector<double> &residuals, std::atomic<int> &iters) : signal_gui(signal_gui), residuals(residuals), iters(iters) {
+multigrid<solverType>::multigrid(std::vector<mesh> ms, std::map<std::string, boundary_condition> bcs, gas g, bool second_order, SignalHandler &signal_gui, std::vector<double> &residuals, std::atomic<int> &iters) : signal_gui(signal_gui), residuals(residuals), iters(iters) {
 
+    solvers.reserve(ms.size());
     for (auto& mi : ms) {
         solvers.push_back(solverType(mi, g, "laminar"));
+        solvers[solvers.size()-1].set_bcs(bcs);
         solvers[solvers.size()-1].set_second_order(second_order);
     }
 
@@ -159,7 +161,6 @@ Eigen::SparseMatrix<double> multigrid<solverType>::gen_mapper(const uint i) {
 template<>
 int multigrid<explicitSolver>::run_solver(
     explicitSolver& s,
-    farfield_conditions vars_far,
     const double start_cfl,
     const uint max_iters,
     double tolerance,
@@ -219,7 +220,6 @@ int multigrid<explicitSolver>::run_solver(
 template<>
 int multigrid<implicitSolver>::run_solver(
     implicitSolver& s,
-    farfield_conditions vars_far,
     const double start_cfl,
     const uint max_iters,
     double tolerance,
@@ -234,7 +234,7 @@ int multigrid<implicitSolver>::run_solver(
     double err = 0;
     double err_last = 0;
 
-    double err_0 = s.get_uniform_residual(vars_far);
+    double err_0 = s.get_uniform_residual();
     do {
         while (signal_gui.pause) std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
@@ -277,10 +277,10 @@ int multigrid<implicitSolver>::run_solver(
 }
 
 template<>
-explicitSolver& multigrid<explicitSolver>::run(farfield_conditions vars_far, const bool reinit, const double relaxation) {
+explicitSolver& multigrid<explicitSolver>::run(const bool reinit, const double relaxation) {
     const uint max_iters = 30000;
     residuals.resize(max_iters / 10);
-    if (reinit) solvers[0].init(vars_far);
+    if (reinit) solvers[0].init();
 
     for (uint i=0; i<solvers.size(); ++i) {
         iters = 0;
@@ -294,15 +294,13 @@ explicitSolver& multigrid<explicitSolver>::run(farfield_conditions vars_far, con
             // Map last solution to current grid
             solvers[i-1].bcs_from_internal();
             solvers[i].get_q() = mappers[i-1] * solvers[i-1].get_q();
-            solvers[i].zero_bcs();
+            solvers[i].refill_bcs();
         }
-
-        solvers[i].farfield(vars_far);
 
         double start_cfl = 1.25;
         double tolerance = (i == 0)|(i == (solvers.size()-1)) ? 1e-4 : 1e-2;
 
-        int state = run_solver(solvers[i], vars_far, start_cfl, max_iters, tolerance, relaxation);
+        int state = run_solver(solvers[i], start_cfl, max_iters, tolerance, relaxation);
 
         if (state) return solvers[i];
     }
@@ -313,10 +311,12 @@ explicitSolver& multigrid<explicitSolver>::run(farfield_conditions vars_far, con
 }
 
 template<>
-implicitSolver& multigrid<implicitSolver>::run(farfield_conditions vars_far, const bool reinit, const double relaxation) {
+implicitSolver& multigrid<implicitSolver>::run(const bool reinit, const double relaxation) {
     const uint max_iters = 300;
     residuals.resize(max_iters);
-    if (reinit) solvers[0].init(vars_far);
+
+    if (reinit) solvers[0].init();
+    solvers[0].refill_bcs();
 
     for (uint i=0; i<solvers.size(); ++i) {
         iters = 0;
@@ -330,15 +330,13 @@ implicitSolver& multigrid<implicitSolver>::run(farfield_conditions vars_far, con
             // Map last solution to current grid
             solvers[i-1].bcs_from_internal();
             solvers[i].get_q() = mappers[i-1] * solvers[i-1].get_q();
-            solvers[i].zero_bcs();
+            solvers[i].refill_bcs();
         }
-
-        solvers[i].farfield(vars_far);
 
         double start_cfl = i == 0 ? 10 : 10;
         double tolerance = (i == 0)|(i == (solvers.size()-1)) ? 1e-4 : 1e-4;
 
-        int state = run_solver(solvers[i], vars_far, start_cfl, max_iters, tolerance, relaxation);
+        int state = run_solver(solvers[i], start_cfl, max_iters, tolerance, relaxation);
 
         if (state || signal_gui.stop) return solvers[i];
     }

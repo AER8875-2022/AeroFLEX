@@ -6,18 +6,28 @@
 end
 
 
-[farfield]
-    T 1
-    mach 0.8
-    angle 0.02181662
-    p 1
+[bc]
+    type    farfield
+    name    farfield
+    T       1
+    mach    0.8
+    angle   0.02181662
+    p       1
 end
 
 
+[bc]
+    type    slip-wall
+    name    wall
+end
+
+
+
 [solver]
-    type implicit
-    second_order true
-    relaxation 0.8
+    type            implicit
+    second_order    true
+    relaxation      0.8
+    viscosity       inviscid
 end
 
 

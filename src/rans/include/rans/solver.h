@@ -70,6 +70,7 @@ protected:
     bool second_order;
 
     std::vector<std::unique_ptr<flux>> edges_flux_functions;
+    std::vector<boundary_variables> boundary_vars;
 
     void set_mesh_and_gas(const mesh& m_in, const gas& g_in);
 
@@ -86,26 +87,39 @@ protected:
     std::string viscosity_model;
 
 public:
+    std::map<std::string, boundary_condition> bcs;
+
+public:
 
     solver() {}
 
     solver(const mesh& m_in, const gas& g_in, std::string viscosity_model) : viscosity_model(viscosity_model) {
         set_mesh_and_gas(m_in, g_in);
-        make_fluxes();
     }
 
-    solver(const solver& s) : solver(s.get_cmesh(), s.get_gas(), s.get_viscosity_model()) {}
+    solver(const solver& s) : solver(s.get_cmesh(), s.get_gas(), s.get_viscosity_model()) {
+        bcs = s.get_bcs();
+        print_interval = s.get_print_interval();
+        second_order = s.get_second_order();
+    }
 
-    void make_fluxes();
+    solver& operator=(const solver& rhs) {
+        if (this == &rhs) return *this;
+        viscosity_model = rhs.get_viscosity_model();
+        set_mesh_and_gas(rhs.get_cmesh(), rhs.get_gas());
+        bcs = rhs.get_bcs();
+        print_interval = rhs.get_print_interval();
+        second_order = rhs.get_second_order();
+        return *this;
+    }
+
+    void set_bcs(std::map<std::string, boundary_condition> bcs_in);
 
     void set_cfl(const double& cfl_in);
 
-    void init(farfield_conditions);
+    void init();
 
-
-    double get_uniform_residual(farfield_conditions);
-
-    void farfield(farfield_conditions);
+    double get_uniform_residual();
 
     Eigen::VectorXd& get_q();
     gas& get_gas() {return g;}
@@ -113,16 +127,18 @@ public:
 
     std::string get_viscosity_model() const {return viscosity_model;}
 
-    void zero_bcs();
+    void refill_bcs();
     void bcs_from_internal();
 
     solution get_solution();
 
-    void set_second_order(const bool x=true);
+    void set_second_order(const bool x=true){second_order = x;}
+    bool get_second_order(const bool x=true) const {return second_order;}
 
     mesh& get_mesh() {return m;}
     const mesh& get_cmesh() const {return m;}
-    uint get_print_interval() {return print_interval;}
+    uint get_print_interval() const {return print_interval;}
+    std::map<std::string, boundary_condition> get_bcs() const {return bcs;}
 
 
     virtual void fill() {}
@@ -155,7 +171,8 @@ void solver::set_mesh_and_gas(const mesh& m_in, const gas& g_in) {
 }
 
 
-void solver::make_fluxes() {
+void solver::set_bcs(std::map<std::string, boundary_condition> bcs_in) {
+    bcs = bcs_in;
 
     int viscosity_int = 0;
     if (viscosity_model == "laminar") {
@@ -167,16 +184,26 @@ void solver::make_fluxes() {
     // Fill edges flux functions
     std::vector<int> edges_flux_to_add(m.edgesCells.cols());
     std::fill(edges_flux_to_add.begin(), edges_flux_to_add.end(), 0);
-
+    
+    boundary_vars.clear();
+    boundary_vars.resize(m.boundaryEdges.size());
     for (int b=0; b<m.boundaryEdges.size(); ++b) {
         const uint& e = m.boundaryEdges[b];
-        if (m.boundaryEdgesPhysicals[b] == "farfield") {
+
+        boundary_variables vars_bi;
+        if (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "farfield") {
             edges_flux_to_add[e] = 1;
-        } else if (m.boundaryEdgesPhysicals[b] == "wall") {
+            vars_bi = bcs.at(m.boundaryEdgesPhysicals[b]).vars_far;
+        } else if (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "slip-wall") {
             edges_flux_to_add[e] = 2;
+        } else if (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "wall") {
+            edges_flux_to_add[e] = 3;
         }
+
+        boundary_vars[b] = vars_bi;
     }
     
+    edges_flux_functions.clear();
     edges_flux_functions.reserve(m.edgesCells.cols());
     for (int e=0; e<m.edgesCells.cols(); ++e) {
         double& nx = m.edgesNormalsX[e];
@@ -187,6 +214,8 @@ void solver::make_fluxes() {
             edges_flux_functions.emplace_back(std::make_unique<farfield_flux>(g, nx, ny, viscosity_int));
         } else if (edges_flux_to_add[e] == 2) {
             edges_flux_functions.emplace_back(std::make_unique<slip_wall_flux>(g, nx, ny, viscosity_int));
+        } else if (edges_flux_to_add[e] == 3) {
+            edges_flux_functions.emplace_back(std::make_unique<wall_flux>(g, nx, ny, viscosity_int));
         }
     }
 }
@@ -196,20 +225,25 @@ void solver::set_cfl(const double& cfl_in) {
     cfl = cfl_in;
 }
 
-void solver::set_second_order(const bool x) {
-    second_order = x;
-}
-
 
 Eigen::VectorXd& solver::get_q() {
     return q;
 }
 
-void solver::zero_bcs() {
-    for (uint i=m.nRealCells; i<m.cellsAreas.size(); ++i) {
-        for (int k=0; k<4; ++k) {
-            q(4*i + k) = 0;
-        }
+void solver::refill_bcs() {
+    for (uint b=0; b<m.boundaryEdges.size(); ++b) {
+        const uint e = m.boundaryEdges[b];
+
+        int cell1 = m.edgesCells(e, 1);
+
+        auto& bc_v = boundary_vars[b];
+
+        auto [rho, rhou, rhov, rhoe] = bc_v.get_conservative(g);
+
+        q(4*cell1 + 0) = rho;
+        q(4*cell1 + 1) = rhou;
+        q(4*cell1 + 2) = rhov;
+        q(4*cell1 + 3) = rhoe;
     }
 }
 
@@ -228,7 +262,10 @@ void solver::bcs_from_internal() {
 
 void solver::set_walls_from_internal(Eigen::VectorXd& q_) {
     for (uint b=0; b<m.boundaryEdges.size(); ++b) {
-        if (m.boundaryEdgesPhysicals[b] == "wall") {
+        if (
+            (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "wall") | 
+            (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "slip-wall")
+        ) {
             const uint e = m.boundaryEdges[b];
 
             int cell0 = m.edgesCells(e, 0);
@@ -425,10 +462,24 @@ void solver::calc_limiters(const Eigen::VectorXd& q_) {
 
 
 
-void solver::init(farfield_conditions var_init) {
+void solver::init() {
+    // Init from the farfield / inlet condition
+
+    // First, try to find the farfield / inlet condition
+    boundary_variables vars_init;
+
+    for (uint b=0; b<m.boundaryEdges.size(); ++b) {
+        if (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "farfield") {
+            vars_init = boundary_vars[b];
+            break;
+        } else if (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "inlet-outlet") {
+            vars_init = boundary_vars[b];
+            break;
+        }
+    }
     int N = m.nRealCells;
 
-    auto [rho, rhou, rhov, rhoe] = var_init.get_conservative(g);
+    auto [rho, rhou, rhov, rhoe] = vars_init.get_conservative(g);
 
     #pragma omp parallel for
     for (int i=0; i<N; ++i) {
@@ -441,28 +492,22 @@ void solver::init(farfield_conditions var_init) {
 
 
 
-void solver::farfield(farfield_conditions var_far) {
 
-    auto [rho, rhou, rhov, rhoe] = var_far.get_conservative(g);
+double solver::get_uniform_residual() {
+    // Get residual assuming a uniform flow field corresponding to vars_far
 
-    #pragma omp parallel for
-    for (int b=0; b<m.boundaryEdges.size(); ++b) {
-        if (m.boundaryEdgesPhysicals[b] == "farfield") {
-            int cb = m.edgesCells(m.boundaryEdges[b], 1);
-            int k = cb*4;
+    // First, try to find the farfield / inlet condition
+    boundary_variables vars_far;
 
-            q(k) = rho;
-            q(k+1) = rhou;
-            q(k+2) = rhov;
-            q(k+3) = rhoe;
+    for (uint b=0; b<m.boundaryEdges.size(); ++b) {
+        if (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "farfield") {
+            vars_far = boundary_vars[b];
+            break;
+        } else if (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "inlet-outlet") {
+            vars_far = boundary_vars[b];
+            break;
         }
     }
-}
-
-
-
-double solver::get_uniform_residual(farfield_conditions var_far) {
-    // Get residual assuming a uniform flow field corresponding to vars_far
 
     // Reset qW to zero
     #pragma omp parallel for
@@ -473,7 +518,7 @@ double solver::get_uniform_residual(farfield_conditions var_far) {
         }
     }
 
-    auto [rho, rhou, rhov, rhoe] = var_far.get_conservative(g);
+    auto [rho, rhou, rhov, rhoe] = vars_far.get_conservative(g);
     Eigen::VectorXd q_far(4);
     q_far(0) = rho;
     q_far(1) = rhou;

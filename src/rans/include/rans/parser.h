@@ -111,26 +111,38 @@ Settings parse(int argc, char **argv, std::string compiled_file) {
                     else
                         infile >> tag;
                 }
-            } else if (tag == "[farfield]") {
+            } else if (tag == "[bc]") {
+                std::string bc_type;
+                std::string bc_name;
+                boundary_variables bc_vars;
+
                 std::string property;
                 infile >> property;
                 infile >> tag;
                 while ((tag != "end") & (!infile.eof())) {
-                    double prop_i = std::stod(tag);
-                    if (property == "T")
-                        data.vars_far.T = prop_i;
+                    if (property == "type")
+                        bc_type = tag;
+                    else if (property == "name")
+                        bc_name = tag;
+                    else if (property == "T")
+                        bc_vars.T = std::stod(tag);
                     else if (property == "mach")
-                        data.vars_far.mach = prop_i;
+                        bc_vars.mach = std::stod(tag);
                     else if (property == "angle")
-                        data.vars_far.angle = prop_i;
+                        bc_vars.angle = std::stod(tag);
                     else if (property == "p")
-                        data.vars_far.p = prop_i;
+                        bc_vars.p = std::stod(tag);
                     infile >> property;
                     if (property == "end")
                         tag = "end";
                     else
                         infile >> tag;
                 }
+
+                boundary_condition bc_i;
+                bc_i.bc_type = bc_type;
+                bc_i.vars_far = bc_vars;
+                data.bcs[bc_name] = bc_i;
             } else if (tag == "[solver]") {
                 std::string property;
                 infile >> property;
