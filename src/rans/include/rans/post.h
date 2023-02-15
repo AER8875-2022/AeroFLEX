@@ -174,6 +174,24 @@ void save(
 
 
 
+
+wallProfile get_wall_profile(solver& solv, std::string patch_name) {
+
+    wallProfile wall;
+
+    mesh& m = solv.get_mesh();
+
+    auto bcs = solv.get_bcs();
+
+    for (uint b=0; b<m.boundaryEdges.size(); ++b) {
+        
+    }
+
+    return wall;
+}
+
+
+
 }
 
 
