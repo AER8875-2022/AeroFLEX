@@ -14,14 +14,16 @@
 
 namespace aero{
     auto DispInterpol(){
-        for (k = 0; k < 11; ++k)
+        for (k = 0; k < ; ++k)
         {
-            for (i = 0; i < 11; ++i)
+            for (i = 0; i < ; ++i)
             {
 
                 auto wstation= wingStations[wings[0].get_wingStationsIDs()[k]];
-                auto vring = vortexRings[wstation.get_vortexRingIDs()[i]];
+                auto vring = vortexRings[wstation.get_vortexIDs()[i]];
                 int numPointsVort =sizeof(vring.getnodesIDs())/sizeof(vring.getnodesIDs()[0]);
+
+
                 int bestDistance[2]={0,0};
                 int bestPoint[2]={0,0};
                 for (p=0; p<numPointsVort; ++p)
