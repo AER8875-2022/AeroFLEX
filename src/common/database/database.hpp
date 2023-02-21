@@ -12,12 +12,6 @@
 #include <unordered_map>
 #include <vector>
 
-#ifndef VLM_CL_ALPHA_DEG
-/** @brief Value of the slope of the CL vs angle of attack function in 1/deg */
-#define VLM_CL_ALPHA_DEG                                                       \
-  0.109662271123215082635482531259185634553432464599609375
-#endif
-
 /** @file database.hpp */
 
 namespace database {

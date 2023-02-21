@@ -11,20 +11,20 @@ using namespace vlm;
 using namespace solver;
 using namespace Eigen;
 
-solver::base::base(const input::solverParam &solvP, const model &object)
-    : solvP(solvP),
-      lhs(MatrixXd::Zero(
-          object.vortexRings.size() + object.doubletPanels.size(),
-          object.vortexRings.size() + object.doubletPanels.size())),
-      rhs(VectorXd::Zero(object.vortexRings.size() +
-                         object.doubletPanels.size())),
-      DoubletMatrixINF(MatrixXd::Zero(object.doubletPanels.size(),
-                                      object.doubletPanels.size())) {}
+linear::steady::steady(std::atomic<int> &iter, std::vector<double> &residuals)
+    : iter(iter), residuals(residuals) {}
 
-// -------------------------------------------
-
-linear::steady::steady(const input::solverParam &solvP, const model &object)
-    : base(solvP, object) {}
+void linear::steady::initialize(const input::solverParam &solvP,
+                                const model &object, const database::table &) {
+  this->solvP = solvP;
+  this->lhs =
+      MatrixXd::Zero(object.vortexRings.size() + object.doubletPanels.size(),
+                     object.vortexRings.size() + object.doubletPanels.size());
+  this->rhs =
+      VectorXd::Zero(object.vortexRings.size() + object.doubletPanels.size());
+  this->DoubletMatrixINF =
+      VectorXd::Zero(object.doubletPanels.size(), object.doubletPanels.size());
+}
 
 void linear::steady::solve(model &object) {
   // Building wake
@@ -54,6 +54,9 @@ void linear::steady::solve(model &object) {
 
   // Exporting solution
   exportSolution(object);
+
+  residuals.push_back(system.error());
+  iter++;
 }
 
 void linear::steady::saveSolution(model &object, const VectorXd &gamma) {
@@ -221,9 +224,23 @@ void linear::steady::buildRHS(const model &object) {
 
 // -------------------------------------------
 
-nonlinear::steady::steady(const input::solverParam &solvP, const model &object,
-                          const database::table database)
-    : linear::steady(solvP, object), database(database) {}
+nonlinear::steady::steady(std::atomic<int> &iter,
+                          std::vector<double> &residuals)
+    : linear::steady(iter, residuals) {}
+
+void nonlinear::steady::initialize(const input::solverParam &solvP,
+                                   const model &object,
+                                   const database::table &database) {
+  this->solvP = solvP;
+  this->lhs =
+      MatrixXd::Zero(object.vortexRings.size() + object.doubletPanels.size(),
+                     object.vortexRings.size() + object.doubletPanels.size());
+  this->rhs =
+      VectorXd::Zero(object.vortexRings.size() + object.doubletPanels.size());
+  this->DoubletMatrixINF =
+      VectorXd::Zero(object.doubletPanels.size(), object.doubletPanels.size());
+  this->database = database;
+}
 
 void nonlinear::steady::buildRHS(const model &object) {
   VectorXd rhs_VLM = VectorXd::Zero(object.vortexRings.size());
@@ -261,12 +278,11 @@ void nonlinear::steady::solve(model &object) {
   buildLHS(object);
   system.compute(lhs);
 
-  // Initializing iterations
+  // Initializing iteration
   double residual = solvP.tolerance;
-  unsigned int iteration = 1;
 
   // Main solving loop
-  while (residual >= solvP.tolerance && iteration < 100) {
+  while (residual >= solvP.tolerance && iter <= solvP.max_iter) {
     // Step 1 : Solving VLM
     buildRHS(object);
     VectorXd gamma = system.solve(rhs);
@@ -276,9 +292,10 @@ void nonlinear::steady::solve(model &object) {
     iterateLift(object);
     // Step 2: One iteration of aoa correction
     residual = iterate(object);
-    std::cout << "Iteration " << iteration << std::endl;
+    std::cout << "Iteration " << iter << std::endl;
     std::cout << "\t Residual = " << residual << std::endl;
-    iteration++;
+    residuals.push_back(residual);
+    iter++;
   }
   // Compute viscous forces
   computeForces(object);
@@ -316,8 +333,8 @@ double nonlinear::steady::iterate(model &object) {
       };
 
       // Step 5 : Applying aoa correction
-      station.updateLocalAoa((cl_visc - cl_inv) / VLM_CL_ALPHA_DEG,
-                             object.nodes, object.vortexRings);
+      double dalpha = solvP.relaxation * (cl_visc - cl_inv) / VLM_CL_ALPHA_DEG;
+      station.updateLocalAoa(dalpha, object.nodes, object.vortexRings);
 
       residual += (cl_visc - cl_inv) / cl_visc * (cl_visc - cl_inv) / cl_visc;
     }
@@ -373,22 +390,3 @@ void nonlinear::steady::computeForces(model &object) {
 }
 
 // -------------------------------------------
-
-// -------------------------------------------
-
-solver::base *solver::initializeSolver(const input::solverParam &solvP,
-                                       const model &object,
-                                       const database::table &database) {
-  vlm::solver::base *solver;
-  if (!solvP.type.compare("LINEAR")) {
-    static vlm::solver::linear::steady temp(solvP, object);
-    solver = &temp;
-  } else if (!solvP.type.compare("NONLINEAR")) {
-    static vlm::solver::nonlinear::steady temp(solvP, object, database);
-    solver = &temp;
-  } else {
-    std::cerr << "\033[1;31m==>ERROR: Unknown VLM solver \033[0m" << std::endl;
-    exit(0);
-  }
-  return (solver);
-}

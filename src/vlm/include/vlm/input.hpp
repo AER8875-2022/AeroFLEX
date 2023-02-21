@@ -90,6 +90,28 @@ struct solverParam {
 
   /** @brief Interpolation type for viscous database */
   std::string interpolation;
+
+  /** @brief Linear solver type */
+  std::string linearSolver;
+
+  /** @brief Relaxation for the iterative scheme */
+  double relaxation;
+
+  /** @brief Max number of iterations for the iterative scheme */
+  int max_iter;
+};
+
+/** @brief Main struct holding parameters on the current case */
+struct settings {
+
+  /** @brief Object holding case and physics-oriented parameters */
+  simParam sim;
+
+  /** @brief Object holding input/output information */
+  ioParam io;
+
+  /** @brief Object holding solver parameters */
+  solverParam solver;
 };
 
 /** @brief Object holding the connectivity obtained from the mesh file */

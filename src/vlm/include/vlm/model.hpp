@@ -58,12 +58,12 @@ private:
   Vector3d cm = Vector3d::Zero();
 
 public:
-  /**
-   * @param mesh Object holding information on the mesh
-   * @param sim Object holding simulation parameters
-   * @param io Object holding input/output parameters */
-  model(const input::meshData &mesh, const input::simParam &sim,
-        const input::ioParam &io);
+  /** @brief Main method to to initialize the VLM model
+   *  @param mesh Object holding information on the mesh
+   *  @param sim Object holding simulation parameters
+   *  @param io Object holding input/output parameters */
+  void initialize(const input::meshData &mesh, const input::simParam &sim,
+                  const input::ioParam &io);
 
   /** @brief Wrapper method initializing wake elements for each lifting surface
    *  @param wakeLength Length of the generated wake in the x direction
@@ -94,7 +94,7 @@ private:
   /** @brief Method that computes the geometric properties and metrics of all
    * elements
    *  @param mesh Information on the mesh */
-  void initialize(const input::meshData &mesh);
+  void initializeMesh(const input::meshData &mesh);
 
   friend class solver::linear::steady;
   friend class solver::linear::unsteady;

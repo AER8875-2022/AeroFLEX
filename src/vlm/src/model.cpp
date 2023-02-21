@@ -7,9 +7,11 @@
 using namespace vlm;
 using namespace Eigen;
 
-model::model(const input::meshData &mesh, const input::simParam &sim,
-             const input::ioParam &io)
-    : sim(sim), io(io), cl(0.0), cd(0.0), cm(Vector3d::Zero()) {
+void model::initialize(const input::meshData &mesh, const input::simParam &sim,
+                       const input::ioParam &io) {
+  // Initializing inputs
+  this->sim = sim;
+  this->io = io;
   // Allocating memory for each objects
   nodes.reserve(mesh.nodes.size());
   vortexRings.reserve(mesh.vortexIDs.size());
@@ -20,7 +22,7 @@ model::model(const input::meshData &mesh, const input::simParam &sim,
   wakeNodes.reserve(2 * mesh.stationIDs.size());
   wakePanels.reserve(mesh.stationIDs.size());
   // Creating model from mesh object
-  initialize(mesh);
+  initializeMesh(mesh);
 }
 
 void model::initializeWake(const double wakeLength) {
@@ -30,7 +32,7 @@ void model::initializeWake(const double wakeLength) {
   }
 }
 
-void model::initialize(const input::meshData &mesh) {
+void model::initializeMesh(const input::meshData &mesh) {
   build(mesh);
   for (auto &wing : wings) {
     wing.initialize(nodes, wingStations, vortexRings, sim);
