@@ -65,6 +65,36 @@ namespace aero{
     }
     
     auto LoadInterpol() {
+        double dotProduct(const vector<double>& a, const vector<double>& b) {
+    if (a.size() != b.size()) {
+        throw std::runtime_error("Vectors must have the same dimension.");
+    }
+    double result = 0.0;
+    for (size_t i = 0; i < a.size(); i++) {
+        result += a[i] * b[i];
+    }
+    return result;
+}
+vector<double> crossProduct(const vector<double>& i, const vector<double>& j){
+    if (i.size() !=3 || j.size() != 3){
+        throw std::runtime_error("Vectors must have dimension 3.");
+    }
+    vector<double> result(3);
+    result[0] = i[1]*j[2] - i[2]*j[1];
+    result[1] = i[2]*j[0] - i[0]*j[2];
+    result[2] = i[0]*j[1] - i[1]*j[0];
+    return result;
+}
+vector<double> addVector(const vector<double>& A, const vector<double>& B){
+    if (A.size() != B.size()) {
+        throw std::runtime_error("Vectors must have the same dimension.");
+    }
+    vector<double> result(A.size());
+    result[0] = A[0] + B[0];
+    result[1] = A[1] + B[1];
+    result[2] = A[2] + B[2];
+    return result;
+}
         
         
     }
