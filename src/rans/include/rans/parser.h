@@ -154,8 +154,31 @@ Settings parse(int argc, char **argv, std::string compiled_file) {
                     else if (property == "second_order") {
                         std::vector<std::string> mylist{"1", "true", "True", "TRUE"};
                         data.second_order = std::find(std::begin(mylist), std::end(mylist), prop_i) != std::end(mylist);
-                    } else if (property == "relaxation")
+                    } else if (property == "viscosity_model") {
+                        data.viscosity_model = prop_i;
+                    } else if (property == "relaxation") {
                         data.relaxation = std::stod(prop_i);
+                    } else if (property == "tolerance") {
+                        data.tolerance = std::stod(prop_i);
+                    } else if (property == "start_cfl") {
+                        data.start_cfl = std::stod(prop_i);
+                    } else if (property == "max_cfl") {
+                        data.max_cfl = std::stod(prop_i);
+                    } else if (property == "slope_cfl") {
+                        data.slope_cfl = std::stod(prop_i);
+                    } else if (property == "rhs_iterations") {
+                        data.rhs_iterations = (uint) std::stoi(prop_i);
+                    } else if (property == "max_iterations") {
+                        data.max_iterations = (uint) std::stoi(prop_i);
+                    } else if (property == "gradients") {
+                        data.gradient_scheme = prop_i;
+                    } else if (property == "limiter_k") {
+                        data.limiter_k = std::stod(prop_i);
+                    } else {
+                        std::cout << "\033[0;33m";
+                        std::cout << "Warning, skipped unknown property " + property;
+                        std::cout << "\033[0m\n";
+                    }
                     infile >> property;
                     if (property == "end")
                         tag = "end";

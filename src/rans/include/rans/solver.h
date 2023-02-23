@@ -80,11 +80,20 @@ protected:
     void calc_gradients(const Eigen::VectorXd&);
     void calc_limiters(const Eigen::VectorXd&);
 
+    void calc_least_squares_matrices();
+
     double cfl = 1;
 
     uint print_interval;
 
     std::string viscosity_model;
+
+    std::string gradient_scheme = "green-gauss";
+
+    std::vector<Eigen::Matrix2d> leastSquaresMatrices;
+    double limiter_k = 5.;
+
+    std::string airfoil_name;
 
 public:
     std::map<std::string, boundary_condition> bcs;
@@ -117,6 +126,12 @@ public:
 
     void set_cfl(const double& cfl_in);
 
+    void set_limiter_k(const double& x) {limiter_k = x;}
+    double get_limiter_k() const {return limiter_k;}
+
+    void set_airfoil_name(const std::string& x) {airfoil_name = x;}
+    std::string get_airfoil_name() const {return airfoil_name;}
+
     void init();
 
     double get_uniform_residual();
@@ -124,6 +139,12 @@ public:
     Eigen::VectorXd& get_q();
     gas& get_gas() {return g;}
     const gas& get_gas() const {return g;}
+
+    void set_gradient_scheme(std::string grads) {
+        gradient_scheme = grads;
+        if (gradient_scheme == "least-squares") calc_least_squares_matrices();
+    }
+    std::string get_gradient_scheme() const {return gradient_scheme;}
 
     std::string get_viscosity_model() const {return viscosity_model;}
 
@@ -143,7 +164,7 @@ public:
 
     virtual void fill() {}
     virtual int compute() {return -1;}
-    virtual double solve(const double relaxation=1, const double tol=0) {return -1;}
+    virtual double solve(const double relaxation=1, const double tol=0, const uint rhs_iterations=5) {return -1;}
 
 };
 
@@ -330,54 +351,121 @@ void solver::calc_dt() {
 }
 
 
+
+void solver::calc_least_squares_matrices() {
+    
+
+    leastSquaresMatrices.resize(m.nRealCells);
+    for (uint i=0; i<m.nRealCells; ++i) {
+        const uint size_i = m.cellsIsTriangle[i] ? 3 : 4;
+        
+        Eigen::MatrixXd d(size_i, 2);
+
+        for (uint j=0; j<size_i; ++j) {
+            const uint e = m.cellsEdges(i, j);
+
+            const uint cell_p = i;
+            const uint cell_n = m.edgesCells(e, 0) == i ? m.edgesCells(e, 1) : m.edgesCells(e, 0);
+
+            d(j, 0) = m.cellsCentersX[cell_n] - m.cellsCentersX[cell_p];
+            d(j, 1) = m.cellsCentersY[cell_n] - m.cellsCentersY[cell_p];
+        }
+
+        leastSquaresMatrices[i] = (d.transpose() * d).inverse();
+    }
+}
+
+
 void solver::calc_gradients(const Eigen::VectorXd& q_) {
 
-    #pragma omp parallel for
-    for (int i=0; i<gx.size(); ++i) {gx(i) = 0; gy(i) = 0;}
 
-    for (uint e=0; e<m.edgesNodes.cols(); ++e) {
-        const uint& i = m.edgesCells(e, 0);
-        const uint& j = m.edgesCells(e, 1);
+    if (gradient_scheme == "green-gauss") {
+        #pragma omp parallel for
+        for (int i=0; i<gx.size(); ++i) {gx(i) = 0; gy(i) = 0;}
 
-        const double dxif = m.edgesCentersX[e] - m.cellsCentersX[i];
-        const double dyif = m.edgesCentersY[e] - m.cellsCentersY[i];
-        const double dif = sqrt(dxif*dxif + dyif*dyif);
+        for (uint e=0; e<m.edgesNodes.cols(); ++e) {
+            const uint& i = m.edgesCells(e, 0);
+            const uint& j = m.edgesCells(e, 1);
 
-        const double dxij = m.cellsCentersX[i] - m.cellsCentersX[j];
-        const double dyij = m.cellsCentersY[i] - m.cellsCentersY[j];
-        const double dij = sqrt(dxij*dxij + dyij*dyij);
+            const double dxif = m.edgesCentersX[e] - m.cellsCentersX[i];
+            const double dyif = m.edgesCentersY[e] - m.cellsCentersY[i];
+            const double dif = sqrt(dxif*dxif + dyif*dyif);
 
-        const double geom_factor = dif / dij;
+            const double dxij = m.cellsCentersX[i] - m.cellsCentersX[j];
+            const double dyij = m.cellsCentersY[i] - m.cellsCentersY[j];
+            const double dij = sqrt(dxij*dxij + dyij*dyij);
 
-        if (i != j) {
-            for (uint k=0; k<4; ++k) {
-                const double fk = (q_(4*i+k)*(1.0 - geom_factor) + q_(4*j+k) * geom_factor) * m.edgesLengths[e];
+            const double geom_factor = dif / dij;
 
-                gx(4*i+k) += fk * m.edgesNormalsX[e];
-                gy(4*i+k) += fk * m.edgesNormalsY[e];
+            if (i != j) {
+                for (uint k=0; k<4; ++k) {
+                    const double fk = (q_(4*i+k)*(1.0 - geom_factor) + q_(4*j+k) * geom_factor) * m.edgesLengths[e];
 
-                gx(4*j+k) -= fk * m.edgesNormalsX[e];
-                gy(4*j+k) -= fk * m.edgesNormalsY[e];
-            }
-        } else {
-            for (uint k=0; k<4; ++k) {
-                const double fk = q(4*i+k) * m.edgesLengths[e];
+                    gx(4*i+k) += fk * m.edgesNormalsX[e];
+                    gy(4*i+k) += fk * m.edgesNormalsY[e];
 
-                gx(4*i+k) += fk * m.edgesNormalsX[e];
-                gy(4*i+k) += fk * m.edgesNormalsY[e];
+                    gx(4*j+k) -= fk * m.edgesNormalsX[e];
+                    gy(4*j+k) -= fk * m.edgesNormalsY[e];
+                }
+            } else {
+                for (uint k=0; k<4; ++k) {
+                    const double fk = q(4*i+k) * m.edgesLengths[e];
+
+                    gx(4*i+k) += fk * m.edgesNormalsX[e];
+                    gy(4*i+k) += fk * m.edgesNormalsY[e];
+                }
             }
         }
-    }
 
-    #pragma omp parallel for
-    for (int i=0; i<m.nRealCells; ++i) {
-        gx.segment(4*i, 4) /= m.cellsAreas[i];
-        gy.segment(4*i, 4) /= m.cellsAreas[i];
-    }
-    #pragma omp parallel for
-    for (int i=m.nRealCells; i<m.cellsAreas.size(); ++i) {
-        gx.segment(4*i, 4) *= 0;
-        gy.segment(4*i, 4) *= 0;
+        #pragma omp parallel for
+        for (int i=0; i<m.nRealCells; ++i) {
+            gx.segment(4*i, 4) /= m.cellsAreas[i];
+            gy.segment(4*i, 4) /= m.cellsAreas[i];
+        }
+        #pragma omp parallel for
+        for (int i=m.nRealCells; i<m.cellsAreas.size(); ++i) {
+            gx.segment(4*i, 4) *= 0;
+            gy.segment(4*i, 4) *= 0;
+        }
+    } else if (gradient_scheme == "least-squares") {
+        for (uint i=0; i<m.nRealCells; ++i) {
+            const uint size_i = m.cellsIsTriangle[i] ? 3 : 4;
+            
+            Eigen::MatrixXd d(size_i, 2);
+
+            Eigen::Vector2d grad_i;
+
+            for (uint j=0; j<size_i; ++j) {
+                const uint e = m.cellsEdges(i, j);
+
+                const uint cell_p = i;
+                const uint cell_n = m.edgesCells(e, 0) == i ? m.edgesCells(e, 1) : m.edgesCells(e, 0);
+
+                d(j, 0) = m.cellsCentersX[cell_n] - m.cellsCentersX[cell_p];
+                d(j, 1) = m.cellsCentersY[cell_n] - m.cellsCentersY[cell_p];
+            }
+
+            for (uint k=0; k<4; ++k) {
+                Eigen::VectorXd deltas_k(size_i);
+
+                for (uint j=0; j<size_i; ++j) {
+                    const uint e = m.cellsEdges(i, j);
+
+                    const uint cell_p = i;
+                    const uint cell_n = m.edgesCells(e, 0) == i ? m.edgesCells(e, 1) : m.edgesCells(e, 0);
+
+                    deltas_k(j) = q(4*cell_n + k) - q(4*cell_p + k);
+                }
+
+                grad_i = leastSquaresMatrices[i] * d.transpose() * deltas_k;
+                gx(4*i + k) = grad_i(0);
+                gy(4*i + k) = grad_i(1);
+            }
+        }
+        for (int i=m.nRealCells; i<m.cellsAreas.size(); ++i) {
+            gx.segment(4*i, 4) *= 0;
+            gy.segment(4*i, 4) *= 0;
+        }
     }
 }
 
@@ -416,7 +504,7 @@ void solver::calc_limiters(const Eigen::VectorXd& q_) {
                     double delta_max = q_max(4*id+k) - q_(4*id+k);
                     double delta_min = q_min(4*id+k) - q_(4*id+k);
 
-                    const double Ka = 5. * sqrt_area;
+                    const double Ka = limiter_k * sqrt_area;
                     const double K3a = Ka * Ka * Ka;
                     const double dMaxMin2 = (delta_max - delta_min)*(delta_max - delta_min);
 
@@ -620,7 +708,7 @@ public:
 
     void fill() {}
     int compute() {return 0;}
-    double solve(const double relaxation=1, const double tol=0);
+    double solve(const double relaxation=1, const double tol=0, const uint rhs_iterations=5);
 
 };
 
@@ -678,7 +766,7 @@ void explicitSolver::calc_residual(const Eigen::VectorXd& q_) {
 }
 
 
-double explicitSolver::solve(const double relaxation, const double tol) {
+double explicitSolver::solve(const double relaxation, const double tol, const uint rhs_iterations) {
     calc_dt();
 
     #pragma omp parallel for
@@ -774,9 +862,14 @@ public:
 
         // Linear solver parameters
         #ifndef RANS_BICGSTAB
+            /*
             rho_solver.setTolerance(1e-2);
             rho_solver.preconditioner().setFillfactor(3);
             rho_solver.preconditioner().setDroptol(1e-4);
+            /**/
+            rho_solver.setTolerance(1e-1);
+            rho_solver.preconditioner().setFillfactor(1);
+            rho_solver.preconditioner().setDroptol(1e-2);
 
             rho_solver.setMaxIterations(500);
         #endif
@@ -831,7 +924,7 @@ public:
 
     void fill();
     int compute();
-    double solve(const double relaxation=1, const double tol=0);
+    double solve(const double relaxation=1, const double tol=0, const uint rhs_iterations=5);
 
 };
 
@@ -1026,7 +1119,8 @@ int implicitSolver::compute() {
 
 double implicitSolver::solve(
     const double relaxation,
-    const double tol
+    const double tol, 
+    const uint rhs_iterations
 ) {
     // Solve rho, rho_u, rho_v, rho_e
     fillRhoRHS();
@@ -1043,7 +1137,7 @@ double implicitSolver::solve(
         q += qW*relaxation;
     }
 
-    for (uint i=0; i<10; ++i) {
+    for (uint i=0; i<rhs_iterations; ++i) {
         fillRhoRHS();
 
         err = RhoVector.norm();
