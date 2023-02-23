@@ -26,6 +26,7 @@ namespace rans {
 template<class solverType>
 class multigrid {
     GUIHandler &gui;
+    Settings &settings;
     std::vector<double> &residuals;
     std::atomic<int> &iters;
 
@@ -35,24 +36,28 @@ class multigrid {
 
     Eigen::SparseMatrix<double> gen_mapper(const uint i);
 
-    int run_solver(solverType& s, double start_cfl=40, const uint max_iters=300, double tolerance=1e-6, const double relaxation=1);
+    int run_solver(solverType& s);
 
 public:
 
-    multigrid(std::vector<mesh> ms, std::map<std::string, boundary_condition> bcs, gas g, bool second_order, GUIHandler &gui, std::vector<double> &residuals, std::atomic<int> &iters);
+    multigrid(std::vector<mesh> ms, Settings &settings, GUIHandler &gui, std::vector<double> &residuals, std::atomic<int> &iters);
 
-    solverType& run(const bool reinit=true, const double relaxation=1);
+    solverType& run(const bool reinit=true);
 
 };
 
 template<class solverType>
-multigrid<solverType>::multigrid(std::vector<mesh> ms, std::map<std::string, boundary_condition> bcs, gas g, bool second_order, GUIHandler &gui, std::vector<double> &residuals, std::atomic<int> &iters) : gui(gui), residuals(residuals), iters(iters) {
+multigrid<solverType>::multigrid(std::vector<mesh> ms, Settings &settings, GUIHandler &gui, std::vector<double> &residuals, std::atomic<int> &iters) 
+: gui(gui), settings(settings), residuals(residuals), iters(iters) 
+{
 
     solvers.reserve(ms.size());
     for (auto& mi : ms) {
-        solvers.push_back(solverType(mi, g, "laminar"));
-        solvers[solvers.size()-1].set_bcs(bcs);
-        solvers[solvers.size()-1].set_second_order(second_order);
+        solvers.push_back(solverType(mi, settings.g, settings.viscosity_model));
+        solvers[solvers.size()-1].set_bcs(settings.bcs);
+        solvers[solvers.size()-1].set_second_order(settings.second_order);
+        solvers[solvers.size()-1].set_gradient_scheme(settings.gradient_scheme);
+        solvers[solvers.size()-1].set_limiter_k(settings.limiter_k);
     }
 
     #ifdef RANS_DEBUG
@@ -160,14 +165,10 @@ Eigen::SparseMatrix<double> multigrid<solverType>::gen_mapper(const uint i) {
 
 template<>
 int multigrid<explicitSolver>::run_solver(
-    explicitSolver& s,
-    const double start_cfl,
-    const uint max_iters,
-    double tolerance,
-    const double relaxation
+    explicitSolver& s
 ) {
 
-    double cfl = start_cfl;
+    double cfl = settings.start_cfl;
 
     // Iterations loop
 
@@ -190,7 +191,7 @@ int multigrid<explicitSolver>::run_solver(
 
         if (ok == 0) {
             err_last = err;
-            err = s.solve(relaxation);
+            err = s.solve(settings.relaxation);
         } else
             err = -1;
         if (i % s.get_print_interval() == 0) std::cout << "." << std::flush;
@@ -212,21 +213,17 @@ int multigrid<explicitSolver>::run_solver(
         }
 
         i++;
-    } while ((err > tolerance) && (i < max_iters) && !gui.signal.stop);
+    } while ((err > settings.tolerance) && (i < settings.max_iterations) && !gui.signal.stop);
 
     return 0;
 }
 
 template<>
 int multigrid<implicitSolver>::run_solver(
-    implicitSolver& s,
-    const double start_cfl,
-    const uint max_iters,
-    double tolerance,
-    const double relaxation
+    implicitSolver& s
 ) {
 
-    double cfl = start_cfl;
+    double cfl = settings.start_cfl;
 
     // Iterations loop
 
@@ -249,19 +246,16 @@ int multigrid<implicitSolver>::run_solver(
 
         if (ok == 0) {
             err_last = err;
-            err = s.solve(relaxation, err_0 * tolerance);
+            err = s.solve(settings.relaxation, err_0 * settings.tolerance, settings.rhs_iterations);
         } else
             err = -1;
         if (i % s.get_print_interval() == 0) std::cout << "." << std::flush;
 
         err /= err_0;
 
-        if (err >= 0) {
-
-            if (i > 0) {
-                cfl = cfl * std::max(0.1, std::min(2., (err_last)/(err)));
-            }
-        }
+        
+        //cfl = std::max(settings.start_cfl, std::min(settings.max_cfl, cfl * err_last / err));
+        cfl = std::min(settings.start_cfl + (i+1)*settings.slope_cfl, settings.max_cfl);
 
         if (i % s.get_print_interval() == 0) std::cout << " Residual = " << err << std::endl;
         i++;
@@ -271,14 +265,14 @@ int multigrid<implicitSolver>::run_solver(
         iters++;
         // do-while c'est cursed
         // Do smt if max iters is reached
-    } while ((err > tolerance) && (i < max_iters) && !gui.signal.stop);
+    } while ((err > settings.tolerance) && (i < settings.max_iterations) && !gui.signal.stop);
 
     return 0;
 }
 
 template<>
-explicitSolver& multigrid<explicitSolver>::run(const bool reinit, const double relaxation) {
-    const uint max_iters = 30000;
+explicitSolver& multigrid<explicitSolver>::run(const bool reinit) {
+    const uint max_iters = settings.max_iterations;
     residuals.resize(max_iters / 10);
     if (reinit) solvers[0].init();
 
@@ -297,10 +291,7 @@ explicitSolver& multigrid<explicitSolver>::run(const bool reinit, const double r
             solvers[i].refill_bcs();
         }
 
-        double start_cfl = 1.25;
-        double tolerance = (i == 0)|(i == (solvers.size()-1)) ? 1e-4 : 1e-2;
-
-        int state = run_solver(solvers[i], start_cfl, max_iters, tolerance, relaxation);
+        int state = run_solver(solvers[i]);
 
         if (state) return solvers[i];
     }
@@ -311,8 +302,8 @@ explicitSolver& multigrid<explicitSolver>::run(const bool reinit, const double r
 }
 
 template<>
-implicitSolver& multigrid<implicitSolver>::run(const bool reinit, const double relaxation) {
-    const uint max_iters = 300;
+implicitSolver& multigrid<implicitSolver>::run(const bool reinit) {
+    const uint max_iters = settings.max_iterations;
     residuals.resize(max_iters);
 
     if (reinit) solvers[0].init();
@@ -333,10 +324,7 @@ implicitSolver& multigrid<implicitSolver>::run(const bool reinit, const double r
             solvers[i].refill_bcs();
         }
 
-        double start_cfl = i == 0 ? 10 : 10;
-        double tolerance = (i == 0)|(i == (solvers.size()-1)) ? 1e-4 : 1e-4;
-
-        int state = run_solver(solvers[i], start_cfl, max_iters, tolerance, relaxation);
+        int state = run_solver(solvers[i]);
 
         if (state || gui.signal.stop) return solvers[i];
     }

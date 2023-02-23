@@ -7,34 +7,42 @@ end
 
 
 [bc]
+    name    Farfield
     type    farfield
-    name    farfield
     T       1
     mach    0.8
-    angle   0.02181662
+    angle   0.0
     p       1
 end
 
 
 [bc]
+    name    Airfoil
     type    slip-wall
-    name    wall
 end
 
 
 
 [solver]
-    type            implicit
-    second_order    true
-    relaxation      0.8
-    viscosity       inviscid
+    type                implicit
+    second_order        true
+    viscosity_model     inviscid
+    tolerance           1e-8
+    start_cfl           5
+    slope_cfl           1
+    max_cfl             100
+    relaxation          0.8
+    gradients           least-squares
+    limiter_k           5.
+    rhs_iterations      5
+    airfoil_name        Airfoil
 end
 
 
 [mesh]
-    ../../../../examples/rans/naca0012q_coarse.msh
-    ../../../../examples/rans/naca0012q_mid.msh
-    ../../../../examples/rans/naca0012q_fine.msh
+    ../../../../examples/rans/airfoil_API2_coarse.msh
+    ../../../../examples/rans/airfoil_API2_mid.msh
+    ../../../../examples/rans/airfoil_API2_fine.msh
 end
 
 

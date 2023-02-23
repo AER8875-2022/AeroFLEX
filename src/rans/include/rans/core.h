@@ -148,7 +148,19 @@ struct Settings {
 
     std::string solver_type;
     bool second_order = true;
+    double start_cfl = 40.;
+    double slope_cfl = 50.;
+    double max_cfl = 1000.;
     double relaxation = 1;
+    double tolerance = 1e-4;
+    uint rhs_iterations = 5;
+    uint max_iterations = 30000;
+
+    std::string viscosity_model = "inviscid";
+    std::string gradient_scheme = "least-squares";
+    double limiter_k = 5.;
+
+    std::string airfoil_name = "";
 
     std::string outfilename;
 

@@ -122,13 +122,11 @@ void save(
     s += "      <CellData Scalars=\"scalars\">\n";
 
     // Save wall distance
-    if (m.do_compute_wall_dist) {
-        s += "        <DataArray type=\"Float32\" Name=\"Wall Distance\" Format=\"ascii\">\n";
-        for (int j=0; j<m.nRealCells; ++j) {
-            s += "          " + double2string(m.wall_dist[j], 16) + "\n";
-        }
-        s += "        </DataArray>\n";
+    s += "        <DataArray type=\"Float32\" Name=\"Wall Distance\" Format=\"ascii\">\n";
+    for (int j=0; j<m.nRealCells; ++j) {
+        s += "          " + double2string(m.wall_dist[j], 16) + "\n";
     }
+    s += "        </DataArray>\n";
 
     // Save variables
     s += "        <DataArray type=\"Float32\" Name=\"Mach\" Format=\"ascii\">\n";
