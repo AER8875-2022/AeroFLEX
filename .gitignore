@@ -34,6 +34,7 @@
 /build/*
 /.xmake/*
 /.vscode/*
+/.cache/*
 compile_commands.json
 
 # Simulation outputs
