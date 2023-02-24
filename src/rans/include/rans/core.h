@@ -108,17 +108,30 @@ struct boundary_condition {
 
 
 
-struct solution {
-    double gamma;
-    double R;
+class solution {
+private:
+    Eigen::VectorXd &q;
+    gas &g;
 
-    Eigen::VectorXd rho;
-    Eigen::VectorXd rhou;
-    Eigen::VectorXd rhov;
-    Eigen::VectorXd rhoe;
+public:
+
+    solution(Eigen::VectorXd &q, gas &g) : q(q), g(g) {}
+
+    double rho(const int& i) const {
+        return q(4*i);
+    }
+    double rhou(const int& i) const {
+        return q(4*i+1);
+    }
+    double rhov(const int& i) const {
+        return q(4*i+2);
+    }
+    double rhoe(const int& i) const {
+        return q(4*i+3);
+    }
 
     double p(const int& i) const {
-        return (gamma - 1)*(rhoe(i) - 0.5/rho(i)*(rhou(i)*rhou(i) + rhov(i)*rhov(i)));
+        return (g.gamma - 1)*(rhoe(i) - 0.5/rho(i)*(rhou(i)*rhou(i) + rhov(i)*rhov(i)));
     }
 
     double u(const int& i) const {
@@ -128,10 +141,10 @@ struct solution {
         return rhov(i)/rho(i);
     }
     double T(const int& i) const {
-        return p(i)/(R*rho(i));
+        return p(i)/(g.R*rho(i));
     }
     double c(const int& i) const {
-        return sqrt(gamma * p(i)/rho(i));
+        return sqrt(g.gamma * p(i)/rho(i));
     }
     double mach(const int& i) const {
         return sqrt(rhou(i)*rhou(i) + rhov(i)*rhov(i))/(rho(i) * c(i));

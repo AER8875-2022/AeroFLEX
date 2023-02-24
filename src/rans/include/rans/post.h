@@ -33,14 +33,18 @@ std::string double2string(const double& x, const int precision) {
 
 
 
+struct wallEdge {
+    std::array<double, 2> x;
+    std::array<double, 2> y;
+};
+
+
 struct wallProfile {
-    std::vector<double> x;
-    std::vector<double> y;
+    std::vector<wallEdge> edges;
     std::vector<double> cp;
 
     void reserve(const uint& n) {
-        x.reserve(n);
-        y.reserve(n);
+        edges.reserve(n);
         cp.reserve(n);
     }
 };
@@ -175,6 +179,9 @@ void save(
 
 wallProfile get_wall_profile(solver& solv, std::string patch_name) {
 
+
+    solution sol = solv.get_solution();
+
     wallProfile wall;
 
     mesh& m = solv.get_mesh();
@@ -182,7 +189,27 @@ wallProfile get_wall_profile(solver& solv, std::string patch_name) {
     auto bcs = solv.get_bcs();
 
     for (uint b=0; b<m.boundaryEdges.size(); ++b) {
-        
+        if (m.boundaryEdgesPhysicals[b] == patch_name) {
+            const uint e = m.boundaryEdges[b];
+            const uint n0 = m.edgesNodes(e, 0);
+            const uint n1 = m.edgesNodes(e, 1);
+
+            const uint cell = m.edgesCells(e, 0);
+
+            // Generate wall edge
+            wallEdge ei;
+            ei.x[0] = m.nodesX[n0];
+            ei.x[1] = m.nodesX[n1];
+
+            ei.y[0] = m.nodesY[n0];
+            ei.y[1] = m.nodesY[n1];
+
+            wall.edges.push_back(ei);
+
+            // Also calculate cp
+            const double rho = sol.rho(cell);
+            const double rho = sol.rho(cell);
+        }
     }
 
     return wall;
