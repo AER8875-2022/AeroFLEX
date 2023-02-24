@@ -267,7 +267,7 @@ public:
     void compute_mesh();
     void add_cell_edges(uint cell_id);
 
-    void compute_wall_dist();
+    void compute_wall_dist(const std::string& patch_name);
 
     void send_mesh_info();
 };
@@ -791,7 +791,7 @@ void mesh::add_boundary_cells() {
 
 
 
-void mesh::compute_wall_dist() {
+void mesh::compute_wall_dist(const std::string& patch_name) {
 
 
     // Compute the distance to the wall
@@ -801,21 +801,25 @@ void mesh::compute_wall_dist() {
         double& cy = cellsCentersY[i];
 
         double mind = 1;
+        bool first_added = true;
         // Loop over all boundary cells
         for (uint j=0; j<boundaryEdges.size(); ++j) {
-            const int& e = boundaryEdges[j];
+            if (boundaryEdgesPhysicals[j] == patch_name) {
+                const int& e = boundaryEdges[j];
 
-            double& wx = edgesCentersX[e];
-            double& wy = edgesCentersY[e];
+                double& wx = edgesCentersX[e];
+                double& wy = edgesCentersY[e];
 
-            double dx = cx - wx;
-            double dy = cy - wy;
-            double d = sqrt(dx*dx + dy*dy);
+                double dx = cx - wx;
+                double dy = cy - wy;
+                double d = sqrt(dx*dx + dy*dy);
 
-            if (j == 0) {
-                mind = d;
-            } else {
-                mind = std::min(mind, d);
+                if (first_added) {
+                    mind = d;
+                    first_added = false;
+                } else {
+                    mind = std::min(mind, d);
+                }
             }
         }
         wall_dist[i] = mind;
