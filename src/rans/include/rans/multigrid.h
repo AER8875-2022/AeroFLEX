@@ -271,13 +271,12 @@ int multigrid<implicitSolver>::run_solver(
 template<>
 explicitSolver& multigrid<explicitSolver>::run(const bool reinit) {
     const uint max_iters = settings.max_iterations;
-    residuals.resize(max_iters / 10);
+    residuals.resize(solvers.size() * (max_iters / 10));
 
     if (reinit) solvers[0].init();
     solvers[0].refill_bcs();
 
     for (uint i=0; i<solvers.size(); ++i) {
-        std::fill(residuals.begin(), residuals.end(), 0.0);
 
         // Multigrid loop
 
@@ -303,14 +302,12 @@ explicitSolver& multigrid<explicitSolver>::run(const bool reinit) {
 template<>
 implicitSolver& multigrid<implicitSolver>::run(const bool reinit) {
     const uint max_iters = settings.max_iterations;
-    residuals.resize(max_iters);
+    residuals.resize(solvers.size() * max_iters);
 
     if (reinit) solvers[0].init();
     solvers[0].refill_bcs();
 
     for (uint i=0; i<solvers.size(); ++i) {
-        std::fill(residuals.begin(), residuals.end(), 0.0);
-
         // Multigrid loop
 
         std::cout << "\nMultigrid : Stage " << i+1 << "/" << solvers.size() << "\n" << std::endl;
