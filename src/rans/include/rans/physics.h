@@ -80,6 +80,10 @@ inline void calc_grad_v(Eigen::VectorXd& gv, const Eigen::VectorXd& q, const Eig
     gv(0) = (q(0)*gx(2) - q(2)*gx(0))/(q(0)*q(0));
     gv(1) = (q(0)*gy(2) - q(2)*gy(0))/(q(0)*q(0));
 }
+// Smoothed absolute value
+inline double sabs(const double& x) {
+    return sqrt(x*x + 1e-3);
+}
 
 
 
@@ -186,9 +190,11 @@ inline Eigen::VectorXd internal_flux::operator()(
     const double VL = uL*nx + vL*ny;
 
     // Entropy correction
-    const double lambda_cm = entropy_correction(abs(V-c), 0.05*c);
-    const double lambda_c  = entropy_correction(abs(V), 0.05*c);
-    const double lambda_cp = entropy_correction(abs(V+c), 0.05*c);
+    /**/
+    const double lambda_cm = entropy_correction(sabs(V-c), 0.05*c);
+    const double lambda_c  = entropy_correction(sabs(V), 0.05*c);
+    const double lambda_cp = entropy_correction(sabs(V+c), 0.05*c);
+    /**/
 
     const double kF1 = lambda_cm*((pR-pL) - rho*c*(VR-VL))/(2.*c*c);
     const double kF234_0 = lambda_c*((q_R(0) - q_L(0)) - (pR-pL)/(c*c));

@@ -176,7 +176,7 @@ int multigrid<explicitSolver>::run_solver(
     double err = 0;
     double err_last = 0;
 
-    double err_0 = 0;
+    double err_0 = s.get_uniform_residual();
     do {
         while (gui.signal.pause) std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
@@ -195,8 +195,6 @@ int multigrid<explicitSolver>::run_solver(
         } else
             err = -1;
         if (i % s.get_print_interval() == 0) std::cout << "." << std::flush;
-
-        if (i == 0) err_0 = err;
 
         if (err > 0) {
             err /= err_0;
@@ -274,7 +272,9 @@ template<>
 explicitSolver& multigrid<explicitSolver>::run(const bool reinit) {
     const uint max_iters = settings.max_iterations;
     residuals.resize(max_iters / 10);
+
     if (reinit) solvers[0].init();
+    solvers[0].refill_bcs();
 
     for (uint i=0; i<solvers.size(); ++i) {
         iters = 0;

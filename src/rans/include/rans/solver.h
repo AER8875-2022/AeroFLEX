@@ -24,6 +24,7 @@
 #include <rans/core.h>
 #include <rans/physics.h>
 
+
 #ifdef RANS_MATRIX_FREE
     #include <rans/ransMatrix.h>
 #endif
@@ -169,7 +170,6 @@ public:
 };
 
 void solver::set_mesh_and_gas(const mesh& m_in, const gas& g_in) {
-    second_order = true;
 
     m = m_in;
     g = g_in;
@@ -645,24 +645,7 @@ double solver::get_uniform_residual() {
 
 
 solution solver::get_solution() {
-    int N = m.cellsAreas.size();
-
-    solution s;
-    s.gamma = g.gamma;
-    s.R = g.R;
-
-    s.rho.resize(N);
-    s.rhou.resize(N);
-    s.rhov.resize(N);
-    s.rhoe.resize(N);
-
-    #pragma omp parallel for
-    for (int i=0; i<N; ++i) {
-        s.rho(i) = q(4*i);
-        s.rhou(i) = q(4*i+1);
-        s.rhov(i) = q(4*i+2);
-        s.rhoe(i) = q(4*i+3);
-    }
+    solution s(q, g);
 
     return s;
 }
@@ -867,11 +850,16 @@ public:
             rho_solver.preconditioner().setFillfactor(3);
             rho_solver.preconditioner().setDroptol(1e-4);
             /**/
-            rho_solver.setTolerance(1e-1);
-            rho_solver.preconditioner().setFillfactor(1);
-            rho_solver.preconditioner().setDroptol(1e-2);
+            #ifndef RANS_MATRIX_FREE
+                rho_solver.setTolerance(1e-2);
+                rho_solver.preconditioner().setFillfactor(2);
+                rho_solver.preconditioner().setDroptol(1e-3);
+                rho_solver.setMaxIterations(500);
+            #else
+                rho_solver.setTolerance(1e-3);
+                rho_solver.setMaxIterations(1000);
+            #endif
 
-            rho_solver.setMaxIterations(500);
         #endif
 
         int N = m.cellsAreas.size();
@@ -970,60 +958,56 @@ void implicitSolver::fillRhoLHS() {
                 RhoMatrix.coeffRef(k+j, k+j) = m.cellsAreas[i]/dt(i);
             }
         }
-    #endif
 
-    // Fill internal matrix elements from flux jacobian
-    for (int e=0; e<m.edgesCells.cols(); ++e) {
+        // Fill internal matrix elements from flux jacobian
+        for (int e=0; e<m.edgesCells.cols(); ++e) {
 
-        // Get this edges cells index
-        int cell0 = m.edgesCells(e, 0);
-        int cell1 = m.edgesCells(e, 1);
+            // Get this edges cells index
+            int cell0 = m.edgesCells(e, 0);
+            int cell1 = m.edgesCells(e, 1);
 
-        int k0 = 4*cell0;
-        int k1 = 4*cell1;
+            int k0 = 4*cell0;
+            int k1 = 4*cell1;
 
-        Eigen::VectorXd q_L = q.segment(k0, 4);
-        Eigen::VectorXd q_R = q.segment(k1, 4);
+            Eigen::VectorXd q_L = q.segment(k0, 4);
+            Eigen::VectorXd q_R = q.segment(k1, 4);
 
-        Eigen::VectorXd n(2);
-        n(0) = m.edgesNormalsX[e];
-        n(1) = m.edgesNormalsY[e];
+            Eigen::VectorXd n(2);
+            n(0) = m.edgesNormalsX[e];
+            n(1) = m.edgesNormalsY[e];
 
 
-        #ifndef RANS_MATRIX_FREE
-        {
-            const Eigen::MatrixXd Jacobian = calc_convective_jacobian(*edges_flux_functions[e], q_L, q_R) * m.edgesLengths[e];
+            {
+                const Eigen::MatrixXd Jacobian = calc_convective_jacobian(*edges_flux_functions[e], q_L, q_R) * m.edgesLengths[e];
 
-            // Set jacobian elements
-            for (int i=0; i<4; ++i) {
-                for (int j=0; j<4; ++j) {
-                    RhoMatrix.coeffRef(k0+i, k0+j) += Jacobian(i, j);
-                    RhoMatrix.coeffRef(k0+i, k1+j) += Jacobian(i, j+4);
+                // Set jacobian elements
+                for (int i=0; i<4; ++i) {
+                    for (int j=0; j<4; ++j) {
+                        RhoMatrix.coeffRef(k0+i, k0+j) += Jacobian(i, j);
+                        RhoMatrix.coeffRef(k0+i, k1+j) += Jacobian(i, j+4);
 
-                    if (edges_flux_functions[e]->two_sided) {
-                        RhoMatrix.coeffRef(k1+i, k0+j) += Jacobian(i+4, j);
-                        RhoMatrix.coeffRef(k1+i, k1+j) += Jacobian(i+4, j+4);
+                        if (edges_flux_functions[e]->two_sided) {
+                            RhoMatrix.coeffRef(k1+i, k0+j) += Jacobian(i+4, j);
+                            RhoMatrix.coeffRef(k1+i, k1+j) += Jacobian(i+4, j+4);
+                        }
                     }
                 }
             }
         }
-        #endif
-    }
 
-    // Also fill bcs
-    #pragma omp parallel for
-    for (int ci=m.nRealCells; ci<m.cellsAreas.size(); ++ci) {
-        int k = 4*ci;
+        // Also fill bcs
+        #pragma omp parallel for
+        for (int ci=m.nRealCells; ci<m.cellsAreas.size(); ++ci) {
+            int k = 4*ci;
 
-        #ifndef RANS_MATRIX_FREE
-        for (int i=0; i<4; ++i) {
-            for (int j=0; j<4; ++j) {
-                RhoMatrix.coeffRef(k+i, k+j) = 0;
+            for (int i=0; i<4; ++i) {
+                for (int j=0; j<4; ++j) {
+                    RhoMatrix.coeffRef(k+i, k+j) = 0;
+                }
+                RhoMatrix.coeffRef(k+i, k+i) = 1;
             }
-            RhoMatrix.coeffRef(k+i, k+i) = 1;
         }
-        #endif
-    }
+    #endif
 
 
 }
