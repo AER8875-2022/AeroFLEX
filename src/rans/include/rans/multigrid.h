@@ -13,11 +13,13 @@
 */
 #pragma once
 #include <rans/solver.h>
+#include <rans/post.h>
 #include <atomic>
 #include <algorithm>
 #include <thread>
 
 #include <common_aeroflex.hpp>
+
 
 namespace rans {
 
@@ -58,6 +60,11 @@ multigrid<solverType>::multigrid(std::vector<mesh> ms, Settings &settings, GUIHa
         solvers[solvers.size()-1].set_second_order(settings.second_order);
         solvers[solvers.size()-1].set_gradient_scheme(settings.gradient_scheme);
         solvers[solvers.size()-1].set_limiter_k(settings.limiter_k);
+
+        if (settings.airfoil_name != "") {
+            auto& mi = solvers[solvers.size()-1].get_mesh();
+            mi.compute_wall_dist(settings.airfoil_name);
+        }
     }
 
     #ifdef RANS_DEBUG
@@ -320,6 +327,14 @@ implicitSolver& multigrid<implicitSolver>::run(const bool reinit) {
         }
 
         int state = run_solver(solvers[i]);
+
+        if (settings.airfoil_name != "") {
+            wallProfile wp = get_wall_profile(solvers[i], settings.airfoil_name);
+            std::cout << "\nWall profile results on " << settings.airfoil_name << ":\n";
+            std::cout << " - CD = " << wp.cd << "\n";
+            std::cout << " - CL = " << wp.cl << "\n";
+            std::cout << " - CM = " << wp.cm << "\n" << std::endl;
+        }
 
         if (state || gui.signal.stop) return solvers[i];
     }

@@ -174,6 +174,8 @@ Settings parse(int argc, char **argv, std::string compiled_file) {
                         data.gradient_scheme = prop_i;
                     } else if (property == "limiter_k") {
                         data.limiter_k = std::stod(prop_i);
+                    } else if (property == "airfoil_name") {
+                        data.airfoil_name = prop_i;
                     } else {
                         std::cout << "\033[0;33m";
                         std::cout << "Warning, skipped unknown property " + property;
