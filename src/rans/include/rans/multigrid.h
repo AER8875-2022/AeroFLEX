@@ -47,8 +47,8 @@ public:
 };
 
 template<class solverType>
-multigrid<solverType>::multigrid(std::vector<mesh> ms, Settings &settings, GUIHandler &gui, std::vector<double> &residuals, std::atomic<int> &iters) 
-: gui(gui), settings(settings), residuals(residuals), iters(iters) 
+multigrid<solverType>::multigrid(std::vector<mesh> ms, Settings &settings, GUIHandler &gui, std::vector<double> &residuals, std::atomic<int> &iters)
+: gui(gui), settings(settings), residuals(residuals), iters(iters)
 {
 
     solvers.reserve(ms.size());
@@ -251,7 +251,7 @@ int multigrid<implicitSolver>::run_solver(
 
         err /= err_0;
 
-        
+
         //cfl = std::max(settings.start_cfl, std::min(settings.max_cfl, cfl * err_last / err));
         cfl = std::min(settings.start_cfl + (i+1)*settings.slope_cfl, settings.max_cfl);
 
@@ -277,7 +277,6 @@ explicitSolver& multigrid<explicitSolver>::run(const bool reinit) {
     solvers[0].refill_bcs();
 
     for (uint i=0; i<solvers.size(); ++i) {
-        iters = 0;
         std::fill(residuals.begin(), residuals.end(), 0.0);
 
         // Multigrid loop
@@ -310,7 +309,6 @@ implicitSolver& multigrid<implicitSolver>::run(const bool reinit) {
     solvers[0].refill_bcs();
 
     for (uint i=0; i<solvers.size(); ++i) {
-        iters = 0;
         std::fill(residuals.begin(), residuals.end(), 0.0);
 
         // Multigrid loop
