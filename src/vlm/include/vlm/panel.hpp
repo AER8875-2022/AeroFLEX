@@ -49,6 +49,9 @@ class panel {
   /** @brief Vector holding the IDs of the panel's nodes */
   std::vector<int> nodeIDs;
 
+  /** @brief Reference to nodes */
+  std::vector<Vector3d> &nodes;
+
   /** @brief Area of the panel */
   double area;
 
@@ -62,16 +65,15 @@ class panel {
   std::vector<geom::edgeLine> edges;
 
 public:
-  /** @param nodeIDs IDs of the nodes defining the panel */
-  panel(const std::vector<int> &nodeIDs);
-
-  /** @brief Method that updates the geometry of the panel from moved nodes
+  /** @param nodeIDs IDs of the nodes defining the panel
    *  @param nodes Nodes of the mesh */
-  void updateGeometry(const std::vector<Vector3d> &nodes);
+  panel(const std::vector<int> &nodeIDs, std::vector<Vector3d> &nodes);
 
-  /** @brief Method that initializes the geometry of the panel
-   *  @param nodes Nodes of the mesh */
-  void initialize(const std::vector<Vector3d> &nodes);
+  /** @brief Method that updates the geometry of the panel from moved nodes */
+  void updateGeometry();
+
+  /** @brief Method that initializes the geometry of the panel */
+  void initialize();
 
   /** @brief Getter method for nodeIDs */
   std::vector<int> get_nodeIDs() const;
@@ -89,20 +91,18 @@ public:
   std::vector<geom::edgeLine> get_edges() const;
 
 private:
-  /** @brief Method that computes the center of the panel
-   *  @param nodes Nodes of the mesh */
-  void computeCenter(const std::vector<Vector3d> &nodes);
+  /** @brief Method that computes the center of the panel */
+  void computeCenter();
 
-  /** @brief Method that computes the vector normal to the panel
-   *  @param nodes Nodes of the mesh */
-  void computeNormal(const std::vector<Vector3d> &nodes);
+  /** @brief Method that computes the vector normal to the panel */
+  void computeNormal();
 
-  /** @brief Method that computes the area of the panel
-   *  @param nodes Nodes of the mesh */
-  void computeArea(const std::vector<Vector3d> &nodes);
+  /** @brief Method that computes the area of the panel */
+  void computeArea();
 
   friend class element::vortexRing;
   friend class element::doubletPanel;
+  friend class surface::wingStation;
 };
 
 } // namespace geom
@@ -142,55 +142,46 @@ class vortexRing {
 public:
   /** @param globalIndex Unique global index of the current element
    *  @param nodeIDs Nodes defining the element
+   *  @param nodes Nodes of the mesh
    *  @param gamma Strength of the vortices bouding the ring */
-  vortexRing(const int globalIndex, const std::vector<int> &nodeIDs,
+  vortexRing(const int globalIndex, const std::vector<int> &nodeIDs, std::vector<Vector3d> &nodes,
              const double gamma);
 
   /** @brief Method initializing the element's geometry
-   *  @param nodes Nodes of the mesh
    *  @param sim Simulation parameters */
-  void initialize(const std::vector<Vector3d> &nodes,
-                  const input::simParam &sim);
+  void initialize(const input::simParam &sim);
 
   /** @brief Method computing the coordinates where to forces are acting
-   *  @param nodes Nodes of the mesh
    *  @return Coordinates of the force acting point */
-  Vector3d forceActingPoint(const std::vector<Vector3d> &nodes) const;
+  Vector3d forceActingPoint() const;
 
   /** @brief Method computing the length of the trailing edge of the ring
-   *  @param nodes Nodes of the mesh
    *  @return Vector defining the trailing edge of the ring */
-  Vector3d leadingEdgeDl(const std::vector<Vector3d> &nodes);
+  Vector3d leadingEdgeDl();
 
   /** @brief Method computing the influence of the current vortex ring on a
    * collocation point
    *  @param collocationPoint Point in tridimensional space
-   *  @param nodes Nodes of the mesh
    *  @return Induced velocity vector at collocation point */
-  Vector3d influence(const Vector3d &collocationPoint,
-                     const std::vector<Vector3d> &nodes) const;
+  Vector3d influence(const Vector3d &collocationPoint) const;
 
   /** @brief Method computing the streamwise influence (only) of the current
    * vortex ring on a collocation point
    *  @param collocationPoint Point in tridimensional space
-   *  @param nodes Nodes of the mesh
    *  @return Induced velocity vector at collocation point */
-  Vector3d streamInfluence(const Vector3d &collocationPoint,
-                           const std::vector<Vector3d> &nodes) const;
+  Vector3d streamInfluence(const Vector3d &collocationPoint) const;
 
   /** @brief Method updating the geometry of the current element based on new
-   * moved nodes
-   *  @param nodes Nodes of the mesh */
-  void updateGeometry(const std::vector<Vector3d> &nodes);
+   * moved nodes */
+  void updateGeometry();
 
   /** @brief Saves and updates the strength of the current vortex ring
    *  @param gamma Strength to be saved to the current element */
   void updateGamma(const double gamma);
 
   /** @brief Method computing the collocation point corrected for high anlges of
-   * attack
-   *  @param nodes Nodes of the mesh */
-  void computeCollocationPoint(const std::vector<Vector3d> &nodes);
+   * attack */
+  void computeCollocationPoint();
 
   /** @brief Getter method for area */
   double get_area() const;
@@ -240,17 +231,14 @@ class doubletPanel {
   geom::panel panel;
 
 public:
-  doubletPanel(const int globalIndex, const std::vector<int> &nodeIDs,
+  doubletPanel(const int globalIndex, const std::vector<int> &nodeIDs, std::vector<Vector3d> &nodes,
                const double sigma);
-  void initialize(const std::vector<Vector3d> &nodes,
-                  const input::simParam &sim);
-  Vector3d influence(const Vector3d &collocationPoint,
-                     const std::vector<Vector3d> &nodes) const;
-  void updateGeometry(const std::vector<Vector3d> &nodes);
-  void LocalCoordinate(const std::vector<Vector3d> &nodes);
+  void initialize(const input::simParam &sim);
+  Vector3d influence(const Vector3d &collocationPoint) const;
+  void updateGeometry();
+  void LocalCoordinate();
   void
-  updateNodes(const std::vector<Vector3d>
-                  &nodes); // to create later updating/projecting the position
+  updateNodes(const std::vector<Vector3d> &nodes); // to create later updating/projecting the position
                            // of the node onto the mean of the panel (co-planor
                            // panel in the localcoordinates)
   double get_area() const;

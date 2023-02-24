@@ -172,7 +172,7 @@ void database::table::generateFromPolar(const std::string &polar,
   parser.compile(polar, expression);
 
   // Generating table with multiple aoa
-  for (x = -10.; x <= 50.; x += 1.) {
+  for (x = -15.; x <= 50.; x += 0.1) {
     const double cli = expression.value();
     alpha.push_back(x);
     cl.push_back(cli);

@@ -91,6 +91,8 @@ public:
   std::vector<double> &residuals;
 
 public:
+  /** @param iter Iteration counter
+   *  @param residuals Iteration residuals vector */
   steady(std::atomic<int> &iter, std::vector<double> &residuals);
 
   /** @brief Method to initialize the solver object
@@ -145,6 +147,8 @@ class steady : public linear::steady {
   database::table database;
 
 public:
+  /** @param iter Iteration counter
+   *  @param residuals Iteration residuals vector */
   steady(std::atomic<int> &iter, std::vector<double> &residuals);
 
   /** @brief Method to initialize the solver object
