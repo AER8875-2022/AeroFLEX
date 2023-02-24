@@ -123,6 +123,9 @@ public:
         return *this;
     }
 
+
+    boundary_variables get_boundary_variables();
+
     void set_bcs(std::map<std::string, boundary_condition> bcs_in);
 
     void set_cfl(const double& cfl_in);
@@ -550,21 +553,29 @@ void solver::calc_limiters(const Eigen::VectorXd& q_) {
 
 
 
+boundary_variables solver::get_boundary_variables() {
+    // First, try to find the farfield / inlet condition
+    boundary_variables vars_far;
+
+    for (uint b=0; b<m.boundaryEdges.size(); ++b) {
+        if (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "farfield") {
+            vars_far = boundary_vars[b];
+            break;
+        } else if (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "inlet-outlet") {
+            vars_far = boundary_vars[b];
+            break;
+        }
+    }
+    return vars_far;
+}
+
+
+
 void solver::init() {
     // Init from the farfield / inlet condition
 
     // First, try to find the farfield / inlet condition
-    boundary_variables vars_init;
-
-    for (uint b=0; b<m.boundaryEdges.size(); ++b) {
-        if (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "farfield") {
-            vars_init = boundary_vars[b];
-            break;
-        } else if (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "inlet-outlet") {
-            vars_init = boundary_vars[b];
-            break;
-        }
-    }
+    boundary_variables vars_init = get_boundary_variables();
     int N = m.nRealCells;
 
     auto [rho, rhou, rhov, rhoe] = vars_init.get_conservative(g);
@@ -585,17 +596,7 @@ double solver::get_uniform_residual() {
     // Get residual assuming a uniform flow field corresponding to vars_far
 
     // First, try to find the farfield / inlet condition
-    boundary_variables vars_far;
-
-    for (uint b=0; b<m.boundaryEdges.size(); ++b) {
-        if (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "farfield") {
-            vars_far = boundary_vars[b];
-            break;
-        } else if (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "inlet-outlet") {
-            vars_far = boundary_vars[b];
-            break;
-        }
-    }
+    boundary_variables vars_far = get_boundary_variables();
 
     // Reset qW to zero
     #pragma omp parallel for
