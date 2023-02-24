@@ -93,12 +93,12 @@ void database::table::importFromFile(const std::string &path,
     }
 
     // Ignoring comments
-    if (line[0].compare("#") == 0) {
+    if (!line[0].compare("#")) {
       continue;
     }
 
     // Airfoil declaration
-    if (line[0].compare("END") == 0 && line[1].compare("AIRFOIL") == 0) {
+    if (!line[0].compare("END") && !line[1].compare("AIRFOIL")) {
       isAirfoil = false;
 
       airfoils.insert(
@@ -117,14 +117,14 @@ void database::table::importFromFile(const std::string &path,
       cd.push_back(std::stod(line[2]));
       cmy.push_back(std::stod(line[3]));
     }
-    if (line[0].compare("AIRFOIL") == 0) {
+    if (!line[0].compare("AIRFOIL")) {
       isAirfoil = true;
       airfoilName = line[1];
       continue;
     }
 
     // Location declaration
-    if (line[0].compare("END") == 0 && line[1].compare("SURFACE") == 0) {
+    if (!line[0].compare("END") && !line[1].compare("SURFACE")) {
       isLocation = false;
 
       sectionAirfoils.insert({surfaceID, sections});
@@ -138,7 +138,7 @@ void database::table::importFromFile(const std::string &path,
       sections.push_back(line[0]);
       spanLocs.push_back(std::stod(line[1]));
     }
-    if (line[0].compare("SURFACE") == 0) {
+    if (!line[0].compare("SURFACE")) {
       isLocation = true;
       surfaceID = std::stoi(line[1]);
       continue;
@@ -172,7 +172,7 @@ void database::table::generateFromPolar(const std::string &polar,
   parser.compile(polar, expression);
 
   // Generating table with multiple aoa
-  for (x = -10.; x <= 50.; x += 1.) {
+  for (x = -15.; x <= 50.; x += 0.1) {
     const double cli = expression.value();
     alpha.push_back(x);
     cl.push_back(cli);

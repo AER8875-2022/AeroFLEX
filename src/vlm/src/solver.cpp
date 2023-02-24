@@ -11,20 +11,20 @@ using namespace vlm;
 using namespace solver;
 using namespace Eigen;
 
-solver::base::base(const input::solverParam &solvP, const model &object)
-    : solvP(solvP),
-      lhs(MatrixXd::Zero(
-          object.vortexRings.size() + object.doubletPanels.size(),
-          object.vortexRings.size() + object.doubletPanels.size())),
-      rhs(VectorXd::Zero(object.vortexRings.size() +
-                         object.doubletPanels.size())),
-      DoubletMatrixINF(MatrixXd::Zero(object.doubletPanels.size(),
-                                      object.doubletPanels.size())) {}
+linear::steady::steady(std::atomic<int> &iter, std::vector<double> &residuals)
+    : iter(iter), residuals(residuals) {}
 
-// -------------------------------------------
-
-linear::steady::steady(const input::solverParam &solvP, const model &object)
-    : base(solvP, object) {}
+void linear::steady::initialize(const input::solverParam &solvP,
+                                const model &object, const database::table &) {
+  this->solvP = solvP;
+  this->lhs =
+      MatrixXd::Zero(object.vortexRings.size() + object.doubletPanels.size(),
+                     object.vortexRings.size() + object.doubletPanels.size());
+  this->rhs =
+      VectorXd::Zero(object.vortexRings.size() + object.doubletPanels.size());
+  this->DoubletMatrixINF =
+      VectorXd::Zero(object.doubletPanels.size(), object.doubletPanels.size());
+}
 
 void linear::steady::solve(model &object) {
   // Building wake
@@ -54,6 +54,9 @@ void linear::steady::solve(model &object) {
 
   // Exporting solution
   exportSolution(object);
+
+  residuals.push_back(system.error());
+  iter++;
 }
 
 void linear::steady::saveSolution(model &object, const VectorXd &gamma) {
@@ -80,10 +83,9 @@ void linear::steady::computeInducedDrag(model &object) {
   for (auto &influencedWake : object.wakePanels) {
     Vector3d v = Vector3d::Zero();
     for (auto &influencingWake : object.wakePanels) {
-      v += influencingWake.influence(influencedWake.get_collocationPoint(),
-                                     object.wakeNodes);
+      v += influencingWake.influence(influencedWake.get_collocationPoint());
     }
-    Vector3d dl = influencedWake.leadingEdgeDl(object.wakeNodes);
+    Vector3d dl = influencedWake.leadingEdgeDl();
     drag -= 0.5 * object.sim.rho * influencedWake.get_gamma() *
             v.dot(influencedWake.get_normal() * dl.norm());
   }
@@ -98,11 +100,11 @@ void linear::steady::computeForces(model &object) {
   // Computing forces at each wing station
 #pragma omp parallel for
   for (auto &station : object.wingStations) {
-    station.computeForces(object.sim, object.nodes, object.vortexRings);
+    station.computeForces(object.sim);
   }
   // Updating global forces
   for (auto &wing : object.wings) {
-    wing.computeForces(object.sim, object.wingStations);
+    wing.computeForces(object.sim);
     object.cl += wing.get_cl() * wing.get_area() / object.sim.sref;
     object.cm += wing.get_cm() * wing.get_area() / object.sim.sref;
   }
@@ -125,7 +127,7 @@ void linear::steady::buildLHS(const model &object) {
       // influence Vortex -> Vortex
       for (auto &influencingVortex : object.vortexRings) {
         auto v1 = influencingVortex.influence(
-            influencedVortex.get_collocationPoint(), object.nodes);
+            influencedVortex.get_collocationPoint());
         lhs(influencedVortex.get_globalIndex(),
             influencingVortex.get_globalIndex()) =
             v1.dot(influencedVortex.get_normal());
@@ -133,8 +135,7 @@ void linear::steady::buildLHS(const model &object) {
       // influence Doublets -> Vortex
       for (auto &influencingDoublets : object.doubletPanels) {
         auto v2 = influencingDoublets.influence(
-            influencedVortex.get_collocationPoint(),
-            object.nodes); // modifier la fonction doublets.influence dans
+            influencedVortex.get_collocationPoint()); // modifier la fonction doublets.influence dans
                            // panel.cpp
         lhs(influencedVortex.get_globalIndex(),
             size_Vortex + influencingDoublets.get_globalIndex()) =
@@ -147,8 +148,7 @@ void linear::steady::buildLHS(const model &object) {
       // influence Vortex -> Doublets
       for (auto &influencingVortex : object.vortexRings) {
         auto v3 = influencingVortex.influence(
-            influencedDoublets.get_center(),
-            object.nodes); // modifier la fonction doublets.influence dans
+            influencedDoublets.get_center()); // modifier la fonction doublets.influence dans
                            // panel.cpp
 
         lhs(size_Vortex + influencedDoublets.get_globalIndex(),
@@ -158,8 +158,7 @@ void linear::steady::buildLHS(const model &object) {
       // influence Doublets -> Doublets
       for (auto &influencingDoublets : object.doubletPanels) {
         auto v4 = influencingDoublets.influence(
-            influencedDoublets.get_center(),
-            object.nodes); // modifier la fonction doublets.influence dans
+            influencedDoublets.get_center()); // modifier la fonction doublets.influence dans
                            // panel.cpp
         lhs(size_Vortex + influencedDoublets.get_globalIndex(),
             size_Vortex + influencingDoublets.get_globalIndex()) =
@@ -175,7 +174,7 @@ void linear::steady::buildLHS(const model &object) {
     for (auto &influencedVortex : object.vortexRings) {
       for (auto &influencingWake : object.wakePanels) {
         auto v = influencingWake.influence(
-            influencedVortex.get_collocationPoint(), object.wakeNodes);
+            influencedVortex.get_collocationPoint());
         lhs(influencedVortex.get_globalIndex(),
             influencingWake.get_globalIndex()) +=
             v.dot(influencedVortex.get_normal());
@@ -184,8 +183,7 @@ void linear::steady::buildLHS(const model &object) {
 #pragma omp for
     for (auto &influencedDoublets : object.doubletPanels) {
       for (auto &influencingWake : object.wakePanels) {
-        auto v = influencingWake.influence(influencedDoublets.get_center(),
-                                           object.wakeNodes);
+        auto v = influencingWake.influence(influencedDoublets.get_center());
         lhs(size_Vortex + influencedDoublets.get_globalIndex(),
             influencingWake.get_globalIndex()) +=
             v.dot(influencedDoublets.get_normal());
@@ -221,9 +219,23 @@ void linear::steady::buildRHS(const model &object) {
 
 // -------------------------------------------
 
-nonlinear::steady::steady(const input::solverParam &solvP, const model &object,
-                          const database::table database)
-    : linear::steady(solvP, object), database(database) {}
+nonlinear::steady::steady(std::atomic<int> &iter,
+                          std::vector<double> &residuals)
+    : linear::steady(iter, residuals) {}
+
+void nonlinear::steady::initialize(const input::solverParam &solvP,
+                                   const model &object,
+                                   const database::table &database) {
+  this->solvP = solvP;
+  this->lhs =
+      MatrixXd::Zero(object.vortexRings.size() + object.doubletPanels.size(),
+                     object.vortexRings.size() + object.doubletPanels.size());
+  this->rhs =
+      VectorXd::Zero(object.vortexRings.size() + object.doubletPanels.size());
+  this->DoubletMatrixINF =
+      VectorXd::Zero(object.doubletPanels.size(), object.doubletPanels.size());
+  this->database = database;
+}
 
 void nonlinear::steady::buildRHS(const model &object) {
   VectorXd rhs_VLM = VectorXd::Zero(object.vortexRings.size());
@@ -261,12 +273,11 @@ void nonlinear::steady::solve(model &object) {
   buildLHS(object);
   system.compute(lhs);
 
-  // Initializing iterations
-  double residual = solvP.tolerance;
-  unsigned int iteration = 1;
+  // Initializing iteration
+  double residual = 2*solvP.tolerance;
 
   // Main solving loop
-  while (residual >= solvP.tolerance && iteration < 100) {
+  while (residual > solvP.tolerance && iter <= solvP.max_iter) {
     // Step 1 : Solving VLM
     buildRHS(object);
     VectorXd gamma = system.solve(rhs);
@@ -276,9 +287,10 @@ void nonlinear::steady::solve(model &object) {
     iterateLift(object);
     // Step 2: One iteration of aoa correction
     residual = iterate(object);
-    std::cout << "Iteration " << iteration << std::endl;
+    std::cout << "Iteration " << iter << std::endl;
     std::cout << "\t Residual = " << residual << std::endl;
-    iteration++;
+    residuals.push_back(residual);
+    iter++;
   }
   // Compute viscous forces
   computeForces(object);
@@ -291,12 +303,11 @@ void nonlinear::steady::solve(model &object) {
 double nonlinear::steady::iterate(model &object) {
   double residual = 0.0;
 
+#pragma omp parallel for reduction(+ : residual)
   for (auto &wing : object.wings) {
-    double root =
-        object.wingStations[wing.get_stationIDs().front()].get_spanLoc();
-
-    // #pragma omp parallel for reduction(+ : residual)
     for (auto stationID : wing.get_stationIDs()) {
+      double root =
+          object.wingStations[wing.get_stationIDs().front()].get_spanLoc();
       auto &station = object.wingStations[stationID];
       double spanLoc = (station.spanLoc - root) / wing.get_span();
 
@@ -316,8 +327,8 @@ double nonlinear::steady::iterate(model &object) {
       };
 
       // Step 5 : Applying aoa correction
-      station.updateLocalAoa((cl_visc - cl_inv) / VLM_CL_ALPHA_DEG,
-                             object.nodes, object.vortexRings);
+      double dalpha = solvP.relaxation * (cl_visc - cl_inv) / VLM_CL_ALPHA_DEG;
+      station.updateLocalAoa(dalpha);
 
       residual += (cl_visc - cl_inv) / cl_visc * (cl_visc - cl_inv) / cl_visc;
     }
@@ -330,7 +341,7 @@ void nonlinear::steady::iterateLift(model &object) {
   object.cl = 0.0;
 #pragma omp parallel for
   for (auto &station : object.wingStations) {
-    station.computeForces(object.sim, object.nodes, object.vortexRings);
+    station.computeForces(object.sim);
   }
 }
 
@@ -358,14 +369,14 @@ void nonlinear::steady::computeForces(model &object) {
       // Lever used to transfer to 2D moment to 3D moment at specified origin
       double lever =
           object.sim.origin(0) -
-          station.forceActingPoint(object.nodes, object.vortexRings)(0);
+          station.forceActingPoint()(0);
       // Updating station's force coefficients
       station.cl = cl;
       station.cd = cd;
       station.cm(1) = cmy + lever / station.chord * cl;
     }
     // Updating global forces
-    wing.computeForces(object.sim, object.wingStations);
+    wing.computeForces(object.sim);
     object.cl += wing.get_cl() * wing.get_area() / object.sim.sref;
     object.cd += wing.get_cd() * wing.get_area() / object.sim.sref;
     object.cm += wing.get_cm() * wing.get_area() / object.sim.sref;
@@ -373,22 +384,3 @@ void nonlinear::steady::computeForces(model &object) {
 }
 
 // -------------------------------------------
-
-// -------------------------------------------
-
-solver::base *solver::initializeSolver(const input::solverParam &solvP,
-                                       const model &object,
-                                       const database::table &database) {
-  vlm::solver::base *solver;
-  if (!solvP.type.compare("LINEAR")) {
-    static vlm::solver::linear::steady temp(solvP, object);
-    solver = &temp;
-  } else if (!solvP.type.compare("NONLINEAR")) {
-    static vlm::solver::nonlinear::steady temp(solvP, object, database);
-    solver = &temp;
-  } else {
-    std::cerr << "\033[1;31m==>ERROR: Unknown VLM solver \033[0m" << std::endl;
-    exit(0);
-  }
-  return (solver);
-}

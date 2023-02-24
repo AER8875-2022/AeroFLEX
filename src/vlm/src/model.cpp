@@ -7,9 +7,11 @@
 using namespace vlm;
 using namespace Eigen;
 
-model::model(const input::meshData &mesh, const input::simParam &sim,
-             const input::ioParam &io)
-    : sim(sim), io(io), cl(0.0), cd(0.0), cm(Vector3d::Zero()) {
+void model::initialize(const input::meshData &mesh, const input::simParam &sim,
+                       const input::ioParam &io) {
+  // Initializing inputs
+  this->sim = sim;
+  this->io = io;
   // Allocating memory for each objects
   nodes.reserve(mesh.nodes.size());
   vortexRings.reserve(mesh.vortexIDs.size());
@@ -20,33 +22,33 @@ model::model(const input::meshData &mesh, const input::simParam &sim,
   wakeNodes.reserve(2 * mesh.stationIDs.size());
   wakePanels.reserve(mesh.stationIDs.size());
   // Creating model from mesh object
-  initialize(mesh);
+  initializeMesh(mesh);
 }
 
 void model::initializeWake(const double wakeLength) {
   for (auto &station : wingStations) {
-    station.generateWake(wakeLength, nodes, vortexRings, sim, wakeNodes,
+    station.generateWake(wakeLength, sim, wakeNodes,
                          wakePanels);
   }
 }
 
-void model::initialize(const input::meshData &mesh) {
+void model::initializeMesh(const input::meshData &mesh) {
   build(mesh);
   for (auto &wing : wings) {
-    wing.initialize(nodes, wingStations, vortexRings, sim);
+    wing.initialize(sim);
   }
   for (auto &patch : patches) {
-    patch.initialize(nodes, doubletPanels, sim);
+    patch.initialize(sim);
   }
 }
 
 void model::updateGeometry(const std::vector<Vector3d> &nodes) {
   this->nodes = nodes;
   for (auto &wing : wings) {
-    wing.updateGeometry(nodes, wingStations, vortexRings);
+    wing.updateGeometry();
   }
   for (auto &patch : patches) {
-    patch.updateGeometry(nodes, doubletPanels);
+    patch.updateGeometry();
   }
 }
 
@@ -60,25 +62,25 @@ void model::build(const input::meshData &mesh) {
   for (auto &[key, node] : mesh.nodes) {
     nodes.push_back(node);
   }
-  // Building wings
-  for (auto &[key, ids] : mesh.wingIDs) {
-    wings.push_back(surface::wing(key, ids));
-  }
-  // Building patches
-  for (auto &[key, ids] : mesh.patchIDs) {
-    patches.push_back(surface::patch(key, ids));
-  }
-  // Building stations
-  for (auto &[key, ids] : mesh.stationIDs) {
-    wingStations.push_back(surface::wingStation(key, ids));
-  }
   // Building vortex rings
   for (auto &[key, ids] : mesh.vortexIDs) {
-    vortexRings.push_back(element::vortexRing(key, ids, 1.0));
+    vortexRings.push_back(element::vortexRing(key, ids, nodes, 1.0));
   }
   // Building doublet panels
   for (auto &[key, ids] : mesh.doubletIDs) {
-    doubletPanels.push_back(element::doubletPanel(key, ids, 1.0));
+    doubletPanels.push_back(element::doubletPanel(key, ids, nodes, 1.0));
+  }
+  // Building stations
+  for (auto &[key, ids] : mesh.stationIDs) {
+    wingStations.push_back(surface::wingStation(key, ids, vortexRings));
+  }
+  // Building wings
+  for (auto &[key, ids] : mesh.wingIDs) {
+    wings.push_back(surface::wing(key, ids, wingStations));
+  }
+  // Building patches
+  for (auto &[key, ids] : mesh.patchIDs) {
+    patches.push_back(surface::patch(key, ids, doubletPanels));
   }
 }
 

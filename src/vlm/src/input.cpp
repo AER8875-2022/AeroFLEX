@@ -64,6 +64,10 @@ input::importConfigFile(const std::string path) {
   solvP.tolerance = file.Get<double>("SOLVER", "TOLERANCE", 1e-15);
   solvP.interpolation = file.Get<std::string>("SOLVER", "INTERPOLATION_TYPE",
                                               std::string("LAGRANGE"));
+  solvP.linearSolver =
+      file.Get<std::string>("SOLVER", "LINEAR_SOLVER", std::string("BICGSTAB"));
+  solvP.relaxation = file.Get<double>("SOLVER", "RELAXATION", 1.0);
+  solvP.max_iter = file.Get<int>("SOLVER", "MAX_ITER", 100);
 
   return {io, sim, solvP};
 }
@@ -141,19 +145,19 @@ meshData input::importMeshFile(const ioParam &names) {
     }
 
     // Ignoring comments
-    if (line[0].compare("#") == 0) {
+    if (!line[0].compare("#")) {
       continue;
     }
 
     // BEGINING LINE PARSING
-    if (line[0].compare("NODE") == 0) {
+    if (!line[0].compare("NODE")) {
       int nodeID = std::stoi(line[1]);
       Vector3d coord = {std::stod(line[2]), std::stod(line[3]),
                         std::stod(line[4])};
       // Adding to corresponding map
       mesh.nodes[nodeID] = coord;
 
-    } else if (line[0].compare("VORTEX") == 0) {
+    } else if (!line[0].compare("VORTEX")) {
       int vortexID = std::stoi(line[1]);
       std::vector<int> nodeIDs;
       for (size_t i = 2; i != line.size(); i++) {
@@ -162,7 +166,7 @@ meshData input::importMeshFile(const ioParam &names) {
       // Adding to corresponding map
       mesh.vortexIDs[vortexID] = nodeIDs;
 
-    } else if (line[0].compare("DOUBLET") == 0) {
+    } else if (!line[0].compare("DOUBLET")) {
       int doubletID = std::stoi(line[1]);
       std::vector<int> nodeIDs;
       for (size_t i = 2; i != line.size(); i++) {
@@ -171,7 +175,7 @@ meshData input::importMeshFile(const ioParam &names) {
       // Adding to corresponding map
       mesh.doubletIDs[doubletID] = nodeIDs;
 
-    } else if (line[0].compare("WINGSTATION") == 0) {
+    } else if (!line[0].compare("WINGSTATION")) {
       int stationID = std::stoi(line[1]);
       std::vector<int> vortexIDs;
       for (size_t i = 2; i != line.size(); i++) {
@@ -180,8 +184,7 @@ meshData input::importMeshFile(const ioParam &names) {
       // Adding to corresponding map
       mesh.stationIDs[stationID] = vortexIDs;
 
-    } else if (line[0].compare("WING") == 0 ||
-               line[0].compare("LIFTINGSURFACE") == 0) {
+    } else if (!line[0].compare("WING") || !line[0].compare("LIFTINGSURFACE")) {
       int wingID = std::stoi(line[1]);
       std::vector<int> stationIDs;
       for (size_t i = 2; i != line.size(); i++) {
@@ -190,8 +193,8 @@ meshData input::importMeshFile(const ioParam &names) {
       // Adding to corresponding map
       mesh.wingIDs[wingID] = stationIDs;
 
-    } else if (line[0].compare("PATCH") == 0 ||
-               line[0].compare("NONLIFTINGSURFACE") == 0) {
+    } else if (!line[0].compare("PATCH") ||
+               !line[0].compare("NONLIFTINGSURFACE")) {
       int patchID = std::stoi(line[1]);
       std::vector<int> doubletIDs;
       for (size_t i = 2; i != line.size(); i++) {

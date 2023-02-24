@@ -1,5 +1,9 @@
 
-#include "vlm.hpp"
+#include "vlm/input.hpp"
+#include "vlm/model.hpp"
+#include "vlm/solver.hpp"
+#include "vlm/utils.hpp"
+#include <atomic>
 #include <iostream>
 
 int main(int argc, char **argv) {
@@ -42,32 +46,52 @@ int main(int argc, char **argv) {
   // INITIALIZING VLM MODEL
   // #############################
   std::cout << "==>Initializing vortex lattice model...";
-  vlm::model object(mesh, sim, io);
+  vlm::model object;
+  object.initialize(mesh, sim, io);
   std::cout << "\033[1;36mDone\033[0m" << std::endl;
 
   // #############################
   // INITIALIZING VISCOUS DATABASE
   // #############################
   database::table database;
+
   if (!solvP.type.compare("NONLINEAR")) {
     std::cout << "==>Initializing viscous database...";
     if (!sim.databaseFormat.compare("FILE")) {
       database.importFromFile(io.databaseFile, solvP);
-    }
-    else if (!sim.databaseFormat.compare("POLAR")) {
+    } else if (!sim.databaseFormat.compare("POLAR")) {
       database.generateFromPolar(sim.liftPolar, object, solvP);
     }
   }
+
   std::cout << "\033[1;36mDone\033[0m" << std::endl;
 
   // #############################
   // CALLING SOLVER
   // #############################
   std::cout << "==>Solving...\n";
-  auto solver = vlm::solver::initializeSolver(solvP, object, database);
+
+  std::atomic<int> iters = 0;
+  std::vector<double> residuals;
+
+  vlm::solver::base *solver;
+  vlm::solver::linear::steady linear(iters, residuals);
+  vlm::solver::nonlinear::steady nonlinear(iters, residuals);
+
+  if (!solvP.type.compare("LINEAR")) {
+    linear.initialize(solvP, object, database::table());
+    solver = &linear;
+  } else if (!solvP.type.compare("NONLINEAR")) {
+    nonlinear.initialize(solvP, object, database);
+    solver = &nonlinear;
+  } else {
+    std::cerr << "\033[1;31m==>ERROR: Unknown VLM solver \033[0m" << std::endl;
+    return 1;
+  }
+
   solver->solve(object);
   std::cout << "...\033[1;36mDone\033[0m" << std::endl;
-
   std::cout << "\n\033[1;32mSimulation done! \033[0m" << std::endl;
+
   return 0;
 }
