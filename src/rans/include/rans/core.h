@@ -117,6 +117,10 @@ public:
 
     solution(Eigen::VectorXd &q, gas &g) : q(q), g(g) {}
 
+    double gamma() const {
+        return g.gamma;
+    }
+
     double rho(const int& i) const {
         return q(4*i);
     }

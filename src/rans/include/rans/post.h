@@ -43,6 +43,10 @@ struct wallProfile {
     std::vector<wallEdge> edges;
     std::vector<double> cp;
 
+    double cd = 0.;
+    double cl = 0.;
+    double cm = 0.;
+
     void reserve(const uint& n) {
         edges.reserve(n);
         cp.reserve(n);
@@ -179,6 +183,10 @@ void save(
 
 wallProfile get_wall_profile(solver& solv, std::string patch_name) {
 
+    // First, get farfield conditions and compute infinity variables
+    boundary_variables vars_far = solv.get_boundary_variables();
+    const double p_inf = vars_far.p;
+    const double mach_inf = vars_far.mach;
 
     solution sol = solv.get_solution();
 
@@ -208,7 +216,15 @@ wallProfile get_wall_profile(solver& solv, std::string patch_name) {
 
             // Also calculate cp
             const double rho = sol.rho(cell);
-            const double rho = sol.rho(cell);
+            const double u = sol.u(cell);
+            const double v = sol.v(cell);
+            const double p = sol.p(cell);
+            const double umag = sqrt(u*u + v*v);
+            const double cs = sol.c(cell);
+            const double mach = umag / cs;
+            const double cp = 2./(sol.gamma()*mach_inf*mach_inf)*(p/p_inf - 1.);
+
+            wall.cp.push_back(cp);
         }
     }
 
