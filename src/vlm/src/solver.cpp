@@ -43,10 +43,10 @@ void linear::steady::solve(model &object) {
   buildLHS(object);
   buildRHS(object);
   // Solving
-  VectorXd gamma = system.solve(rhs);
+  VectorXd X = system.solve(rhs);
 
   // Saving solution to model for further uses
-  saveSolution(object, gamma);
+  saveSolution(object, X);
 
   // Computing forces
   computeForces(object);
@@ -59,18 +59,18 @@ void linear::steady::solve(model &object) {
   iter++;
 }
 
-void linear::steady::saveSolution(model &object, const VectorXd &gamma) {
+void linear::steady::saveSolution(model &object, const VectorXd &X) {
 #pragma omp parallel
   {
     // Saving gamma to vortex rings
 #pragma omp for
     for (auto &vortex : object.vortexRings) {
-      vortex.updateGamma(gamma[vortex.get_globalIndex()]);
+      vortex.updateGamma(X[vortex.get_globalIndex()]);
     }
 // Saving gamma to wake panels
 #pragma omp for
     for (auto &wake : object.wakePanels) {
-      wake.updateGamma(gamma[wake.get_globalIndex()]);
+      wake.updateGamma(X[wake.get_globalIndex()]);
     }
   }
 }
@@ -285,9 +285,9 @@ void nonlinear::steady::solve(model &object) {
   while (residual >= solvP.tolerance && iter <= solvP.max_iter) {
     // Step 1 : Solving VLM
     buildRHS(object);
-    VectorXd gamma = system.solve(rhs);
+    VectorXd X = system.solve(rhs);
     // Saving solution to model for further uses
-    saveSolution(object, gamma);
+    saveSolution(object, X);
     // Computing 3D lift coefficient
     iterateLift(object);
     // Step 2: One iteration of aoa correction

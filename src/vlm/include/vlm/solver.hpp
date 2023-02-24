@@ -62,8 +62,8 @@ protected:
 
   /** @brief Pure virtual function to save solution into the model
    *  @param object Model holding the VLM elements
-   *  @param gamma Vector holding the strengths of each vortex ring */
-  virtual void saveSolution(model &object, const VectorXd &gamma) = 0;
+   *  @param X Vector holding the strengths of each vortex ring(gamma) and strengths of each doublets*/
+  virtual void saveSolution(model &object, const VectorXd &X) = 0;
 
   /** @brief Pure virtual function to compute global induced drag
    *  @param object Model holding the VLM elements */
@@ -114,8 +114,8 @@ protected:
 
   /** @brief Method to save solution into the model
    *  @param object Model holding the VLM elements
-   *  @param gamma Vector holding the strengths of each vortex ring */
-  virtual void saveSolution(model &object, const VectorXd &gamma) override;
+   *  @param X Vector holding the strengths of each vortex ring(gamma) and strengths of each doublets*/
+  virtual void saveSolution(model &object, const VectorXd &X) override;
 
   /** @brief Method to compute global induced drag
    *  @param object Model holding the VLM elements */
