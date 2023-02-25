@@ -215,6 +215,11 @@ Vector3d doubletPanel::influence(const Vector3d &collocationPoint,
   return d;
 }
 
+Vector3d doubletPanel::ProjectingCollocation(const Vector3d &collocationPoint) const{
+  return {collocationPoint.dot(Localreference[0]), collocationPoint.dot(Localreference[1]),
+         collocationPoint.dot(Localreference[2])};
+}
+
 double doubletPanel::get_area() const { return panel.area; }
 
 Vector3d doubletPanel::get_normal() const { return panel.normal; }

@@ -47,11 +47,11 @@ void linear::steady::solve(model &object) {
 
   // Saving solution to model for further uses
   saveSolution(object, X);
-
+  
   // Computing forces
   computeForces(object);
   computeInducedDrag(object);
-
+  std::cout << "apres induced drag (debug)" << std::endl;
   // Exporting solution
   exportSolution(object);
 
@@ -135,8 +135,7 @@ void linear::steady::buildLHS(const model &object) {
       }
       // influence Doublets -> Vortex
       for (auto &influencingDoublets : object.doubletPanels) {
-        auto v2 = influencingDoublets.influence(
-            influencedVortex.get_collocationPoint(),
+        auto v2 = influencingDoublets.influence(influencingDoublets.ProjectingCollocation(influencedVortex.get_collocationPoint()),
             object.nodes); // modifier la fonction doublets.influence dans
                            // panel.cpp
         lhs(influencedVortex.get_globalIndex(),
@@ -161,7 +160,7 @@ void linear::steady::buildLHS(const model &object) {
       // influence Doublets -> Doublets
       for (auto &influencingDoublets : object.doubletPanels) {
         auto v4 = influencingDoublets.influence(
-            influencedDoublets.get_center(),
+            influencingDoublets.ProjectingCollocation(influencedDoublets.get_center()),
             object.nodes); // modifier la fonction doublets.influence dans
                            // panel.cpp
         lhs(size_Vortex + influencedDoublets.get_globalIndex(),

@@ -248,11 +248,12 @@ public:
                      const std::vector<Vector3d> &nodes) const;
   void updateGeometry(const std::vector<Vector3d> &nodes);
   void LocalCoordinate(const std::vector<Vector3d> &nodes);
-  void
-  updateNodes(const std::vector<Vector3d>
+  void updateNodes(const std::vector<Vector3d>
                   &nodes); // to create later updating/projecting the position
                            // of the node onto the mean of the panel (co-planor
                            // panel in the localcoordinates)
+  Vector3d ProjectingCollocation(const Vector3d &collocationPoint) const;
+  
   double get_area() const;
   Vector3d get_normal() const;
   Vector3d get_center() const;
