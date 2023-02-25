@@ -23,7 +23,7 @@ void linear::steady::initialize(const input::solverParam &solvP,
   this->rhs =
       VectorXd::Zero(object.vortexRings.size() + object.doubletPanels.size());
   this->DoubletMatrixINF =
-      VectorXd::Zero(object.doubletPanels.size(), object.doubletPanels.size());
+      MatrixXd::Zero(object.doubletPanels.size(), object.doubletPanels.size());
 }
 
 void linear::steady::solve(model &object) {
