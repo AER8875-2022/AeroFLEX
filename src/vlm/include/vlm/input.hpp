@@ -58,6 +58,28 @@ struct simParam {
    *  @param alpha Local angle of attack
    *  @return Local free stream vector */
   Vector3d freeStream(const double alpha) const;
+
+  /** @brief Method computing the stream flow orientation
+   *  @return Stream axis vector */
+  Vector3d streamAxis() const;
+
+  /** @brief Method computing the stream flow orientation
+   *  @param alpha Local angle of attack
+   *  @return Stream axis vector */
+  Vector3d streamAxis(const double alpha) const;
+
+  /** @brief Method computing the lift axis
+   *  @return Lift axis vector */
+  Vector3d liftAxis() const;
+
+  /** @brief Method computing the lift axis
+   *  @param alpha Local angle of attack
+   *  @return Lift axis vector */
+  Vector3d liftAxis(const double alpha) const;
+
+  /** @brief Method computing the dynamic pressure
+   *  @return Dynamic pressure value */
+  double dynamicPressure() const;
 };
 
 /** @brief Object holding input/output information */

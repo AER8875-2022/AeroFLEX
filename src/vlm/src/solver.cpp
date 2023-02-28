@@ -79,7 +79,7 @@ void linear::steady::computeInducedDrag(model &object) {
   Vector3d Qinf = object.sim.freeStream();
   double drag = 0.0;
   // Looping over wake panels
-#pragma omp parallel for
+#pragma omp parallel for reduction(- : drag)
   for (auto &influencedWake : object.wakePanels) {
     Vector3d v = Vector3d::Zero();
     for (auto &influencingWake : object.wakePanels) {
@@ -89,8 +89,7 @@ void linear::steady::computeInducedDrag(model &object) {
     drag -= 0.5 * object.sim.rho * influencedWake.get_gamma() *
             v.dot(influencedWake.get_normal() * dl.norm());
   }
-  object.cd += drag / (0.5 * object.sim.rho * Qinf.norm() * Qinf.norm() *
-                       object.sim.sref);
+  object.cd += drag / (object.sim.dynamicPressure() * object.sim.sref);
 }
 
 void linear::steady::computeForces(model &object) {
@@ -135,8 +134,9 @@ void linear::steady::buildLHS(const model &object) {
       // influence Doublets -> Vortex
       for (auto &influencingDoublets : object.doubletPanels) {
         auto v2 = influencingDoublets.influence(
-            influencedVortex.get_collocationPoint()); // modifier la fonction doublets.influence dans
-                           // panel.cpp
+            influencedVortex
+                .get_collocationPoint()); // modifier la fonction
+                                          // doublets.influence dans panel.cpp
         lhs(influencedVortex.get_globalIndex(),
             size_Vortex + influencingDoublets.get_globalIndex()) =
             v2.dot(influencedVortex.get_normal());
@@ -148,8 +148,9 @@ void linear::steady::buildLHS(const model &object) {
       // influence Vortex -> Doublets
       for (auto &influencingVortex : object.vortexRings) {
         auto v3 = influencingVortex.influence(
-            influencedDoublets.get_center()); // modifier la fonction doublets.influence dans
-                           // panel.cpp
+            influencedDoublets
+                .get_center()); // modifier la fonction doublets.influence dans
+                                // panel.cpp
 
         lhs(size_Vortex + influencedDoublets.get_globalIndex(),
             influencingVortex.get_globalIndex()) =
@@ -158,8 +159,9 @@ void linear::steady::buildLHS(const model &object) {
       // influence Doublets -> Doublets
       for (auto &influencingDoublets : object.doubletPanels) {
         auto v4 = influencingDoublets.influence(
-            influencedDoublets.get_center()); // modifier la fonction doublets.influence dans
-                           // panel.cpp
+            influencedDoublets
+                .get_center()); // modifier la fonction doublets.influence dans
+                                // panel.cpp
         lhs(size_Vortex + influencedDoublets.get_globalIndex(),
             size_Vortex + influencingDoublets.get_globalIndex()) =
             v4.dot(influencedDoublets.get_normal());
@@ -173,8 +175,8 @@ void linear::steady::buildLHS(const model &object) {
 #pragma omp for
     for (auto &influencedVortex : object.vortexRings) {
       for (auto &influencingWake : object.wakePanels) {
-        auto v = influencingWake.influence(
-            influencedVortex.get_collocationPoint());
+        auto v =
+            influencingWake.influence(influencedVortex.get_collocationPoint());
         lhs(influencedVortex.get_globalIndex(),
             influencingWake.get_globalIndex()) +=
             v.dot(influencedVortex.get_normal());
@@ -274,7 +276,7 @@ void nonlinear::steady::solve(model &object) {
   system.compute(lhs);
 
   // Initializing iteration
-  double residual = 2*solvP.tolerance;
+  double residual = 2 * solvP.tolerance;
 
   // Main solving loop
   while (residual > solvP.tolerance && iter <= solvP.max_iter) {
@@ -367,9 +369,7 @@ void nonlinear::steady::computeForces(model &object) {
       auto [cl, cd, cmy] =
           database.coefficients(aoa_eff, wing.get_globalIndex(), spanLoc);
       // Lever used to transfer to 2D moment to 3D moment at specified origin
-      double lever =
-          object.sim.origin(0) -
-          station.forceActingPoint()(0);
+      double lever = object.sim.origin(0) - station.forceActingPoint()(0);
       // Updating station's force coefficients
       station.cl = cl;
       station.cd = cd;

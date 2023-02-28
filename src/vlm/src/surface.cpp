@@ -6,9 +6,10 @@ using namespace surface;
 using namespace Eigen;
 
 wingStation::wingStation(const int globalIndex,
-                         const std::vector<int> &vortexIDs, std::vector<element::vortexRing> &vortices)
-    : globalIndex(globalIndex), vortexIDs(vortexIDs), vortices(vortices), area(0.0), cl(0.0),
-      cm(Vector3d::Zero()) {}
+                         const std::vector<int> &vortexIDs,
+                         std::vector<element::vortexRing> &vortices)
+    : globalIndex(globalIndex), vortexIDs(vortexIDs), vortices(vortices),
+      area(0.0), cl(0.0), cm(Vector3d::Zero()) {}
 
 void wingStation::initialize(const input::simParam &sim) {
   for (auto &vortexID : vortexIDs) {
@@ -51,7 +52,8 @@ void wingStation::generateWake(const double wakeLength,
   int id2 = wakeNodes.size() - 3;
   int id3 = wakeNodes.size() - 2;
   int id4 = wakeNodes.size() - 1;
-  auto wakePanel = element::vortexRing(globalIndex, {id1, id2, id3, id4}, wakeNodes, 1.0);
+  auto wakePanel =
+      element::vortexRing(globalIndex, {id1, id2, id3, id4}, wakeNodes, 1.0);
   wakePanel.initialize(sim);
   wakePanels.push_back(wakePanel);
 }
@@ -125,10 +127,8 @@ void wingStation::computeForces(const input::simParam &sim) {
     Vector3d localMoment = force.cross(lever);
 
     // Saving forces of the panel
-    vortex.cl =
-        localForce / (0.5 * sim.rho * Qinf.norm() * Qinf.norm() * sim.sref);
-    vortex.cm = localMoment / (0.5 * sim.rho * Qinf.norm() * Qinf.norm() *
-                               sim.cref * sim.sref);
+    vortex.cl = localForce / (sim.dynamicPressure() * sim.sref);
+    vortex.cm = localMoment / (sim.dynamicPressure() * sim.cref * sim.sref);
 
     // Incrementing wing station forces
     lift += localForce;
@@ -138,15 +138,16 @@ void wingStation::computeForces(const input::simParam &sim) {
     previousGamma = vortex.get_gamma();
   }
   // Computing coefficients
-  cl = lift / (0.5 * sim.rho * Qinf.norm() * Qinf.norm() * area);
-  cm = moment / (0.5 * sim.rho * Qinf.norm() * Qinf.norm() * area * chord);
+  cl = lift / (sim.dynamicPressure() * area);
+  cm = moment / (sim.dynamicPressure() * area * chord);
 }
 
 // ----------------------------
 
-wing::wing(const int globalIndex, const std::vector<int> &stationIDs, std::vector<wingStation> &stations)
-    : globalIndex(globalIndex), stationIDs(stationIDs), stations(stations), area(0.0), cl(0.0),
-      cm(Vector3d::Zero()) {}
+wing::wing(const int globalIndex, const std::vector<int> &stationIDs,
+           std::vector<wingStation> &stations)
+    : globalIndex(globalIndex), stationIDs(stationIDs), stations(stations),
+      area(0.0), cl(0.0), cm(Vector3d::Zero()) {}
 
 void wing::initialize(const input::simParam &sim) {
   for (auto &stationID : stationIDs) {
@@ -156,8 +157,7 @@ void wing::initialize(const input::simParam &sim) {
   // Computing span of the wing
   auto &rootStation = stations[stationIDs.front()];
   auto &tipStation = stations[stationIDs.back()];
-  span = tipStation.forceActingPoint()(1) -
-         rootStation.forceActingPoint()(1);
+  span = tipStation.forceActingPoint()(1) - rootStation.forceActingPoint()(1);
 }
 
 void wing::updateGeometry() {
@@ -203,8 +203,10 @@ void wing::computeForces(const input::simParam &sim) {
 
 // ----------------------------
 
-patch::patch(const int globalIndex, const std::vector<int> &doubletIDs, std::vector<element::doubletPanel> &doubletPanels)
-    : globalIndex(globalIndex), doubletIDs(doubletIDs), doubletPanels(doubletPanels), area(0.0) {}
+patch::patch(const int globalIndex, const std::vector<int> &doubletIDs,
+             std::vector<element::doubletPanel> &doubletPanels)
+    : globalIndex(globalIndex), doubletIDs(doubletIDs),
+      doubletPanels(doubletPanels), area(0.0) {}
 
 void patch::initialize(const input::simParam &sim) {
   for (auto &doubletID : doubletIDs) {

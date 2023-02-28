@@ -144,8 +144,8 @@ public:
    *  @param nodeIDs Nodes defining the element
    *  @param nodes Nodes of the mesh
    *  @param gamma Strength of the vortices bouding the ring */
-  vortexRing(const int globalIndex, const std::vector<int> &nodeIDs, std::vector<Vector3d> &nodes,
-             const double gamma);
+  vortexRing(const int globalIndex, const std::vector<int> &nodeIDs,
+             std::vector<Vector3d> &nodes, const double gamma);
 
   /** @brief Method initializing the element's geometry
    *  @param sim Simulation parameters */
@@ -231,14 +231,15 @@ class doubletPanel {
   geom::panel panel;
 
 public:
-  doubletPanel(const int globalIndex, const std::vector<int> &nodeIDs, std::vector<Vector3d> &nodes,
-               const double sigma);
+  doubletPanel(const int globalIndex, const std::vector<int> &nodeIDs,
+               std::vector<Vector3d> &nodes, const double sigma);
   void initialize(const input::simParam &sim);
   Vector3d influence(const Vector3d &collocationPoint) const;
   void updateGeometry();
   void LocalCoordinate();
   void
-  updateNodes(const std::vector<Vector3d> &nodes); // to create later updating/projecting the position
+  updateNodes(const std::vector<Vector3d>
+                  &nodes); // to create later updating/projecting the position
                            // of the node onto the mean of the panel (co-planor
                            // panel in the localcoordinates)
   double get_area() const;
