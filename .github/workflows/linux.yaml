@@ -21,6 +21,9 @@ jobs:
         id: cache_key
         run: echo "key=$(date +'%W')" >> $GITHUB_OUTPUT
 
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
       - name: Set xmake env
         run: echo "XMAKE_GLOBALDIR=${{ runner.workspace }}/xmake-global" >> $GITHUB_ENV
 
