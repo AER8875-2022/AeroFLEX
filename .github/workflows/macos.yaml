@@ -62,4 +62,4 @@ jobs:
 
       - name: Build
         run: |
-          xmake -vD --yes
+          xmake -v --yes
