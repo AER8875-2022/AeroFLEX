@@ -8,7 +8,6 @@ on:
     paths-ignore:
         - '.github/workflows/linux.yaml'
         - '.github/workflows/windows.yaml'
-        - '.github/workflows/macos.yaml'
         - 'README.md'
 
 jobs:
@@ -59,7 +58,7 @@ jobs:
 
       - name: Config
         run: |
-          xmake f -y -m release ${{ matrix.compiler }}
+          xmake f -y -v -m release ${{ matrix.compiler }}
 
       - name: Build
         run: |

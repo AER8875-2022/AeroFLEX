@@ -6,7 +6,6 @@ on:
       - opened
   push:
     paths-ignore:
-        - '.github/workflows/linux.yaml'
         - '.github/workflows/windows.yaml'
         - '.github/workflows/macos.yaml'
         - 'README.md'
