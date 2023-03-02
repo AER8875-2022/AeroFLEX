@@ -22,7 +22,7 @@ jobs:
         with:
           xmake-version: latest
           actions-cache-folder: ".xmake-cache"
-      
+
       - name: Update xmake repository
         run: xmake repo --update
 
