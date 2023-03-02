@@ -41,7 +41,9 @@ jobs:
       # Fetch xmake dephash
       - name: Retrieve dependencies hash
         id: dep_hash
-        run: echo "hash<<EOF"$'\n'"$(xmake l utils.ci.packageskey)"$'\n'EOF >> $GITHUB_OUTPUT
+        run:
+          keys=$(echo $(xmake l utils.ci.packageskey) | tr '\n' ' ')
+          echo "hash=$keys" >> $GITHUB_OUTPUT
 
       # Cache xmake dependencies
       - name: Retrieve cached xmake dependencies
