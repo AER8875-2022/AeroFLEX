@@ -4,7 +4,7 @@
 
 using namespace vlm;
 
-VLM::VLM(GUIHandler &gui) : gui(gui) {};
+VLM::VLM(GUIHandler &gui) : gui(gui){};
 
 void VLM::input() {
   if (!is_initialized) {

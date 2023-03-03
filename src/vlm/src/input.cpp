@@ -22,9 +22,7 @@ Vector3d simParam::freeStream(const double alpha) const {
                    vinf * std::sin(alpha * M_PI / 180.0)});
 }
 
-Vector3d simParam::streamAxis() const {
-  return (freeStream().normalized());
-}
+Vector3d simParam::streamAxis() const { return (freeStream().normalized()); }
 
 Vector3d simParam::streamAxis(const double alpha) const {
   return (freeStream(alpha).normalized());
