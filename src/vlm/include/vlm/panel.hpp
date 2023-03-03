@@ -6,6 +6,10 @@
 #include "vlm/input.hpp"
 #include "vlm/potential.hpp"
 
+#ifndef M_PI
+#define M_PI 3.141592653589793115997963468544185161590576171875
+#endif
+
 /** @file panel.hpp */
 
 using namespace Eigen;
