@@ -56,11 +56,13 @@ int main(int argc, char **argv) {
   database::table database;
 
   if (!solvP.type.compare("NONLINEAR")) {
+    std::cout << "\n";
     std::cout << "==>Initializing viscous database...";
     database.importFromFile(io.databaseFile, solvP);
+    std::cout << "\033[1;36mDone\033[0m" << std::endl;
   }
 
-  std::cout << "\033[1;36mDone\033[0m" << std::endl;
+  std::cout << std::endl;
 
   // #############################
   // CALLING SOLVER

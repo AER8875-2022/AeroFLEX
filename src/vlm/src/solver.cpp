@@ -40,7 +40,6 @@ void linear::steady::solve(model &object) {
   system.compute(lhs);
 
   // Building linear system
-  buildLHS(object);
   buildRHS(object);
   // Solving
   VectorXd gamma = system.solve(rhs);
@@ -55,6 +54,7 @@ void linear::steady::solve(model &object) {
   // Exporting solution
   exportSolution(object);
 
+  std::cout << "\t Residual = " << system.error() << std::endl;
   residuals.push_back(system.error());
   iter++;
 }
@@ -369,10 +369,10 @@ void nonlinear::steady::solve(model &object) {
 double nonlinear::steady::iterate(model &object) {
   double residual = 0.0;
 
-#pragma omp parallel for reduction(+ : residual)
   for (int wingID = 0; wingID < object.wings.size(); wingID++) {
     auto &wing = object.wings[wingID];
 
+#pragma omp parallel for reduction(+ : residual)
     for (int i = 0; i < wing.get_stationIDs().size(); i++) {
       auto stationID = wing.get_stationIDs()[i];
 
