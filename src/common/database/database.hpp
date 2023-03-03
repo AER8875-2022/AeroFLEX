@@ -84,7 +84,7 @@ struct table {
    *  @return Tuple holding the values of all 3 interpolated coefficients (0:
    * CL, 1: CD, 2: CMy) */
   std::tuple<double, double, double> coefficients(const double alpha,
-                                                  const double surfaceID,
+                                                  const int surfaceID,
                                                   const double spanLoc);
 
   /** @brief Interpolates the value of the lift coefficient at specified angle
@@ -93,7 +93,7 @@ struct table {
    *  @param surfaceID ID of the wing surface on which the forces are evaluated
    *  @param spanLoc spanwise location where the forces are interpolated
    *  @return Interpolated lift coefficient */
-  double cl(const double alpha, const double surfaceID, const double spanLoc);
+  double cl(const double alpha, const int surfaceID, const double spanLoc);
 };
 
 } // namespace database

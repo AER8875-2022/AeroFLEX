@@ -139,7 +139,7 @@ void database::table::importFromFile(const std::string &path,
 }
 
 std::tuple<double, double, double>
-database::table::coefficients(const double alpha, const double surfaceID,
+database::table::coefficients(const double alpha, const int surfaceID,
                               const double spanLoc) {
   // Interpolating coefficients for a given alpha
   auto &sections = sectionAirfoils.at(surfaceID);
@@ -168,7 +168,7 @@ database::table::coefficients(const double alpha, const double surfaceID,
   return {cl_i[0], cd_i[0], cmy_i[0]};
 }
 
-double database::table::cl(const double alpha, const double surfaceID,
+double database::table::cl(const double alpha, const int surfaceID,
                            const double spanLoc) {
   // Interpolating coefficient for a given alpha
   auto &sections = sectionAirfoils.at(surfaceID);
