@@ -35,6 +35,7 @@
 /.xmake/*
 /.vscode/*
 /.cache/*
+/.idea/*
 compile_commands.json
 
 # Simulation outputs
