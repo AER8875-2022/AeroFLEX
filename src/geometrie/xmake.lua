@@ -6,8 +6,8 @@
 --     -- add_files("src/*.cpp")
 --     add_files("dev/*.cpp")
 
-target("geometrie")
-    set_kind("static")
-    add_packages("eigen")
-    add_includedirs("../common")
-    add_includedirs("include", {public = true})
+-- target("geometrie")
+--     set_kind("static")
+--     add_packages("eigen")
+--     add_includedirs("../common")
+--     add_includedirs("include", {public = true})
