@@ -57,11 +57,7 @@ int main(int argc, char **argv) {
 
   if (!solvP.type.compare("NONLINEAR")) {
     std::cout << "==>Initializing viscous database...";
-    if (!sim.databaseFormat.compare("FILE")) {
-      database.importFromFile(io.databaseFile, solvP);
-    } else if (!sim.databaseFormat.compare("POLAR")) {
-      database.generateFromPolar(sim.liftPolar, object, solvP);
-    }
+    database.importFromFile(io.databaseFile, solvP);
   }
 
   std::cout << "\033[1;36mDone\033[0m" << std::endl;

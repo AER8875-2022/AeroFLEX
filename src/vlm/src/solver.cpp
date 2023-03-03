@@ -76,7 +76,6 @@ void linear::steady::saveSolution(model &object, const VectorXd &gamma) {
 }
 
 void linear::steady::computeInducedDrag(model &object) {
-  Vector3d Qinf = object.sim.freeStream();
   double drag = 0.0;
   // Looping over wake panels
 #pragma omp parallel for reduction(- : drag)

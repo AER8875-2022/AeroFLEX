@@ -42,12 +42,8 @@ struct simParam {
   /** @brief Viscous relaxation value applied on the vortex filament kernel */
   double coreRadius;
 
-  /** @brief Input format of the database (FILE, POLAR, NONE) */
+  /** @brief Input format of the database (FILE, NONE) */
   std::string databaseFormat;
-
-  /** @brief Equation of the lift polar (only required of databaseFormat is set
-   * to POLAR)*/
-  std::string liftPolar;
 
   /** @brief Method computing the free stream vector in the plane's referential
    *  @return Free stream vector */

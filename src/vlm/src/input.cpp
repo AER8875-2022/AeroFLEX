@@ -62,8 +62,6 @@ input::importConfigFile(const std::string path) {
   sim.coreRadius = file.Get<double>("SIMULATION", "LAMB-OSEEN_RADIUS", 0.0);
   sim.databaseFormat = file.Get<std::string>("SIMULATION", "DATABASE_FORMAT",
                                              std::string("NONE"));
-  sim.liftPolar =
-      file.Get<std::string>("SIMULATION", "LIFT_POLAR", std::string(""));
 
   // [IO]
   ioParam io;
