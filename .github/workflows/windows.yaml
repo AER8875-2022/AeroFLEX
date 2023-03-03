@@ -5,10 +5,10 @@ on:
     types:
       - opened
   push:
-    paths-ignore:
-      - '.github/workflows/linux.yaml'
-      - '.github/workflows/macos.yaml'
-      - 'README.md'
+    # paths-ignore:
+    #   - '.github/workflows/linux.yaml'
+    #   - '.github/workflows/macos.yaml'
+    #   - 'README.md'
 
 jobs:
   build:
