@@ -60,15 +60,15 @@ void linear::steady::solve(model &object) {
 }
 
 void linear::steady::saveSolution(model &object, const VectorXd &gamma) {
-#pragma omp parallel
+// #pragma omp parallel
   {
     // Saving gamma to vortex rings
-#pragma omp for
+// #pragma omp for
     for (auto &vortex : object.vortexRings) {
       vortex.updateGamma(gamma[vortex.get_globalIndex()]);
     }
 // Saving gamma to wake panels
-#pragma omp for
+// #pragma omp for
     for (auto &wake : object.wakePanels) {
       wake.updateGamma(gamma[wake.get_globalIndex()]);
     }
@@ -78,7 +78,7 @@ void linear::steady::saveSolution(model &object, const VectorXd &gamma) {
 void linear::steady::computeInducedDrag(model &object) {
   double drag = 0.0;
   // Looping over wake panels
-#pragma omp parallel for reduction(- : drag)
+// #pragma omp parallel for reduction(- : drag)
   for (auto &influencedWake : object.wakePanels) {
     Vector3d v = Vector3d::Zero();
     for (auto &influencingWake : object.wakePanels) {
@@ -96,7 +96,7 @@ void linear::steady::computeForces(model &object) {
   object.cd = 0.0;
   object.cm = Vector3d::Zero();
   // Computing forces at each wing station
-#pragma omp parallel for
+// #pragma omp parallel for
   for (auto &station : object.wingStations) {
     station.computeForces(object.sim);
   }
@@ -118,9 +118,9 @@ void linear::steady::buildLHS(const model &object) {
   // Panel scan loop
   const int size_Vortex = object.vortexRings.size();
   // influence de tous les panneaux sur les VortexRings
-#pragma omp parallel
+// #pragma omp parallel
   {
-#pragma omp for
+// #pragma omp for
     for (auto &influencedVortex : object.vortexRings) {
       // influence Vortex -> Vortex
       for (auto &influencingVortex : object.vortexRings) {
@@ -142,7 +142,7 @@ void linear::steady::buildLHS(const model &object) {
       }
     }
     // influence de tous les panneaux sur les doublets
-#pragma omp for
+// #pragma omp for
     for (auto &influencedDoublets : object.doubletPanels) {
       // influence Vortex -> Doublets
       for (auto &influencingVortex : object.vortexRings) {
@@ -171,7 +171,7 @@ void linear::steady::buildLHS(const model &object) {
     }
 
 // Adding contribution of wake
-#pragma omp for
+// #pragma omp for
     for (auto &influencedVortex : object.vortexRings) {
       for (auto &influencingWake : object.wakePanels) {
         auto v =
@@ -181,7 +181,7 @@ void linear::steady::buildLHS(const model &object) {
             v.dot(influencedVortex.get_normal());
       }
     }
-#pragma omp for
+// #pragma omp for
     for (auto &influencedDoublets : object.doubletPanels) {
       for (auto &influencingWake : object.wakePanels) {
         auto v = influencingWake.influence(influencedDoublets.get_center());
@@ -196,16 +196,16 @@ void linear::steady::buildLHS(const model &object) {
 void linear::steady::buildRHS(const model &object) {
   VectorXd rhs_VLM = VectorXd::Zero(object.vortexRings.size());
   VectorXd sources = VectorXd::Zero(object.doubletPanels.size());
-#pragma omp parallel
+// #pragma omp parallel
   {
-#pragma omp for
+// #pragma omp for
     for (auto &vortex : object.vortexRings) {
       rhs_VLM(vortex.get_globalIndex()) =
           -object.sim.freeStream().dot(vortex.get_normal());
     }
 
     // Building sources vector
-#pragma omp for
+// #pragma omp for
     for (auto &doubs : object.doubletPanels) {
       sources(doubs.get_globalIndex()) =
           -object.sim.freeStream().dot(doubs.get_normal());
@@ -241,15 +241,15 @@ void nonlinear::steady::initialize(const input::solverParam &solvP,
 void nonlinear::steady::buildRHS(const model &object) {
   VectorXd rhs_VLM = VectorXd::Zero(object.vortexRings.size());
   VectorXd sources = VectorXd::Zero(object.doubletPanels.size());
-#pragma omp parallel
+// #pragma omp parallel
   {
-#pragma omp for
+// #pragma omp for
     for (auto &vortex : object.vortexRings) {
       rhs_VLM(vortex.get_globalIndex()) =
           -object.sim.freeStream(vortex.local_aoa).dot(vortex.get_normal());
     }
     // Building sources vector
-#pragma omp for
+// #pragma omp for
     for (auto &doubs : object.doubletPanels) {
       sources(doubs.get_globalIndex()) =
           -object.sim.freeStream().dot(doubs.get_normal());
@@ -304,7 +304,7 @@ void nonlinear::steady::solve(model &object) {
 double nonlinear::steady::iterate(model &object) {
   double residual = 0.0;
 
-#pragma omp parallel for reduction(+ : residual)
+// #pragma omp parallel for reduction(+ : residual)
   for (auto &wing : object.wings) {
     for (auto stationID : wing.get_stationIDs()) {
       double root =
@@ -340,7 +340,7 @@ double nonlinear::steady::iterate(model &object) {
 
 void nonlinear::steady::iterateLift(model &object) {
   object.cl = 0.0;
-#pragma omp parallel for
+// #pragma omp parallel for
   for (auto &station : object.wingStations) {
     station.computeForces(object.sim);
   }
@@ -355,7 +355,7 @@ void nonlinear::steady::computeForces(model &object) {
     double root =
         object.wingStations[wing.get_stationIDs().front()].get_spanLoc();
 
-#pragma omp parallel for
+// #pragma omp parallel for
     for (auto stationID : wing.get_stationIDs()) {
       auto &station = object.wingStations[stationID];
 
