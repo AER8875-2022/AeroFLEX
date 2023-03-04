@@ -91,6 +91,10 @@ public:
    *  @param dalpha Variation of the local angle of attack */
   void updateLocalAoa(const double dalpha);
 
+  /** @brief Method to reset the local angle of attack to the geometric one
+   *  @param sim Simulation parameters */
+  void resetLocalAoa(const input::simParam &sim);
+
   /** @brief Method computing the inviscid local forces on the current element
    */
   void computeForces(const input::simParam &sim);

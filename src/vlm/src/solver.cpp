@@ -3,16 +3,19 @@
 #include "database/database.hpp"
 #include "vlm/output.hpp"
 #include <any>
+#include <chrono>
 #include <iomanip>
 #include <iostream>
 #include <omp.h>
+#include <thread>
 
 using namespace vlm;
 using namespace solver;
 using namespace Eigen;
 
-linear::steady::steady(std::atomic<int> &iter, std::vector<double> &residuals)
-    : iter(iter), residuals(residuals) {}
+linear::steady::steady(std::atomic<int> &iter, std::vector<double> &residuals,
+                       GUIHandler &gui)
+    : iter(iter), residuals(residuals), gui(gui) {}
 
 void linear::steady::initialize(const input::solverParam &solvP,
                                 const model &object, const database::table &) {
@@ -106,8 +109,7 @@ void linear::steady::computeForces(model &object) {
   object.cm = Vector3d::Zero();
   // Computing forces at each wing station
 #pragma omp parallel for
-  for (int stationID = 0; stationID < object.wingStations.size();
-       stationID++) {
+  for (int stationID = 0; stationID < object.wingStations.size(); stationID++) {
     auto &station = object.wingStations[stationID];
     station.computeForces(object.sim);
   }
@@ -135,8 +137,7 @@ void linear::steady::buildLHS(const model &object) {
   {
 #pragma omp for
     for (int influencedVortexID = 0;
-         influencedVortexID < object.vortexRings.size();
-         influencedVortexID++) {
+         influencedVortexID < object.vortexRings.size(); influencedVortexID++) {
       auto &influencedVortex = object.vortexRings[influencedVortexID];
 
       // influence Vortex -> Vortex
@@ -212,8 +213,7 @@ void linear::steady::buildLHS(const model &object) {
 // Adding contribution of wake
 #pragma omp for
     for (int influencedVortexID = 0;
-         influencedVortexID < object.vortexRings.size();
-         influencedVortexID++) {
+         influencedVortexID < object.vortexRings.size(); influencedVortexID++) {
       auto &influencedVortex = object.vortexRings[influencedVortexID];
 
       for (int influencingWakeID = 0;
@@ -252,8 +252,7 @@ void linear::steady::buildRHS(const model &object) {
 #pragma omp parallel
   {
 #pragma omp for
-    for (int vortexID = 0; vortexID < object.vortexRings.size();
-         vortexID++) {
+    for (int vortexID = 0; vortexID < object.vortexRings.size(); vortexID++) {
       auto &vortex = object.vortexRings[vortexID];
 
       rhs_VLM(vortex.get_globalIndex()) =
@@ -280,8 +279,8 @@ void linear::steady::buildRHS(const model &object) {
 // -------------------------------------------
 
 nonlinear::steady::steady(std::atomic<int> &iter,
-                          std::vector<double> &residuals)
-    : linear::steady(iter, residuals) {}
+                          std::vector<double> &residuals, GUIHandler &gui)
+    : linear::steady(iter, residuals, gui) {}
 
 void nonlinear::steady::initialize(const input::solverParam &solvP,
                                    const model &object,
@@ -303,8 +302,7 @@ void nonlinear::steady::buildRHS(const model &object) {
 #pragma omp parallel
   {
 #pragma omp for
-    for (int vortexID = 0; vortexID < object.vortexRings.size();
-         vortexID++) {
+    for (int vortexID = 0; vortexID < object.vortexRings.size(); vortexID++) {
       auto &vortex = object.vortexRings[vortexID];
 
       rhs_VLM(vortex.get_globalIndex()) =
@@ -340,10 +338,12 @@ void nonlinear::steady::solve(model &object) {
   system.compute(lhs);
 
   // Initializing iteration
-  double residual = 2 * solvP.tolerance;
+  double residual;
 
   // Main solving loop
-  while (residual > solvP.tolerance && iter <= solvP.max_iter) {
+  do {
+    while (gui.signal.pause)
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
     // Step 1 : Solving VLM
     buildRHS(object);
     VectorXd gamma = system.solve(rhs);
@@ -357,7 +357,8 @@ void nonlinear::steady::solve(model &object) {
     std::cout << "\t Residual = " << residual << std::endl;
     residuals.push_back(residual);
     iter++;
-  }
+  } while ((residual > solvP.tolerance) && (iter <= solvP.max_iter) &&
+           (!gui.signal.stop));
   // Compute viscous forces
   computeForces(object);
   // Computing 3D effects on drag
@@ -411,8 +412,7 @@ double nonlinear::steady::iterate(model &object) {
 void nonlinear::steady::iterateLift(model &object) {
   object.cl = 0.0;
 #pragma omp parallel for
-  for (int stationID = 0; stationID < object.wingStations.size();
-       stationID++) {
+  for (int stationID = 0; stationID < object.wingStations.size(); stationID++) {
     auto &station = object.wingStations[stationID];
 
     station.computeForces(object.sim);

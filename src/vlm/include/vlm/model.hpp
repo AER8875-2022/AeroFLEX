@@ -77,6 +77,9 @@ public:
   /** @brief Method reinitializing the wake to a non existing state */
   void resetWake();
 
+  /** @brief Method reinitializing the previous solution to zero */
+  void clear();
+
   /** @brief Getter method for the lift coefficient */
   double get_cl() const;
 

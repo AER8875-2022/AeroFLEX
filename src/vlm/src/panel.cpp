@@ -24,10 +24,12 @@ void panel::updateGeometry() {
 }
 
 void panel::initialize() {
-  for (size_t i = 0; i != nodeIDs.size() - 1; i++) {
-    edges.push_back(geom::edgeLine(nodeIDs[i], nodeIDs[i + 1]));
+  if (edges.empty()) {
+    for (size_t i = 0; i != nodeIDs.size() - 1; i++) {
+      edges.push_back(geom::edgeLine(nodeIDs[i], nodeIDs[i + 1]));
+    }
+    edges.push_back(geom::edgeLine(nodeIDs.back(), nodeIDs.front()));
   }
-  edges.push_back(geom::edgeLine(nodeIDs.back(), nodeIDs.front()));
   updateGeometry();
 }
 
@@ -121,7 +123,7 @@ Vector3d vortexRing::streamInfluence(const Vector3d &collocationPoint) const {
 
 void vortexRing::updateGeometry() {
   panel.updateGeometry();
-  computeCollocationPoint();
+  // computeCollocationPoint();
 }
 
 void vortexRing::updateGamma(const double gamma) {

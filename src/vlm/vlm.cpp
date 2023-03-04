@@ -1,10 +1,10 @@
 
-#include "vlm.hpp"
+#include "vlm/vlm.hpp"
 #include "common_aeroflex.hpp"
 
 using namespace vlm;
 
-VLM::VLM(GUIHandler &gui) : gui(gui){};
+VLM::VLM(GUIHandler &gui) : gui(gui) {};
 
 void VLM::input() {
   if (!is_initialized) {
@@ -17,8 +17,11 @@ void VLM::input() {
 
 void VLM::solve() {
   solver::base *solver;
-  solver::linear::steady linear(iters, residuals);
-  solver::nonlinear::steady nonlinear(iters, residuals);
+  solver::linear::steady linear(iters, residuals, gui);
+  solver::nonlinear::steady nonlinear(iters, residuals, gui);
+
+  // Clear previous solution
+  reinitialize();
 
   if (!data.solver.type.compare("LINEAR")) {
     linear.initialize(data.solver, object, database::table());
@@ -32,3 +35,12 @@ void VLM::solve() {
 
   solver->solve(object);
 };
+
+void VLM::reinitialize() {
+  // Reset model
+  object.resetWake();
+  object.clear();
+  // Reset iterations
+  residuals.clear();
+  iters = 0;
+}

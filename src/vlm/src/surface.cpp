@@ -70,6 +70,14 @@ void wingStation::updateLocalAoa(const double dalpha) {
   }
 }
 
+void wingStation::resetLocalAoa(const input::simParam &sim) {
+  local_aoa = sim.aoa;
+  for (auto &vortexID : vortexIDs) {
+    vortices[vortexID].local_aoa = sim.aoa;
+    vortices[vortexID].computeCollocationPoint();
+  }
+}
+
 double wingStation::get_globalIndex() const { return globalIndex; }
 
 double wingStation::get_area() const { return area; }

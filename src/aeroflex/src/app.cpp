@@ -6,6 +6,7 @@
 #include "common_aeroflex.hpp"
 
 #include <rans/rans.h>
+#include <vlm/vlm.hpp>
 
 // Temporary
 #include <rans/parser.h>
@@ -22,6 +23,7 @@ class Aero {
 
 		// Modules
 		Rans &rans;
+		vlm::VLM &vlm;
 
 		double x = 0.0;
 
@@ -31,7 +33,7 @@ class Aero {
 		bool signal_status_busy = false;
 		bool signal_status_ready = true;
 		GUIHandler &gui;
-		Aero(Rans &rans, GUIHandler &gui) : rans(rans), gui(gui) {};
+		Aero(Rans &rans, vlm::VLM &vlm, GUIHandler &gui) : rans(rans), vlm(vlm), gui(gui) {};
 };
 
 template <class T>
@@ -167,8 +169,10 @@ namespace FlexGUI {
 		Rans rans(gui);
 		rans.data = data;
 
+		vlm::VLM vlm(gui);
+
 		// Initialize main application with the modules
-		Aero aero(rans, gui);
+		Aero aero(rans, vlm, gui);
 
 		while (g_ApplicationRunning)
 		{

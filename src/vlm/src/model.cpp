@@ -56,6 +56,16 @@ void model::resetWake() {
   wakeNodes.clear();
 }
 
+void model::clear() {
+  for (auto &vortex : vortexRings) {
+    vortex.updateGamma(0.0);
+  }
+  // TODO: Update Doublet solution
+  for (auto &wingStation : wingStations) {
+    wingStation.resetLocalAoa(sim);
+  }
+}
+
 void model::build(const input::meshData &mesh) {
   // Building nodes
   for (auto &[key, node] : mesh.nodes) {

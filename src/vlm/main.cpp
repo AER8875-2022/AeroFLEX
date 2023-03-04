@@ -3,6 +3,7 @@
 #include "vlm/model.hpp"
 #include "vlm/solver.hpp"
 #include "vlm/utils.hpp"
+#include "common_aeroflex.hpp"
 #include <atomic>
 #include <iostream>
 
@@ -71,10 +72,11 @@ int main(int argc, char **argv) {
 
   std::atomic<int> iters = 0;
   std::vector<double> residuals;
+  GUIHandler gui; // Empty GUI Handler
 
   vlm::solver::base *solver;
-  vlm::solver::linear::steady linear(iters, residuals);
-  vlm::solver::nonlinear::steady nonlinear(iters, residuals);
+  vlm::solver::linear::steady linear(iters, residuals, gui);
+  vlm::solver::nonlinear::steady nonlinear(iters, residuals, gui);
 
   if (!solvP.type.compare("LINEAR")) {
     linear.initialize(solvP, object, database::table());
