@@ -157,7 +157,7 @@ database::table::coefficients(const double alpha, const int surfaceID,
   }
 
   const int n_d[] = {int(spanLocs.size())};
-  const double spanLoc_i[1] = {alpha};
+  const double spanLoc_i[1] = {spanLoc};
 
   double cl_i[1], cd_i[1], cmy_i[1];
 
@@ -182,7 +182,7 @@ double database::table::cl(const double alpha, const int surfaceID,
   }
 
   const int n_d[] = {int(spanLocs.size())};
-  const double spanLoc_i[1] = {alpha};
+  const double spanLoc_i[1] = {spanLoc};
 
   double cl_i[1];
 
