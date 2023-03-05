@@ -4,6 +4,7 @@
 
 #include "Eigen/Dense"
 #include "Eigen/IterativeLinearSolvers"
+#include "common_aeroflex.hpp"
 #include "database/database.hpp"
 #include "vlm/input.hpp"
 #include "vlm/model.hpp"
@@ -90,10 +91,14 @@ public:
   /** @brief Residual vector */
   std::vector<double> &residuals;
 
+  /** @brief Gui event handler */
+  GUIHandler &gui;
+
 public:
   /** @param iter Iteration counter
    *  @param residuals Iteration residuals vector */
-  steady(std::atomic<int> &iter, std::vector<double> &residuals);
+  steady(std::atomic<int> &iter, std::vector<double> &residuals,
+         GUIHandler &gui);
 
   /** @brief Method to initialize the solver object
    *  @param solvP Struct holding the solver parameters
@@ -149,7 +154,8 @@ class steady : public linear::steady {
 public:
   /** @param iter Iteration counter
    *  @param residuals Iteration residuals vector */
-  steady(std::atomic<int> &iter, std::vector<double> &residuals);
+  steady(std::atomic<int> &iter, std::vector<double> &residuals,
+         GUIHandler &gui);
 
   /** @brief Method to initialize the solver object
    *  @param solvP Struct holding the solver parameters

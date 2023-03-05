@@ -63,7 +63,8 @@ public:
   /** @param globalIndex Unique global index of the current element
    *  @param vortexIDs IDs of the vortices forming the current element
    *  @param vortices VortexRings of the mesh */
-  wingStation(const int globalIndex, const std::vector<int> &vortexIDs, std::vector<element::vortexRing> &vortices);
+  wingStation(const int globalIndex, const std::vector<int> &vortexIDs,
+              std::vector<element::vortexRing> &vortices);
 
   /** @brief Method initializing the current element
    *  @param sim Simulation parameters */
@@ -77,20 +78,22 @@ public:
    *  @param sim Simulation parameters
    *  @param wakeNodes To be generated wake nodes
    *  @param wakePanels To be generated wake panels */
-  void generateWake(const double wakeLength,
-                    const input::simParam &sim,
+  void generateWake(const double wakeLength, const input::simParam &sim,
                     std::vector<Vector3d> &wakeNodes,
                     std::vector<element::vortexRing> &wakePanels);
 
   /** @brief Method computing the coordinates where to forces are acting
    *  @return Coordinates of the force acting point */
-  Vector3d
-  forceActingPoint() const;
+  Vector3d forceActingPoint() const;
 
   /** @brief Method updating the local angle of attack for the current wing
    * station
    *  @param dalpha Variation of the local angle of attack */
   void updateLocalAoa(const double dalpha);
+
+  /** @brief Method to reset the local angle of attack to the geometric one
+   *  @param sim Simulation parameters */
+  void resetLocalAoa(const input::simParam &sim);
 
   /** @brief Method computing the inviscid local forces on the current element
    */
@@ -162,7 +165,8 @@ public:
   /** @param globalIndex Unique global index for the current element
    *  @param stationIDs IDs of the wing stations forming the current element
    *  @param stations Wing station of the mesh */
-  wing(const int globalIndex, const std::vector<int> &stationIDs, std::vector<wingStation> &stations);
+  wing(const int globalIndex, const std::vector<int> &stationIDs,
+       std::vector<wingStation> &stations);
 
   /** @brief Method initializing the geometry of the current element
    *  @param sim Simulation parameters */
@@ -207,7 +211,8 @@ class patch {
   double area;
 
 public:
-  patch(const int globalIndex, const std::vector<int> &doubletIDs, std::vector<element::doubletPanel> &doubletPanels);
+  patch(const int globalIndex, const std::vector<int> &doubletIDs,
+        std::vector<element::doubletPanel> &doubletPanels);
   void initialize(const input::simParam &sim);
   void updateGeometry();
   double get_globalIndex() const;

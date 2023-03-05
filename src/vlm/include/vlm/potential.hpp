@@ -6,6 +6,10 @@
 #include <tuple>
 #include <vector>
 
+#ifndef M_PI
+#define M_PI 3.141592653589793115997963468544185161590576171875
+#endif
+
 /** @file potential.hpp */
 
 using namespace Eigen;

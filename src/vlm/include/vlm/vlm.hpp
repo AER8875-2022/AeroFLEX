@@ -17,16 +17,20 @@ public:
   database::table database;
   input::settings data;
 
-  bool is_initialized = false;
-
   std::vector<double> residuals;
   std::atomic<int> iters = 0;
   GUIHandler &gui;
+
+private:
+  bool is_initialized = false;
 
 public:
   VLM(GUIHandler &gui);
   void input();
   void solve();
+
+private:
+  void reinitialize();
 
 }; // end class vlm
 

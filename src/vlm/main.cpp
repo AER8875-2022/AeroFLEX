@@ -3,6 +3,7 @@
 #include "vlm/model.hpp"
 #include "vlm/solver.hpp"
 #include "vlm/utils.hpp"
+#include "common_aeroflex.hpp"
 #include <atomic>
 #include <iostream>
 
@@ -56,15 +57,13 @@ int main(int argc, char **argv) {
   database::table database;
 
   if (!solvP.type.compare("NONLINEAR")) {
+    std::cout << "\n";
     std::cout << "==>Initializing viscous database...";
-    if (!sim.databaseFormat.compare("FILE")) {
-      database.importFromFile(io.databaseFile, solvP);
-    } else if (!sim.databaseFormat.compare("POLAR")) {
-      database.generateFromPolar(sim.liftPolar, object, solvP);
-    }
+    database.importFromFile(io.databaseFile, solvP);
+    std::cout << "\033[1;36mDone\033[0m" << std::endl;
   }
 
-  std::cout << "\033[1;36mDone\033[0m" << std::endl;
+  std::cout << std::endl;
 
   // #############################
   // CALLING SOLVER
@@ -73,10 +72,11 @@ int main(int argc, char **argv) {
 
   std::atomic<int> iters = 0;
   std::vector<double> residuals;
+  GUIHandler gui; // Empty GUI Handler
 
   vlm::solver::base *solver;
-  vlm::solver::linear::steady linear(iters, residuals);
-  vlm::solver::nonlinear::steady nonlinear(iters, residuals);
+  vlm::solver::linear::steady linear(iters, residuals, gui);
+  vlm::solver::nonlinear::steady nonlinear(iters, residuals, gui);
 
   if (!solvP.type.compare("LINEAR")) {
     linear.initialize(solvP, object, database::table());

@@ -22,6 +22,22 @@ Vector3d simParam::freeStream(const double alpha) const {
                    vinf * std::sin(alpha * M_PI / 180.0)});
 }
 
+Vector3d simParam::streamAxis() const { return (freeStream().normalized()); }
+
+Vector3d simParam::streamAxis(const double alpha) const {
+  return (freeStream(alpha).normalized());
+}
+
+Vector3d simParam::liftAxis() const {
+  return (freeStream().cross(Vector3d::UnitY()).normalized());
+}
+
+Vector3d simParam::liftAxis(const double alpha) const {
+  return (freeStream(alpha).cross(Vector3d::UnitY()).normalized());
+}
+
+double simParam::dynamicPressure() const { return (0.5 * rho * vinf * vinf); }
+
 // -------------------------------------
 
 std::tuple<ioParam, simParam, solverParam>
@@ -44,8 +60,6 @@ input::importConfigFile(const std::string path) {
   sim.coreRadius = file.Get<double>("SIMULATION", "LAMB-OSEEN_RADIUS", 0.0);
   sim.databaseFormat = file.Get<std::string>("SIMULATION", "DATABASE_FORMAT",
                                              std::string("NONE"));
-  sim.liftPolar =
-      file.Get<std::string>("SIMULATION", "LIFT_POLAR", std::string(""));
 
   // [IO]
   ioParam io;
