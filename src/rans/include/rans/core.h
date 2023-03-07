@@ -139,23 +139,19 @@ struct solution {
 };
 
 struct Settings {
-
     gas g;
 
     std::vector<std::string> meshes;
 
     std::map<std::string, boundary_condition> bcs;
 
-    std::string solver_type;
+    std::string solver_type = "implicit";
     bool second_order = true;
-    double relaxation = 1;
+    double relaxation = 0.8;
 
     std::string outfilename;
 
-    boundary_variables vars_far;
-
     int read_failure = 1;
-
 };
 
 }

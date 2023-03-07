@@ -33,7 +33,7 @@ private:
         std::atomic<node*> next;
         node(T const& data_):
             data(std::make_shared<T>(data_))
-        {}
+        {};
     };
     std::atomic<node*> head;
     std::atomic<node*> tail;
