@@ -9,11 +9,15 @@
 
 namespace structure {
 
+struct Settings {
+  // TODO
+};
+
 class Structure {
 
 public:
-  // TODO: DATA
-  // TODO: SOLUTION
+  Settings settings;
+  // TODO: STORE SOLUTION
 
   std::vector<double> residuals;
   std::atomic<int> iters = 0;
