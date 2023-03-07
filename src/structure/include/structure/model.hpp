@@ -43,7 +43,7 @@ public:
     MODEL(std::string namefile ){   
         
         read_data_file(namefile);
-        K_Global_sparse = Eigen::SparseMatrix<double>( Nbr_Noeud * 6, Nbr_Noeud * 6 );
+        // K_Global_sparse = Eigen::SparseMatrix<double>( Nbr_Noeud * 6, Nbr_Noeud * 6 );
         set_K_global();
         
         set_load_vector();
@@ -88,7 +88,7 @@ public:
     
     void set_K_global(){
 
-        //K_Global_sparse = Eigen::SparseMatrix<double>( Nbr_Noeud * 6, Nbr_Noeud * 6 );
+        K_Global_sparse = Eigen::SparseMatrix<double>( Nbr_Noeud * 6, Nbr_Noeud * 6 );
 
         for( auto& [cbar_id, elem] : CBAR_MAP)
         {
@@ -146,7 +146,7 @@ public:
             std::string code = spc_obj.CODE;
             for(char j : code)
             {   
-                int J        = std::atoi(&j);
+                int J = j - '0';
                 int ddl      = (6*spc_obj.Node_ID) + J - 1;
                 force(ddl)   = 0;
             }
@@ -164,7 +164,7 @@ public:
             std::string code = spc_obj.CODE;
             for(char j : code)
             {   
-                int J        = std::atoi(&j);
+                int J = j - '0';
                 int ddl      = (6*spc_obj.Node_ID) +J -1;
                 Forces(ddl)  = 0;
                 for (int k = 0; k < K_Final_sparse.cols(); ++k)
@@ -288,10 +288,10 @@ public:
                 
                 if (Residu < 10.*tol) Delta_dep_amor = amor*Delta_dep_full;
 
-                if (iters % 500 == 0 ) {
+                // if (iters % 500 == 0 ) {
                     std::cout << "Iteration " << iters << std::endl;
                     std::cout << "\t Residual = " << Residu << std::endl;
-                }
+                // }
 
                 //std::cout<<Residu<<std::endl;
                 Forces_int.setZero();
