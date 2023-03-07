@@ -6,6 +6,7 @@
 #include <structure/proprietes_sections.hpp>
 #include <structure/element.hpp>
 #include <structure/model.hpp>
+#include <common_aeroflex.hpp>
 
 using namespace structure;
 
@@ -13,7 +14,12 @@ int main(int argc, char **argv){
     
     std::cout << "You have entered " << argc << " arguments:" << "\n";
 
-    MODEL M1(argv[1]);    
+    // Dummy GUI variables
+    GUIHandler gui;
+    std::atomic<int> iters = 0;
+    std::vector<double> residuals;
+
+    MODEL M1(argv[1], gui, iters, residuals);
     Eigen::VectorXd dep;
  
     if (argv[2] = "NLS")    //     /home/olivier/Structure-Dev/examples/Moment.txt NLS 10 1E-10 0.5

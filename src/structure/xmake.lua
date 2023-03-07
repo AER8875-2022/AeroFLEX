@@ -2,6 +2,7 @@ target("structure-dev")
     set_kind("binary")
     set_default(false)
     add_packages("openmp", "eigen")
+    add_includedirs("../common")
     add_deps("structure")
     add_files("dev/main.cpp")
 

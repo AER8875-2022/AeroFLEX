@@ -12,7 +12,10 @@
 #include <structure/spc.hpp>
 #include <structure/loads.hpp>
 #include <fstream>
-#include<Eigen/SparseLU>
+#include <Eigen/SparseLU>
+#include <atomic>
+#include <thread>
+#include "common_aeroflex.hpp"
 
 namespace structure {
 
@@ -28,7 +31,6 @@ public:
     std::vector<SPC1>                             SPC1_LIST;      //   
     std::vector<FORCE>                           FORCE_LIST;      //
     std::vector<MOMENT>                         MOMENT_LIST;      //
-    
 
     int Nbr_Element;               //Nombre d'éléments
     int Nbr_Noeud;                 //Nombre de noeud 
@@ -36,18 +38,23 @@ public:
     Eigen::VectorXd                           Forces;
     Eigen::SparseMatrix<double>      K_Global_sparse;
     Eigen::SparseMatrix<double>      K_Final_sparse;
-    
 
-    MODEL(){};
+    // GUI Handlers
+    GUIHandler &gui;
+    std::atomic<int> &iters;
+    std::vector<double> &residuals;
 
-    MODEL(std::string namefile ){   
+    MODEL(GUIHandler &gui, std::atomic<int> &iters, std::vector<double> &residuals)
+        : gui(gui), iters(iters), residuals(residuals) {};
+
+    MODEL(std::string namefile, GUIHandler &gui, std::atomic<int> &iters, std::vector<double> &residuals)
+        : gui(gui), iters(iters), residuals(residuals) {
         
         read_data_file(namefile);
         // K_Global_sparse = Eigen::SparseMatrix<double>( Nbr_Noeud * 6, Nbr_Noeud * 6 );
         set_K_global();
         
         set_load_vector();
-        
         
         set_K_Final_sparse();
     };
@@ -243,13 +250,12 @@ public:
             Eigen::VectorXd Delta_dep_amor = get_Solve(Forces_diff); 
             int n1,n2;          
             double Residu = 1.0;
-            int iters = 0;
 
-            while(Residu> tol)
-            {   
+            // Main solving loop
+            do {
+                while (gui.signal.pause) std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 
-                                        //Delta déplacements  
-                
+                //Delta déplacements
                 Dep += Delta_dep_amor;
                 
                 set_Quaternion_Map(Delta_dep_amor); 
@@ -288,15 +294,16 @@ public:
                 
                 if (Residu < 10.*tol) Delta_dep_amor = amor*Delta_dep_full;
 
-                // if (iters % 500 == 0 ) {
-                    std::cout << "Iteration " << iters << std::endl;
-                    std::cout << "\t Residual = " << Residu << std::endl;
-                // }
+                std::cout << "Iteration " << iters << std::endl;
+                std::cout << "\t Residual = " << Residu << std::endl;
 
-                //std::cout<<Residu<<std::endl;
                 Forces_int.setZero();
+
+                // Incrementing current iteration
                 iters++;
-            }
+                residuals.push_back(Residu);
+
+            } while((Residu> tol) && (!gui.signal.stop));
         }
         return Dep;
     }
