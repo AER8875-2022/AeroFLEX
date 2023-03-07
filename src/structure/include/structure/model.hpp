@@ -1,17 +1,18 @@
 #ifndef STRUCTURE_MODELE_HPP
 #define STRUCTURE_MODELE_HPP
 
-#include "Eigen/Dense"
-#include "Eigen/Sparse"
+#include <Eigen/Dense>
+#include <Eigen/Sparse>
 #include <iostream>
 #include <vector>
 #include <cmath>
 #include <map>
 #include <cstdlib>
-#include "structure/element.hpp"
-#include "structure/spc.hpp"
-#include "structure/loads.hpp"
+#include <structure/element.hpp>
+#include <structure/spc.hpp>
+#include <structure/loads.hpp>
 #include <fstream>
+#include<Eigen/SparseLU>
 
 namespace structure {
 
@@ -42,7 +43,7 @@ public:
     MODEL(std::string namefile ){   
         
         read_data_file(namefile);
-        
+        K_Global_sparse = Eigen::SparseMatrix<double>( Nbr_Noeud * 6, Nbr_Noeud * 6 );
         set_K_global();
         
         set_load_vector();
@@ -87,7 +88,7 @@ public:
     
     void set_K_global(){
 
-        K_Global_sparse = Eigen::SparseMatrix<double>( Nbr_Noeud * 6, Nbr_Noeud * 6 );
+        //K_Global_sparse = Eigen::SparseMatrix<double>( Nbr_Noeud * 6, Nbr_Noeud * 6 );
 
         for( auto& [cbar_id, elem] : CBAR_MAP)
         {
@@ -210,7 +211,7 @@ public:
 
     Eigen::VectorXd get_Solve(Eigen::VectorXd f)
     {   
-        Eigen::SimplicialCholesky<Eigen::SparseMatrix<double>> Solver;
+        Eigen::SparseLU<Eigen::SparseMatrix<double>> Solver;
         Eigen::SparseMatrix<double> Tempo = K_Final_sparse; 
         Solver.compute(Tempo);
         
@@ -224,11 +225,11 @@ public:
     
     Eigen::VectorXd get_NonLinSolve(double Max_load_step, double tol, double amor)
     {
-        Eigen::VectorXd Dep = Eigen::VectorXd( 6 * Nbr_Noeud );
+        Eigen::VectorXd Dep = Eigen::VectorXd(6 * Nbr_Noeud);
         Dep.setZero();
-        Eigen::VectorXd Forces_int( 6 * Nbr_Noeud);
+        Eigen::VectorXd Forces_int(6 * Nbr_Noeud);
         Forces_int.setZero();
-        Eigen::VectorXd Forces_diff( 6 * Nbr_Noeud );
+        Eigen::VectorXd Forces_diff(6 * Nbr_Noeud );
 
         for (double Load_Step = 1.; Load_Step <= Max_load_step; Load_Step ++)
         {
@@ -285,10 +286,12 @@ public:
                 Residu = std::sqrt(Delta_dep_full.transpose()*Delta_dep_full);
                 Delta_dep_amor = Delta_dep_full;
                 
-                if (Residu < 100.*tol) Delta_dep_amor = amor*Delta_dep_full;
+                if (Residu < 10.*tol) Delta_dep_amor = amor*Delta_dep_full;
 
-                std::cout << "Iteration " << iters << std::endl;
-                std::cout << "\t Residual = " << Residu << std::endl;
+                if (iters % 500 == 0 ) {
+                    std::cout << "Iteration " << iters << std::endl;
+                    std::cout << "\t Residual = " << Residu << std::endl;
+                }
 
                 //std::cout<<Residu<<std::endl;
                 Forces_int.setZero();

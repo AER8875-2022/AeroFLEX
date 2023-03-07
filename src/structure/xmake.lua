@@ -1,10 +1,9 @@
 target("structure-dev")
     set_kind("binary")
-    add_packages("openmp", "eigen")
-    add_includedirs("../common")
-    add_includedirs("include", {public = true})
     set_default(false)
-    add_files("main.cpp")
+    add_packages("openmp", "eigen")
+    add_deps("structure")
+    add_files("dev/main.cpp")
 
 target("structure")
     set_kind("headeronly")
