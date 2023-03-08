@@ -10,10 +10,19 @@
 #include<array>
 #include<vector>
 #include"model.hpp"
+#include<Eigen/Dense>
+#include <Eigen/Geometry>
 
 
 namespace aero{
-    auto DispInterpol(){
+    struct interpolation{
+        std::vector<double> node;
+        std::vector<double> weight;
+
+    };
+
+
+    auto DispInterpol( interpolation &pos ){
         for (k = 0; k < ; ++k)
         {
             for (i = 0; i < ; ++i)
@@ -37,7 +46,7 @@ namespace aero{
                         distance = sqrt(
                                 pow(nodeStruct[0]-node[0], 2) + pow(nodeStruct[1]-node[1], 2) +
                                 pow(nodeStruct[2]-node[2], 2));
-                        if (distance < min(bestDistance[0], bestDistance[1])) {
+                        if (distance < max(bestDistance[0], bestDistance[1])) {
                             if (bestDistance[0] < bestDistance[1]) {
                                 bestDistance[0] = distance;
                                 bestPoint[0] = s;
@@ -55,7 +64,18 @@ namespace aero{
                     auto nodeStruct1 = nodes[struct.get_nodeIDs()[bestPoint[0]]];
                     auto nodeStruct2 = nodes[struct.get_nodeIDs()[bestPoint[1]]];
 
-                    // A faire : resoudre le systeme de 2 eq(produit scalaire et colinearité) avec Eigen pour trouver la projection du noeud sur la structure
+                    pos.node.push_back(struct.get_nodeIDs()[bestPoint[0]);
+                    pos.node.push_back(struct.get_nodeIDs()[bestPoint[1]);
+
+                    auto x1= nodeStruct1-nodeStruct2 ;
+                    auto x2= nodeStruct1-node ;
+                    double projection = (x1[0]*x2[0]+x1[1]*x2[1]+x1[2]*x2[2])/pow(x1[0]*x1[0]+x1[1]*x1[1]+x1[2]*x1[2],0.5);
+
+                    pos.weight.push_back(projection);
+                    pos.weight.push_back(1-projection);
+
+
+
 
                 }
             }
@@ -63,35 +83,42 @@ namespace aero{
 
         }
     }
-    
-    auto LoadInterpol() {
-        double dotProduct(const vector<double>& a, const vector<double>& b) {
-            if (a.size() != b.size()) {
-                throw std::runtime_error("Vectors must have the same dimension.");
-            }
-            double result = 0.0;
-            for (size_t i = 0; i < a.size(); i++) {
-                result += a[i] * b[i];
-            }
-            return result;
-         }
-         vector<double> crossProduct(const vector<double>& i, const vector<double>& j){
-             if (i.size() !=3 || j.size() != 3){
-                 throw std::runtime_error("Vectors must have dimension 3.");
-             }
-             vector<double> result(3);
-             result[0] = i[1]*j[2] - i[2]*j[1];
-             result[1] = i[2]*j[0] - i[0]*j[2];
-             result[2] = i[0]*j[1] - i[1]*j[0];
-             return result;
-         }
-         double norme(vector<double> v){
-             double sum = 0;
-             for(int i=0; i<v.size(); i++){
-                 sum += pow(v[i], 2);
-             }
-             return sqrt(sum);
-         }
 
-    return 0;
+    function computeVLMDispalecement() {
+        for (k = 0; k<; ++k) {
+            for (i = 0; i<; ++i) {
+
+                auto wstation = wingStations[wings[0].get_wingStationsIDs()[k]];
+                auto vring = vortexRings[wstation.get_vortexIDs()[i]];
+                int numPointsVort = vring.size();
+                for (p=0; p<numPointsVort; ++p)
+                {
+                    auto node = nodes[vring.get_nodeIDs()[p]];
+                    auto nodeStruct1 = nodes[pos.node[2*p]];
+                    auto nodeStruct2 = nodes[pos.node[2*p+1]];
+                    auto weight1 = pos.weight[2*p];
+                    auto weight2 = pos.weight[2*p+1];
+
+                    Eigen::Vector3d disp;
+                    disp[0]=weight1*nodeStruct1[0]+weight2*nodeStruct2[0];
+                    disp[1]=weight1*nodeStruct1[1]+weight2*nodeStruct2[1];
+                    disp[2]=weight1*nodeStruct1[2]+weight2*nodeStruct2[2];
+                    //prise en compte de la rotation
+                    Eigen::vector4d q1(1,2,3,4), q2(1,2,3,4), q3(1,2,3,4);
+
+                    
+
+                    node[0]=node[0]+disp[0];
+                    node[1]=node[1]+disp[1];
+                    node[2]=node[2]+disp[2];
+
+                }
+            }
+        }
+    }
+
+
+
+
+
 }
