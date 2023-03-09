@@ -61,9 +61,9 @@ void Rans::run() {
 }
 
 void Rans::solve() {
-    if (settings.solver_type == "implicit") {
+    if (settings.solver_type() == "implicit") {
         run<implicitSolver>();
-    } else if (settings.solver_type == "explicit") {
+    } else if (settings.solver_type() == "explicit") {
         run<explicitSolver>();
     }
 };

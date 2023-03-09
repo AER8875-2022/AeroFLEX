@@ -150,7 +150,7 @@ Settings parse(int argc, char **argv, std::string compiled_file) {
                 while ((tag != "end") & (!infile.eof())) {
                     std::string prop_i = tag;
                     if (property == "type")
-                        data.solver_type = prop_i;
+                        data.set_solver_type(prop_i);
                     else if (property == "second_order") {
                         std::vector<std::string> mylist{"1", "true", "True", "TRUE"};
                         data.second_order = std::find(std::begin(mylist), std::end(mylist), prop_i) != std::end(mylist);

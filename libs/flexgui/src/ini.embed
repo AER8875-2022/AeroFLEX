@@ -10,13 +10,13 @@ Collapsed=0
 
 [Window][Buttons]
 Pos=0,19
-Size=410,881
+Size=410,590
 Collapsed=0
 DockId=0x00000001,0
 
 [Window][Graphs]
 Pos=412,19
-Size=865,881
+Size=865,590
 Collapsed=0
 DockId=0x00000002,0
 
@@ -26,12 +26,20 @@ Size=321,881
 Collapsed=0
 DockId=0x00000004,0
 
+[Window][Console]
+Pos=0,611
+Size=1277,289
+Collapsed=0
+DockId=0x00000006,0
+
 [Docking][Data]
-DockSpace     ID=0xF2944C7F Window=0x4647B76E Pos=201,205 Size=1600,881 Split=X
-  DockNode    ID=0x00000003 Parent=0xF2944C7F SizeRef=1277,881 Split=X
-    DockNode  ID=0x00000001 Parent=0x00000003 SizeRef=410,756 CentralNode=1 Selected=0x296642D0
-    DockNode  ID=0x00000002 Parent=0x00000003 SizeRef=865,756 Selected=0x43C7209E
-  DockNode    ID=0x00000004 Parent=0xF2944C7F SizeRef=321,881 Selected=0x723E535C
+DockSpace       ID=0xF2944C7F Window=0x4647B76E Pos=175,97 Size=1600,881 Split=X
+  DockNode      ID=0x00000003 Parent=0xF2944C7F SizeRef=1277,881 Split=Y
+    DockNode    ID=0x00000005 Parent=0x00000003 SizeRef=1600,590 Split=X
+      DockNode  ID=0x00000001 Parent=0x00000005 SizeRef=410,756 CentralNode=1 Selected=0x296642D0
+      DockNode  ID=0x00000002 Parent=0x00000005 SizeRef=865,756 Selected=0x43C7209E
+    DockNode    ID=0x00000006 Parent=0x00000003 SizeRef=1600,289 Selected=0x49278EEE
+  DockNode      ID=0x00000004 Parent=0xF2944C7F SizeRef=321,881 Selected=0x723E535C
 
 )";
-size_t g_ImGuiIniSettingsSize = 769;
+size_t g_ImGuiIniSettingsSize = 1011;

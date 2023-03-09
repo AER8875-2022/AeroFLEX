@@ -15,6 +15,8 @@
 #include <cmath>
 #include <string>
 #include <map>
+#include <vector>
+#include <Eigen/Core>
 
 using uint = unsigned int;
 
@@ -145,13 +147,24 @@ struct Settings {
 
     std::map<std::string, boundary_condition> bcs;
 
-    std::string solver_type = "implicit";
+    std::vector<std::string> solver_options = {"explicit", "implicit"};
+    int type = 1;
     bool second_order = true;
     double relaxation = 0.8;
 
     std::string outfilename;
 
     int read_failure = 1;
+
+    // I hate this...........
+    inline std::string solver_type() {return solver_options.at(type);};
+    inline void set_solver_type(const std::string& type_) {
+        if (type_ == "explicit") {
+            type = 0;
+        } else if (type_ == "implicit") {
+            type = 1;
+        }
+    }
 };
 
 }

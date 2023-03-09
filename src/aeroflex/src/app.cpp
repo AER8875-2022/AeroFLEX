@@ -2,23 +2,26 @@
 #include "EntryPoint.h"
 #include "imgui.h"
 #include "implot.h"
+#include "tinyconfig.hpp"
 
 #include "common_aeroflex.hpp"
-#include "tinyconfig.hpp"
 
 #include <rans/rans.h>
 #include <vlm/vlm.hpp>
 
-// Temporary
-#include <rans/parser.h>
-
 #include <future>
 #include <thread>
+#include <optional>
+#include <unordered_map>
 
 template <class T>
 bool is_future_done(std::future<T> const& f) {
     if (!f.valid()) return false;
     return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+}
+
+const std::string bool_to_string(const bool b) {
+    return b ? "true" : "false";
 }
 
 struct Settings {
@@ -35,21 +38,135 @@ class Aero {
 		void config_save_await();
 
 		// Modules
-		tiny::config &conf;
 		rans::Rans &rans;
 		vlm::VLM &vlm;
 
 		Settings settings;
 
 		std::future<void> future_solve;
-		std::future<Settings> future_config_open;
-		std::future<void> future_config_save;
+		std::future<std::optional<Settings>> future_config_open;
+		std::future<bool> future_config_save;
+		std::string outfile;
 
 		// Signal routing
 		bool signal_status_busy = false;
 		bool signal_status_ready = true;
+		bool config_file_set = false;
 		GUIHandler &gui;
-		Aero(tiny::config &conf, rans::Rans &rans, vlm::VLM &vlm, GUIHandler &gui);
+		Aero(rans::Rans &rans, vlm::VLM &vlm, GUIHandler &gui);
+};
+
+bool *p_open = NULL;
+struct ExampleAppLog
+{
+    ImGuiTextBuffer     Buf;
+    ImGuiTextFilter     Filter;
+    ImVector<int>       LineOffsets;
+    bool                AutoScroll;
+
+    ExampleAppLog()
+    {
+        AutoScroll = true;
+        Clear();
+    }
+
+    void    Clear()
+    {
+        Buf.clear();
+        LineOffsets.clear();
+        LineOffsets.push_back(0);
+    }
+
+    void    AddLog(const char* fmt, ...) IM_FMTARGS(2)
+    {
+        int old_size = Buf.size();
+        va_list args;
+        va_start(args, fmt);
+        Buf.appendfv(fmt, args);
+        va_end(args);
+        for (int new_size = Buf.size(); old_size < new_size; old_size++)
+            if (Buf[old_size] == '\n')
+                LineOffsets.push_back(old_size + 1);
+    }
+
+    void    Draw(const char* title, bool* p_open = NULL)
+    {
+        if (!ImGui::Begin(title, p_open))
+        {
+            ImGui::End();
+            return;
+        }
+
+        // Options menu
+        if (ImGui::BeginPopup("Options"))
+        {
+            ImGui::Checkbox("Auto-scroll", &AutoScroll);
+            ImGui::EndPopup();
+        }
+        bool clear;
+        bool copy;
+        if (ImGui::CollapsingHeader("Options")) {
+            if (ImGui::Button("Autoscroll"))
+                ImGui::OpenPopup("Options");
+            ImGui::SameLine();
+            bool clear = ImGui::Button("Clear");
+            ImGui::SameLine();
+            bool copy = ImGui::Button("Copy");
+            ImGui::SameLine();
+            Filter.Draw("Filter", -100.0f);
+
+            ImGui::Separator();
+
+        }
+        //Main window
+
+
+        if (ImGui::BeginChild("scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar))
+        {
+            if (clear)
+                Clear();
+            if (copy)
+                ImGui::LogToClipboard();
+
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+            const char* buf = Buf.begin();
+            const char* buf_end = Buf.end();
+            if (Filter.IsActive())
+            {
+
+                for (int line_no = 0; line_no < LineOffsets.Size; line_no++)
+                {
+                    const char* line_start = buf + LineOffsets[line_no];
+                    const char* line_end = (line_no + 1 < LineOffsets.Size) ? (buf + LineOffsets[line_no + 1] - 1) : buf_end;
+                    if (Filter.PassFilter(line_start, line_end))
+                        ImGui::TextUnformatted(line_start, line_end);
+                }
+            }
+            else
+            {
+
+                ImGuiListClipper clipper;
+                clipper.Begin(LineOffsets.Size);
+                while (clipper.Step())
+                {
+                    for (int line_no = clipper.DisplayStart; line_no < clipper.DisplayEnd; line_no++)
+                    {
+                        const char* line_start = buf + LineOffsets[line_no];
+                        const char* line_end = (line_no + 1 < LineOffsets.Size) ? (buf + LineOffsets[line_no + 1] - 1) : buf_end;
+                        ImGui::TextUnformatted(line_start, line_end);
+                    }
+                }
+                clipper.End();
+            }
+            ImGui::PopStyleVar();
+
+
+            if (AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+                ImGui::SetScrollHereY(1.0f);
+        }
+        ImGui::EndChild();
+        ImGui::End();
+    }
 };
 
 void solve(rans::Rans &rans) {
@@ -57,17 +174,84 @@ void solve(rans::Rans &rans) {
 	rans.solve();
 }
 
-Settings config_open(tiny::config &io, const std::string &conf_path) {
+std::optional<Settings> config_open(const std::string &conf_path) {
 	Settings settings;
-	io.read(conf_path);
+
+	tiny::config io;
+	bool success = io.read(conf_path);
+	if (!success) return std::nullopt;
+
+	if (io.how_many("rans-bc") != 2) throw std::runtime_error("[RANS] Invalid number of boundary conditions");
+
+	settings.rans.g.gamma = io.get<double>("rans-gas", "gamma");
+	settings.rans.g.R = io.get<double>("rans-gas", "R");
+
+	for (int i = 0; i < io.how_many("rans-bc"); i++) {
+		std::string type = io.get_i<std::string>("rans-bc", "type", i);
+		std::string name = io.get_i<std::string>("rans-bc", "name", i);
+		settings.rans.bcs[name];
+		settings.rans.bcs[name].bc_type = type;
+		if (type == "farfield") {
+			settings.rans.bcs[name].vars_far.T = io.get_i<double>("rans-bc", "T", i);
+			settings.rans.bcs[name].vars_far.mach = io.get_i<double>("rans-bc", "mach", i);
+			settings.rans.bcs[name].vars_far.angle = io.get_i<double>("rans-bc", "angle", i);
+			settings.rans.bcs[name].vars_far.p = io.get_i<double>("rans-bc", "p", i);
+		}
+	}
+
+	settings.rans.set_solver_type(io.get<std::string>("rans-solver", "type"));
+	settings.rans.second_order = io.get<bool>("rans-solver", "second_order");
+	settings.rans.relaxation = io.get<double>("rans-solver", "relaxation");
+
+	for (int i = 0; i < io.how_many("rans-mesh"); i++) {
+		settings.rans.meshes.push_back(io.get_i<std::string>("rans-mesh", "file", i));
+	}
 	return settings;
 }
 
-Aero::Aero(tiny::config &conf, rans::Rans &rans, vlm::VLM &vlm, GUIHandler &gui) : conf(conf), rans(rans), vlm(vlm), gui(gui) {
+bool config_save(const std::string &conf_path, Settings &settings) {
+	tiny::config io;
+	io.sections = {
+		"rans-gas",
+		"rans-bc",
+		"rans-solver",
+		"rans-mesh",
+	};
+
+	io.config["rans-gas"]["gamma"] = std::to_string(settings.rans.g.gamma);
+	io.config["rans-gas"]["R"] = std::to_string(settings.rans.g.R);
+
+	io.config_vec["rans-bc"] = {};
+	for (auto &[name, bc] : settings.rans.bcs) {
+		io.config_vec["rans-bc"].push_back({
+			{"type", bc.bc_type},
+			{"name", name},
+			{"T", std::to_string(bc.vars_far.T)},
+			{"mach", std::to_string(bc.vars_far.mach)},
+			{"angle", std::to_string(bc.vars_far.angle)},
+			{"p", std::to_string(bc.vars_far.p)},
+		});
+	};
+
+	io.config["rans-solver"]["type"] = settings.rans.solver_type();
+	io.config["rans-solver"]["second_order"] = bool_to_string(settings.rans.second_order);
+	io.config["rans-solver"]["relaxation"] = bool_to_string(settings.rans.relaxation);
+
+	io.config_vec["rans-mesh"] = {};
+	for (auto &mesh : settings.rans.meshes) {
+		io.config_vec["rans-mesh"].push_back({
+			{"file", mesh},
+		});
+	};
+
+	return io.write(conf_path);
+}
+
+Aero::Aero(rans::Rans &rans, vlm::VLM &vlm, GUIHandler &gui) : rans(rans), vlm(vlm), gui(gui) {
 	settings.rans.bcs["farfield"];
 	settings.rans.bcs["farfield"].bc_type = "farfield";
-	settings.rans.bcs["slip-wall"];
-	settings.rans.bcs["slip-wall"].bc_type = "wall";
+	settings.rans.bcs["wall"];
+	settings.rans.bcs["wall"].bc_type = "slip-wall";
 
 	// TEMPORARY !!!!
 	settings.rans.meshes.push_back("../../../../examples/rans/naca0012q_coarse.msh");
@@ -78,7 +262,7 @@ Aero::Aero(tiny::config &conf, rans::Rans &rans, vlm::VLM &vlm, GUIHandler &gui)
 void Aero::solve_async() {
 	signal_status_ready = false;
 	signal_status_busy = true;
-	// rans.settings = settings.rans;
+	rans.settings = settings.rans;
 	future_solve = std::async(std::launch::async, [this](){return solve(this->rans);});
 }
 
@@ -92,12 +276,46 @@ void Aero::solve_await() {
 void Aero::config_open_async(const std::string &conf_path) {
 	signal_status_ready = false;
 	signal_status_busy = true;
-	future_config_open = std::async(std::launch::async, [this](const std::string &path){return config_open(this->conf, path);}, conf_path);
+	outfile = conf_path;
+	future_config_open = std::async(std::launch::async,
+	[this](const std::string &path){
+		std::optional<Settings> new_settings_op{};
+		try {
+			new_settings_op = config_open(path);
+		} catch (std::exception &e) {
+			// Put this in queue
+			std::cout << e.what() << std::endl;
+		}
+		return new_settings_op;
+	}, conf_path);
 }
 
 void Aero::config_open_await() {
-	Settings conf_settings = future_config_open.get();
-	settings = conf_settings;
+	auto settings_op = future_config_open.get();
+	if (settings_op.has_value()) {
+		config_file_set = true;
+		settings = settings_op.value();
+	}
+	signal_status_ready = true;
+	signal_status_busy = false;
+}
+
+void Aero::config_save_async(const std::string &conf_path) {
+	signal_status_ready = false;
+	signal_status_busy = true;
+	future_config_save = std::async(std::launch::async,
+	[this](const std::string &path){
+		return config_save(path, this->settings);
+	}, conf_path);
+}
+
+void Aero::config_save_await() {
+	bool success = future_config_save.get();
+	if (success) {
+		gui.msg.push("Config save success");
+	} else {
+		gui.msg.push("Config save failed");
+	}
 	signal_status_ready = true;
 	signal_status_busy = false;
 }
@@ -120,6 +338,12 @@ struct GraphLayer : public FlexGUI::Layer {
 	GraphLayer(Aero &aero) : aero(aero) {};
 };
 
+struct ConsoleLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	Aero &aero;
+	ConsoleLayer(Aero &aero) : aero(aero) {};
+};
+
 void RansLayer::OnUIRender() {
 	ImGui::Begin("RANS");
 
@@ -137,21 +361,11 @@ void RansLayer::OnUIRender() {
 
 	ImGui::Separator();
 	ImGui::Text("Solver");
-	// This is weird and might be slow
-	static int type = static_cast<int>(aero.settings.rans.solver_type == "implicit");
-	static const char* types[] = { "explicit", "implicit" };
-	ImGui::RadioButton("Explicit", &type, 0); ImGui::SameLine();
-	ImGui::RadioButton("Implicit", &type, 1);
-	if (aero.settings.rans.solver_type != types[type]) {
-		aero.settings.rans.solver_type = types[type];
-	}
-	static int order = 0;
-	static const bool orders[] = { false, true };
-	ImGui::RadioButton("First", &order, 0); ImGui::SameLine();
-	ImGui::RadioButton("Second", &order, 1);
-	if (aero.settings.rans.second_order != orders[order]) {
-		aero.settings.rans.second_order = orders[order];
-	}
+
+	ImGui::RadioButton("Explicit", &aero.settings.rans.type, 0); ImGui::SameLine();
+	ImGui::RadioButton("Implicit", &aero.settings.rans.type, 1);
+
+	ImGui::Checkbox("Second Order", &aero.settings.rans.second_order);
 	ImGui::InputDouble("Relaxation", &aero.settings.rans.relaxation, 0.1f, 1.0f, "%.2f");
 
 	ImGui::End();
@@ -160,6 +374,7 @@ void RansLayer::OnUIRender() {
 void ButtonLayer::OnUIRender() {
 	{
 		ImGui::Begin("Buttons");
+		ImGui::Text("Simulation");
 		if (ImGui::Button("Start Simulation", ImVec2(-1.0f, 0.0f)) && !aero.signal_status_busy && aero.signal_status_ready) {
 			aero.solve_async();
 		};
@@ -176,18 +391,31 @@ void ButtonLayer::OnUIRender() {
 			aero.gui.signal.pause = false;
 		};
 
-		if (ImGui::Button("Open Config", ImVec2(-1.0f, 0.0f)) && !aero.signal_status_busy && aero.signal_status_ready) {
+		ImGui::Separator();
+		ImGui::Text("Config");
+		if (ImGui::Button("Open", ImVec2(-1.0f, 0.0f)) && !aero.signal_status_busy && aero.signal_status_ready) {
 			// TODO: Make this a file dialog !!
+			aero.gui.msg.push("Starting parsing");
+			std::cout << "Starting parsing" << std::endl;
 			aero.config_open_async("../../../../examples/conf.ini");
+		};
+
+		if (ImGui::Button("Save", ImVec2(-1.0f, 0.0f)) && aero.config_file_set) {
+			aero.config_save_async("test.ini");
 		};
 
 		if (!aero.signal_status_ready && is_future_done(aero.future_solve)) {
 			aero.solve_await();
-		}
+		};
 
 		if (!aero.signal_status_ready && is_future_done(aero.future_config_open)) {
 			aero.config_open_await();
-		}
+			aero.gui.msg.push("Done parsing");
+		};
+
+		if (!aero.signal_status_ready && is_future_done(aero.future_config_save)) {
+			aero.config_save_await();
+		};
 
 		ImGui::End();
 
@@ -220,10 +448,25 @@ void GraphLayer::OnUIRender() {
 	}
 };
 
+void ConsoleLayer::OnUIRender() {
+    static ExampleAppLog log;
+
+    ImGui::Begin("Console", p_open);
+    std::optional<std::string> txt = aero.gui.msg.pop();
+
+    if (txt.has_value()) {
+        log.AddLog(txt.value().c_str());
+		log.AddLog("yeah\n");
+    }
+
+    ImGui::End();
+    log.Draw("Console", p_open);
+}
+
 FlexGUI::Application* CreateApplication(int argc, char** argv, Aero& aero)
 {
 	FlexGUI::ApplicationSpecification spec;
-	spec.Name = "GUI Example";
+	spec.Name = "AEROFLEX";
 	spec.Width = 1600;
 	spec.Height = 900;
 
@@ -231,6 +474,7 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, Aero& aero)
 	app->PushLayer(std::make_shared<ButtonLayer>(aero));
 	app->PushLayer(std::make_shared<GraphLayer>(aero));
 	app->PushLayer(std::make_shared<RansLayer>(aero));
+	app->PushLayer(std::make_shared<ConsoleLayer>(aero));
 
 	app->SetMenubarCallback([app]()
 	{
@@ -250,28 +494,13 @@ namespace FlexGUI {
 	int Main(int argc, char** argv)
 	{
 		GUIHandler gui;
-		tiny::config conf;
-
-		// Temporary
-		rans::Settings data = rans::parse(argc, argv, __FILE__);
-		if (data.read_failure == 1) {
-			std::cout << "\033[0;31m";
-			std::cout << "Error, unspecified error reading input file.";
-			std::cout << "\033[0m\n" << std::endl;
-			return 1;
-		} else if (data.read_failure == 2) {
-			std::cout << std::endl;
-			return 1;
-		}
 
 		// Initialize modules with signal routing
 		rans::Rans rans(gui);
-		rans.settings = data;
-
 		vlm::VLM vlm(gui);
 
 		// Initialize main application with the modules
-		Aero aero(conf, rans, vlm, gui);
+		Aero aero(rans, vlm, gui);
 
 		while (g_ApplicationRunning)
 		{
@@ -279,10 +508,6 @@ namespace FlexGUI {
 			app->Run();
 			delete app;
 		}
-
-		// rans.input();
-		// rans.solve();
-
 		return 0;
 	}
 }
