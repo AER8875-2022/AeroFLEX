@@ -227,8 +227,12 @@ inline Eigen::VectorXd internal_flux::operator()(
     f(2) -= 0.5*(kF1*(v-c*ny) + kF234_0*v      + kF234_1*(vR - vL - (VR-VL)*ny)             + kF5*(v+c*ny));
     f(3) -= 0.5*(kF1*(h-c*V)    + kF234_0*q2*0.5 + kF234_1*(u*(uR-uL) + v*(vR-vL) - V*(VR-VL))  + kF5*(h+c*V)); 
 
-    if (viscous_type == 1) {
-        // Laminar viscosity model
+    if (viscous_type > 0) {
+
+        double mu = g.mu_L; // Laminar viscosity model
+        if (viscous_type == 2) {
+            // SA model, edit mu
+        }
 
         // Central values
         Eigen::VectorXd qc = 0.5*(q_L + q_R);
@@ -243,9 +247,9 @@ inline Eigen::VectorXd internal_flux::operator()(
 
         // Viscous stresses
         const double div_v = gradu(0) + gradv(1);
-        const double tau_xx = 2. * g.mu_L * (gradu(0) - div_v/3.);
-        const double tau_yy = 2. * g.mu_L * (gradv(1) - div_v/3.);
-        const double tau_xy = g.mu_L * (gradu(1) + gradv(0));
+        const double tau_xx = 2. * mu * (gradu(0) - div_v/3.);
+        const double tau_yy = 2. * mu * (gradv(1) - div_v/3.);
+        const double tau_xy = mu * (gradu(1) + gradv(0));
 
         Eigen::VectorXd phi(2);
         phi(0) = qc(1)/qc(0)*tau_xx + qc(2)/qc(0)*tau_xy + g.k()*gradT(0);
@@ -256,8 +260,6 @@ inline Eigen::VectorXd internal_flux::operator()(
         f(2) -= nx*tau_xy + ny*tau_yy;
         f(3) -= nx*phi(0) + ny*phi(1);
 
-    } else if (viscous_type == 2) {
-        // SA model
     }
 
     return f;
@@ -272,7 +274,7 @@ Eigen::VectorXd internal_flux::vars(
     const double& nu_L,
     const double& nu_R
 ) {
-    return (q_L + q_R)*0.5;
+    return q_R;
 }
 
 
@@ -295,7 +297,7 @@ public:
 
         Eigen::VectorXd q_R = vars(q_L, _q_bc, gx, gy, nu_L, nu_R);
 
-        return invf(q_L, q_R);
+        return invf(q_L, q_R, gx, gy, nu_L, nu_R);
     }
 
     Eigen::VectorXd vars(
@@ -360,7 +362,7 @@ public:
 
         Eigen::VectorXd q_R = vars(q_L, q_bc, gx, gy, nu_L, nu_R);
 
-        return invf(q_L, q_R);
+        return invf(q_L, q_R, gx, gy, nu_L, nu_R);
     }
 
     Eigen::VectorXd vars(
@@ -383,18 +385,6 @@ Eigen::VectorXd wall_flux::vars(
     const double& nu_R
 ) {
     Eigen::VectorXd q_R(4);
-
-    // q_L is the internal field
-
-    const double& rho = q_L(0);
-    const double& rho_u = q_L(1);
-    const double& rho_v = q_L(2);
-    const double& rho_e = q_L(3);
-
-    const double rhoV = rho_u*nx + rho_v*ny;
-
-    const double rho_u_rev = rho_u - 2.*rhoV*nx;
-    const double rho_v_rev = rho_v - 2.*rhoV*ny;
 
     q_R(0) = q_L(0);
     q_R(1) = -q_L(1);
@@ -428,7 +418,7 @@ public:
         // q_R contains bc info
         // q_L is the internal field
 
-        return invf(q_L, q_R);
+        return invf(q_L, q_R, gx, gy, nu_L, nu_R);
     }
 
     Eigen::VectorXd vars(

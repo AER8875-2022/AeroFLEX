@@ -367,8 +367,8 @@ void solver::average_gradients(Eigen::VectorXd& gradx, Eigen::VectorXd& grady, c
     }
     
     double tij[2];
-    tij[0] = m.cellsCentersX[cell0] + m.cellsCentersX[cell1];
-    tij[1] = m.cellsCentersY[cell0] + m.cellsCentersY[cell1];
+    tij[0] = m.cellsCentersX[cell1] - m.cellsCentersX[cell0];
+    tij[1] = m.cellsCentersY[cell1] - m.cellsCentersY[cell0];
 
     const double lij = sqrt(tij[0]*tij[0] + tij[1]*tij[1]);
 
@@ -378,7 +378,7 @@ void solver::average_gradients(Eigen::VectorXd& gradx, Eigen::VectorXd& grady, c
     // Directional derivative
     double grad_dir[4];
     for (uint i=0; i<4; ++i) {
-        grad_dir[i] = (q(4*cell0+i) - q(4*cell1+i))/lij;
+        grad_dir[i] = (q(4*cell1+i) - q(4*cell0+i))/lij;
     }
 
     // Arithmetic average gradient

@@ -3,40 +3,25 @@
 [gas]
     gamma   1.4
     R       0.71428571428
-    mu_L    2e-5
+    mu_L    1e-5
 end
 
 
 [bc]
-    name    top
+    name    Farfield
     type    farfield
     T       1
-    mach    0.2
-    angle   0.
+    mach    0.25
+    angle   0.02181662
     p       1
 end
+
 
 [bc]
-    name    left
-    type    farfield
-    T       1
-    mach    0.2
-    angle   0.
-    p       1
+    name    Airfoil
+    type    wall
 end
 
-[bc]
-    name    right
-    type    farfield
-    T       1
-    mach    0.2
-    angle   0.
-    p       1
-end
-
-
-[bc] name bot0 type slip-wall end
-[bc] name bot1 type wall end
 
 
 [solver]
@@ -51,11 +36,14 @@ end
     gradients           least-squares
     limiter_k           5.
     rhs_iterations      5
+    airfoil_name        Airfoil
 end
 
 
 [mesh]
-    ../../../../examples/rans/flat_plate.msh
+    ../../../../examples/rans/airfoil_API2_coarse.msh
+    ../../../../examples/rans/airfoil_API2_mid.msh
+    ../../../../examples/rans/airfoil_API2_fine.msh
 end
 
 

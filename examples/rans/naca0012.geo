@@ -226,7 +226,7 @@ Curve Loop (2)={5};
 
 Plane Surface(1)={1, 2};
 
-Rotate{{0,0,1}, {0,1,0}, -1.25*Pi/180}{ Surface{1}; }
+Rotate{{0,0,1}, {0,1,0}, 0*Pi/180}{ Surface{1}; }
 
 
 Physical Curve("farfield") = {1, 2, 3, 4};
