@@ -210,7 +210,7 @@ void solver::set_bcs(std::map<std::string, boundary_condition> bcs_in) {
     // Fill edges flux functions
     std::vector<int> edges_flux_to_add(m.edgesCells.cols());
     std::fill(edges_flux_to_add.begin(), edges_flux_to_add.end(), 0);
-    
+
     boundary_vars.clear();
     boundary_vars.resize(m.boundaryEdges.size());
     for (int b=0; b<m.boundaryEdges.size(); ++b) {
@@ -228,7 +228,7 @@ void solver::set_bcs(std::map<std::string, boundary_condition> bcs_in) {
 
         boundary_vars[b] = vars_bi;
     }
-    
+
     edges_flux_functions.clear();
     edges_flux_functions.reserve(m.edgesCells.cols());
     for (int e=0; e<m.edgesCells.cols(); ++e) {
@@ -289,7 +289,7 @@ void solver::bcs_from_internal() {
 void solver::set_walls_from_internal(Eigen::VectorXd& q_) {
     for (uint b=0; b<m.boundaryEdges.size(); ++b) {
         if (
-            (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "wall") | 
+            (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "wall") |
             (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "slip-wall")
         ) {
             const uint e = m.boundaryEdges[b];
@@ -619,14 +619,14 @@ void solver::init() {
     boundary_variables vars_init = get_boundary_variables();
     int N = m.nRealCells;
 
-    auto [rho, rhou, rhov, rhoe] = vars_init.get_conservative(g);
+    conservative_variables q_init = vars_init.get_conservative(g);
 
     #pragma omp parallel for
     for (int i=0; i<N; ++i) {
-        q(4*i) = rho;
-        q(4*i+1) = rhou;
-        q(4*i+2) = rhov;
-        q(4*i+3) = rhoe;
+        q(4*i) = q_init.rho;
+        q(4*i+1) = q_init.rhou;
+        q(4*i+2) = q_init.rhov;
+        q(4*i+3) = q_init.rhoe;
     }
 }
 
@@ -727,7 +727,7 @@ class explicitSolver : public solver {
 
 public:
 
-    explicitSolver(const mesh& m_in, const gas& g_in, std::string viscosity_model) 
+    explicitSolver(const mesh& m_in, const gas& g_in, std::string viscosity_model)
     : solver(m_in, g_in, viscosity_model) {
         print_interval = 1;
         qk.resize(q.size());
@@ -892,7 +892,7 @@ class implicitSolver : public solver {
 
 public:
 
-    implicitSolver(const mesh& m_in, const gas& g_in, std::string viscosity_model) 
+    implicitSolver(const mesh& m_in, const gas& g_in, std::string viscosity_model)
     : solver(m_in, g_in, viscosity_model) {
         print_interval = 1;
 

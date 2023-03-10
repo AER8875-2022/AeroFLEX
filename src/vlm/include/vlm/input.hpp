@@ -7,6 +7,10 @@
 #include <string>
 #include <tuple>
 
+#ifndef M_PI
+#define M_PI 3.141592653589793115997963468544185161590576171875
+#endif
+
 /** @file input.hpp */
 
 using namespace Eigen;
@@ -42,12 +46,8 @@ struct simParam {
   /** @brief Viscous relaxation value applied on the vortex filament kernel */
   double coreRadius;
 
-  /** @brief Input format of the database (FILE, POLAR, NONE) */
+  /** @brief Input format of the database (FILE, NONE) */
   std::string databaseFormat;
-
-  /** @brief Equation of the lift polar (only required of databaseFormat is set
-   * to POLAR)*/
-  std::string liftPolar;
 
   /** @brief Method computing the free stream vector in the plane's referential
    *  @return Free stream vector */
@@ -58,6 +58,28 @@ struct simParam {
    *  @param alpha Local angle of attack
    *  @return Local free stream vector */
   Vector3d freeStream(const double alpha) const;
+
+  /** @brief Method computing the stream flow orientation
+   *  @return Stream axis vector */
+  Vector3d streamAxis() const;
+
+  /** @brief Method computing the stream flow orientation
+   *  @param alpha Local angle of attack
+   *  @return Stream axis vector */
+  Vector3d streamAxis(const double alpha) const;
+
+  /** @brief Method computing the lift axis
+   *  @return Lift axis vector */
+  Vector3d liftAxis() const;
+
+  /** @brief Method computing the lift axis
+   *  @param alpha Local angle of attack
+   *  @return Lift axis vector */
+  Vector3d liftAxis(const double alpha) const;
+
+  /** @brief Method computing the dynamic pressure
+   *  @return Dynamic pressure value */
+  double dynamicPressure() const;
 };
 
 /** @brief Object holding input/output information */
@@ -90,6 +112,28 @@ struct solverParam {
 
   /** @brief Interpolation type for viscous database */
   std::string interpolation;
+
+  /** @brief Linear solver type */
+  std::string linearSolver;
+
+  /** @brief Relaxation for the iterative scheme */
+  double relaxation;
+
+  /** @brief Max number of iterations for the iterative scheme */
+  int max_iter;
+};
+
+/** @brief Main struct holding parameters on the current case */
+struct settings {
+
+  /** @brief Object holding case and physics-oriented parameters */
+  simParam sim;
+
+  /** @brief Object holding input/output information */
+  ioParam io;
+
+  /** @brief Object holding solver parameters */
+  solverParam solver;
 };
 
 /** @brief Object holding the connectivity obtained from the mesh file */

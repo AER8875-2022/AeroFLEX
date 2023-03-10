@@ -1,37 +1,46 @@
 
-#include "vlm.hpp"
+#include "vlm/vlm.hpp"
+#include "common_aeroflex.hpp"
 
-/*
-//Calling solver from CLASS VLM
-VLM::VLM(SignalHandler signal_gui) : signal_gui(signal_gui) {}
+using namespace vlm;
 
-void VLM::input(){
+VLM::VLM(GUIHandler &gui) : gui(gui) {};
 
-  //importing the model
-  std::cout << "==>Loading simulation parameters...";
-  [io, sim, solvP] = vlm::input::importConfigFile(argv[1]);
-  std::cout << "\033[1;36mDone\033[0m" << std::endl;
+void VLM::input() {
+  if (!is_initialized) {
+    auto mesh = vlm::input::importMeshFile(data.io);
+    model object;
+    object.initialize(mesh, data.sim, data.io);
+    is_initialized = true;
+  }
+};
 
+void VLM::solve() {
+  solver::base *solver;
+  solver::linear::steady linear(iters, residuals, gui);
+  solver::nonlinear::steady nonlinear(iters, residuals, gui);
 
-  std::cout << "==>Loading mesh file...";
-  auto mesh = vlm::input::importMeshFile(io);
-  std::cout << "\033[1;36mDone\033[0m" << std::endl;
+  // Clear previous solution
+  reinitialize();
 
-
-  //creating the model
-  std::cout << "==>Initializing vortex lattice model...";
-  object(mesh, sim, io);
-  std::cout << "\033[1;36mDone\033[0m" << std::endl;
-
-}
-
-VLM::solve(solvP){
-
-  std::cout << "==>Solving...\n";
-  auto solver = vlm::solver::initializeSolver(vlm::input::solvP, object, 1.0);
-  solver->solve(object);
-  std::cout << "...\033[1;36mDone\033[0m" << std::endl;
-
+  if (!data.solver.type.compare("LINEAR")) {
+    linear.initialize(data.solver, object, database::table());
+    solver = &linear;
+  } else if (!data.solver.type.compare("NONLINEAR")) {
+    nonlinear.initialize(data.solver, object, database);
+    solver = &nonlinear;
+  } else {
+    return;
   }
 
-  */
+  solver->solve(object);
+};
+
+void VLM::reinitialize() {
+  // Reset model
+  object.resetWake();
+  object.clear();
+  // Reset iterations
+  residuals.clear();
+  iters = 0;
+}

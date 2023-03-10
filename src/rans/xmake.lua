@@ -7,7 +7,7 @@
 --     add_files("dev/*.cpp")
 
 target("rans")
-    set_kind("static")
+    set_kind("headeronly")
     add_packages("eigen", "openmp")
     add_includedirs("../common")
     add_includedirs("include", {public = true})

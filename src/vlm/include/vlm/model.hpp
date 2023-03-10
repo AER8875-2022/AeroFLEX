@@ -58,12 +58,12 @@ private:
   Vector3d cm = Vector3d::Zero();
 
 public:
-  /**
-   * @param mesh Object holding information on the mesh
-   * @param sim Object holding simulation parameters
-   * @param io Object holding input/output parameters */
-  model(const input::meshData &mesh, const input::simParam &sim,
-        const input::ioParam &io);
+  /** @brief Main method to to initialize the VLM model
+   *  @param mesh Object holding information on the mesh
+   *  @param sim Object holding simulation parameters
+   *  @param io Object holding input/output parameters */
+  void initialize(const input::meshData &mesh, const input::simParam &sim,
+                  const input::ioParam &io);
 
   /** @brief Wrapper method initializing wake elements for each lifting surface
    *  @param wakeLength Length of the generated wake in the x direction
@@ -77,6 +77,9 @@ public:
   /** @brief Method reinitializing the wake to a non existing state */
   void resetWake();
 
+  /** @brief Method reinitializing the previous solution to zero */
+  void clear();
+
   /** @brief Getter method for the lift coefficient */
   double get_cl() const;
 
@@ -86,6 +89,10 @@ public:
   /** @brief Getter method for the moment coefficients vector */
   Vector3d get_cm() const;
 
+  /** @brief Method to project forces and moments in the inertial frame of
+   * reference  */
+  Matrix<double, 6, 1> forces_to_inertial_frame(const int stationID) const;
+
 private:
   /** @brief Method building the objects from data acquired from the mesh
    *  @param mesh Information on the mesh */
@@ -94,7 +101,7 @@ private:
   /** @brief Method that computes the geometric properties and metrics of all
    * elements
    *  @param mesh Information on the mesh */
-  void initialize(const input::meshData &mesh);
+  void initializeMesh(const input::meshData &mesh);
 
   friend class solver::linear::steady;
   friend class solver::linear::unsteady;

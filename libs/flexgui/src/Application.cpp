@@ -14,6 +14,8 @@
 #include <glm/glm.hpp>
 
 #include <iostream>
+#include <fstream>
+#include "ini.embed"
 
 extern bool g_ApplicationRunning;
 static FlexGUI::Application* s_Instance = nullptr;
@@ -100,12 +102,15 @@ namespace FlexGUI {
 		ImPlot::CreateContext();
 
 		ImGuiIO& io = ImGui::GetIO(); (void)io;
+
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
 		//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
 		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
+		io.IniFilename = NULL;
 		//io.ConfigViewportsNoAutoMerge = true;
 		//io.ConfigViewportsNoTaskBarIcon = true;
+		ImGui::LoadIniSettingsFromMemory(g_ImGuiIniSettings, g_ImGuiIniSettingsSize);
 
 		// Setup Dear ImGui style
 		ImGui::StyleColorsDark();
@@ -133,10 +138,18 @@ namespace FlexGUI {
 
 	void Application::Shutdown()
 	{
+		size_t ini_size;
+		const char* ini_settings = ImGui::SaveIniSettingsToMemory(&ini_size);
+		std::ofstream ini_file("ini.embed");
+		ini_file << "const char* g_ImGuiIniSettings = R\"(" << std::string(ini_settings, ini_size) << ")\";\n";
+		ini_file << "size_t g_ImGuiIniSettingsSize = " << ini_size << ";";
+		ini_file.close();
+
 		for (auto& layer : m_LayerStack)
 			layer->OnDetach();
 
 		m_LayerStack.clear();
+
 
 		ImGui_ImplOpenGL3_Shutdown();
 		ImGui_ImplGlfw_Shutdown();

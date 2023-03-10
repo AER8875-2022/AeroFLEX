@@ -34,7 +34,12 @@
 /build/*
 /.xmake/*
 /.vscode/*
+/.cache/*
+/.idea/*
 compile_commands.json
 
 # Simulation outputs
 *.vtu
+
+# MacOS Finder binairies
+.DS_Store

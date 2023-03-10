@@ -1,6 +1,8 @@
 #pragma once
 
 #include <atomic>
+#include <memory>
+#include <string>
 
 struct SignalHandler {
 	std::atomic<bool> stop = false;

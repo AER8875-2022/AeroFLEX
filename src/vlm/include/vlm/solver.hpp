@@ -4,9 +4,11 @@
 
 #include "Eigen/Dense"
 #include "Eigen/IterativeLinearSolvers"
+#include "common_aeroflex.hpp"
 #include "database/database.hpp"
 #include "vlm/input.hpp"
 #include "vlm/model.hpp"
+#include <atomic>
 #include <unordered_map>
 
 #ifndef VLM_CL_ALPHA_DEG
@@ -29,22 +31,24 @@ class base {
 protected:
   /** @brief Solver parameters */
   input::solverParam solvP;
+
   /** @brief Left hand side of the linear system */
   MatrixXd lhs;
+
   /** @brief Right hand side of the linear system */
   VectorXd rhs;
+
+  /** @brief Source influence matrix */
   MatrixXd DoubletMatrixINF;
 
 public:
-  /** @brief Base constructor */
-  base();
-
-  /** @brief Constructor to initialize parameters and matrices
-   *  @param solvP Solver parameters
+  /** @brief Method to initialize the solver object
+   *  @param solvP Struct holding the solver parameters
    *  @param object Model holding the VLM elements */
-  base(const input::solverParam &solvP, const model &object);
+  virtual void initialize(const input::solverParam &solvP, const model &object,
+                          const database::table &) = 0;
 
-  /** @brief Pure virtual wrapper method to solve VLM algorithm
+  /** @brief Main method to solve non linear VLM
    *  @param object Model holding the VLM elements */
   virtual void solve(model &object) = 0;
 
@@ -81,12 +85,29 @@ namespace linear {
 class steady : public base {
 
 public:
-  /**
-   *  @param solvP Solver parameters
-   *  @param object Model holding the VLM elements */
-  steady(const input::solverParam &solvP, const model &object);
+  /** @brief Iteration counter */
+  std::atomic<int> &iter;
 
-  /** @brief Main method to solve the linear VLM problem */
+  /** @brief Residual vector */
+  std::vector<double> &residuals;
+
+  /** @brief Gui event handler */
+  GUIHandler &gui;
+
+public:
+  /** @param iter Iteration counter
+   *  @param residuals Iteration residuals vector */
+  steady(std::atomic<int> &iter, std::vector<double> &residuals,
+         GUIHandler &gui);
+
+  /** @brief Method to initialize the solver object
+   *  @param solvP Struct holding the solver parameters
+   *  @param object Model holding the VLM elements */
+  virtual void initialize(const input::solverParam &solvP, const model &object,
+                          const database::table &) override;
+
+  /** @brief Main method to solve non linear VLM
+   *  @param object Model holding the VLM elements */
   virtual void solve(model &object) override;
 
 protected:
@@ -131,12 +152,16 @@ class steady : public linear::steady {
   database::table database;
 
 public:
-  /**
-   *  @param solvP solvP Solver parameters
-   *  @param object Model holding the VLM elements
-   *  @param database Interpolation table */
-  steady(const input::solverParam &solvP, const model &object,
-         const database::table database);
+  /** @param iter Iteration counter
+   *  @param residuals Iteration residuals vector */
+  steady(std::atomic<int> &iter, std::vector<double> &residuals,
+         GUIHandler &gui);
+
+  /** @brief Method to initialize the solver object
+   *  @param solvP Struct holding the solver parameters
+   *  @param object Model holding the VLM elements */
+  virtual void initialize(const input::solverParam &solvP, const model &object,
+                          const database::table &database) override;
 
   /** @brief Main method to solve non linear VLM
    *  @param object Model holding the VLM elements */
@@ -165,16 +190,6 @@ protected:
 class unsteady : public linear::unsteady {};
 
 } // namespace nonlinear
-
-/** @brief Generates the appropriate solver based ont the input parameters
- *  @param solvP Solver parameters
- *  @param object Model holding the VLM elements
- *  @param eta Viscous slope parameter
- *  @return Pointer to appropriate solver class */
-solver::base *initializeSolver(const input::solverParam &solvP,
-                               const model &object,
-                               const database::table &database);
-
 } // namespace solver
 } // namespace vlm
 

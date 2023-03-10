@@ -8,27 +8,29 @@ using namespace Eigen;
 
 // -------------------
 
-panel::panel(const std::vector<int> &nodeIDs)
-    : nodeIDs(nodeIDs), area(0.0), normal(Vector3d::Zero()),
+panel::panel(const std::vector<int> &nodeIDs, std::vector<Vector3d> &nodes)
+    : nodeIDs(nodeIDs), nodes(nodes), area(0.0), normal(Vector3d::Zero()),
       center(Vector3d::Zero()) {
   this->edges.reserve(nodeIDs.size());
 }
 
-void panel::updateGeometry(const std::vector<Vector3d> &nodes) {
+void panel::updateGeometry() {
   for (auto &edge : edges) {
     edge.updateGeometry(nodes);
   }
-  computeCenter(nodes);
-  computeArea(nodes);
-  computeNormal(nodes);
+  computeCenter();
+  computeArea();
+  computeNormal();
 }
 
-void panel::initialize(const std::vector<Vector3d> &nodes) {
-  for (size_t i = 0; i != nodeIDs.size() - 1; i++) {
-    edges.push_back(geom::edgeLine(nodeIDs[i], nodeIDs[i + 1]));
+void panel::initialize() {
+  if (edges.empty()) {
+    for (size_t i = 0; i != nodeIDs.size() - 1; i++) {
+      edges.push_back(geom::edgeLine(nodeIDs[i], nodeIDs[i + 1]));
+    }
+    edges.push_back(geom::edgeLine(nodeIDs.back(), nodeIDs.front()));
   }
-  edges.push_back(geom::edgeLine(nodeIDs.back(), nodeIDs.front()));
-  updateGeometry(nodes);
+  updateGeometry();
 }
 
 std::vector<int> panel::get_nodeIDs() const { return nodeIDs; }
@@ -41,7 +43,7 @@ Vector3d panel::get_center() const { return center; }
 
 std::vector<geom::edgeLine> panel::get_edges() const { return edges; }
 
-void panel::computeCenter(const std::vector<Vector3d> &nodes) {
+void panel::computeCenter() {
   center = Vector3d::Zero();
   for (auto &nodeID : nodeIDs) {
     auto node = nodes[nodeID];
@@ -50,7 +52,7 @@ void panel::computeCenter(const std::vector<Vector3d> &nodes) {
   center /= (double)nodeIDs.size();
 }
 
-void panel::computeNormal(const std::vector<Vector3d> &nodes) {
+void panel::computeNormal() {
   normal = Vector3d::Zero();
   for (size_t i = 0; i != nodeIDs.size() - 1; i++) {
     normal -= edges[i].get_dl().cross(edges[i + 1].get_dl());
@@ -59,7 +61,7 @@ void panel::computeNormal(const std::vector<Vector3d> &nodes) {
   normal.normalize();
 }
 
-void panel::computeArea(const std::vector<Vector3d> &nodes) {
+void panel::computeArea() {
   area = 0.0;
   Vector3d cross, centerEdge = Vector3d::Zero();
   for (size_t i = 0; i != nodeIDs.size(); i++) {
@@ -73,58 +75,55 @@ void panel::computeArea(const std::vector<Vector3d> &nodes) {
 // -------------------
 
 vortexRing::vortexRing(const int globalIndex, const std::vector<int> &nodeIDs,
-                       const double gamma)
+                       std::vector<Vector3d> &nodes, const double gamma)
     : globalIndex(globalIndex), gamma(gamma), cl(0.0), cm(Vector3d::Zero()),
-      panel(nodeIDs) {
+      panel(nodeIDs, nodes) {
   vortices.reserve(4);
 }
 
-void vortexRing::initialize(const std::vector<Vector3d> &nodes,
-                            const input::simParam &sim) {
-  panel.initialize(nodes);
+void vortexRing::initialize(const input::simParam &sim) {
+  panel.initialize();
   for (size_t i = 0; i != panel.nodeIDs.size(); i++) {
     vortices.push_back(fil::vortexLine(1.0, sim.coreRadius));
   }
   local_aoa = sim.aoa;
-  computeCollocationPoint(nodes);
+  computeCollocationPoint();
 }
 
-Vector3d
-vortexRing::forceActingPoint(const std::vector<Vector3d> &nodes) const {
-  return (0.5 * (nodes[panel.nodeIDs[0]] + nodes[panel.nodeIDs[1]]));
+Vector3d vortexRing::forceActingPoint() const {
+  return (0.5 *
+          (panel.nodes[panel.nodeIDs[0]] + panel.nodes[panel.nodeIDs[1]]));
 }
 
-Vector3d vortexRing::leadingEdgeDl(const std::vector<Vector3d> &nodes) {
-  return (nodes[panel.nodeIDs[1]] - nodes[panel.nodeIDs[0]]);
+Vector3d vortexRing::leadingEdgeDl() {
+  return (panel.nodes[panel.nodeIDs[1]] - panel.nodes[panel.nodeIDs[0]]);
 }
 
-void vortexRing::computeCollocationPoint(const std::vector<Vector3d> &nodes) {
+void vortexRing::computeCollocationPoint() {
   // High aoa correction term according to x axis
   double k = local_aoa * M_PI / (180.0 * std::sin(local_aoa * M_PI / 180.0));
-  collocationPoint = k * panel.center + (1 - k) * forceActingPoint(nodes);
+  collocationPoint = k * panel.center + (1 - k) * forceActingPoint();
 }
 
-Vector3d vortexRing::influence(const Vector3d &collocationPoint,
-                               const std::vector<Vector3d> &nodes) const {
+Vector3d vortexRing::influence(const Vector3d &collocationPoint) const {
   Vector3d v = Vector3d::Zero();
   for (size_t i = 0; i != vortices.size(); i++) {
-    v += vortices[i].influence(collocationPoint, nodes, panel.edges[i]);
+    v += vortices[i].influence(collocationPoint, panel.nodes, panel.edges[i]);
   }
   return v;
 }
 
-Vector3d vortexRing::streamInfluence(const Vector3d &collocationPoint,
-                                     const std::vector<Vector3d> &nodes) const {
+Vector3d vortexRing::streamInfluence(const Vector3d &collocationPoint) const {
   Vector3d v = Vector3d::Zero();
   for (size_t i = 1; i != vortices.size(); i += 2) {
-    v += vortices[i].influence(collocationPoint, nodes, panel.edges[i]);
+    v += vortices[i].influence(collocationPoint, panel.nodes, panel.edges[i]);
   }
   return v;
 }
 
-void vortexRing::updateGeometry(const std::vector<Vector3d> &nodes) {
-  panel.updateGeometry(nodes);
-  computeCollocationPoint(nodes);
+void vortexRing::updateGeometry() {
+  panel.updateGeometry();
+  // computeCollocationPoint();
 }
 
 void vortexRing::updateGamma(const double gamma) {
@@ -157,17 +156,17 @@ Vector3d vortexRing::get_collocationPoint() const { return collocationPoint; }
 // -------------------
 
 doubletPanel::doubletPanel(const int globalIndex,
-                           const std::vector<int> &nodeIDs, const double sigma)
-    : globalIndex(globalIndex), sigma(sigma), panel(nodeIDs) {
+                           const std::vector<int> &nodeIDs,
+                           std::vector<Vector3d> &nodes, const double sigma)
+    : globalIndex(globalIndex), sigma(sigma), panel(nodeIDs, nodes) {
 
   Doublets_vortices.reserve(4);
 }
 
-void doubletPanel::initialize(const std::vector<Vector3d> &nodes,
-                              const input::simParam &sim) {
-  panel.initialize(nodes);
+void doubletPanel::initialize(const input::simParam &sim) {
+  panel.initialize();
   // Localreference.reserve(3); // potentiellement temporaire
-  LocalCoordinate(nodes);
+  LocalCoordinate();
   for (size_t i = 0; i != panel.nodeIDs.size(); i++) {
     Doublets_vortices.push_back(fil::vortexLine(1.0, sim.coreRadius));
   }
@@ -179,14 +178,13 @@ void doubletPanel::initialize(const std::vector<Vector3d> &nodes,
   */
 }
 
-void doubletPanel::updateGeometry(const std::vector<Vector3d> &nodes) {
-  panel.updateGeometry(nodes);
-}
+void doubletPanel::updateGeometry() { panel.updateGeometry(); }
 
-void doubletPanel::LocalCoordinate(const std::vector<Vector3d> &nodes) {
+void doubletPanel::LocalCoordinate() {
 
   Eigen::Vector3d m =
-      ((nodes[panel.nodeIDs[1]] + nodes[panel.nodeIDs[2]]) / 2 - panel.center)
+      ((panel.nodes[panel.nodeIDs[1]] + panel.nodes[panel.nodeIDs[2]]) / 2 -
+       panel.center)
           .normalized(); // could be simplefied with panel centerpoint of the
                          // edge
   Eigen::Vector3d l = panel.normal.cross(m);
@@ -204,13 +202,12 @@ void doubletPanel::updateNodes(const std::vector<Vector3d> &nodes) {
   }
 }
 // Solving the influence of the doublets
-Vector3d doubletPanel::influence(const Vector3d &collocationPoint,
-                                 const std::vector<Vector3d> &nodes) const {
+Vector3d doubletPanel::influence(const Vector3d &collocationPoint) const {
   Vector3d d = Vector3d::Zero();
   // la partie en dessous n'est pas encore adapté
   for (size_t i = 0; i != Doublets_vortices.size(); i++) {
-    d +=
-        Doublets_vortices[i].influence(collocationPoint, nodes, panel.edges[i]);
+    d += Doublets_vortices[i].influence(collocationPoint, panel.nodes,
+                                        panel.edges[i]);
   }
   return d;
 }
