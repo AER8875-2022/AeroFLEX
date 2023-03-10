@@ -267,7 +267,7 @@ public:
     void compute_mesh();
     void add_cell_edges(uint cell_id);
 
-    void compute_wall_dist(const std::string& patch_name);
+    void compute_wall_dist(const std::map<std::string, boundary_condition> bcs);
 
     void send_mesh_info();
 };
@@ -791,7 +791,7 @@ void mesh::add_boundary_cells() {
 
 
 
-void mesh::compute_wall_dist(const std::string& patch_name) {
+void mesh::compute_wall_dist(const std::map<std::string, boundary_condition> bcs) {
 
 
     // Compute the distance to the wall
@@ -804,7 +804,10 @@ void mesh::compute_wall_dist(const std::string& patch_name) {
         bool first_added = true;
         // Loop over all boundary cells
         for (uint j=0; j<boundaryEdges.size(); ++j) {
-            if (boundaryEdgesPhysicals[j] == patch_name) {
+            if (
+                (bcs.at(boundaryEdgesPhysicals[j]).bc_type == "wall") |
+                (bcs.at(boundaryEdgesPhysicals[j]).bc_type == "slip-wall")
+            ) {
                 const int& e = boundaryEdges[j];
 
                 double& wx = edgesCentersX[e];

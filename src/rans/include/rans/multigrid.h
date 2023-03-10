@@ -55,16 +55,12 @@ multigrid<solverType>::multigrid(std::vector<mesh> ms, Settings &settings, GUIHa
 
     solvers.reserve(ms.size());
     for (auto& mi : ms) {
+        mi.compute_wall_dist(settings.bcs);
         solvers.push_back(solverType(mi, settings.g, settings.viscosity_model));
         solvers[solvers.size()-1].set_bcs(settings.bcs);
         solvers[solvers.size()-1].set_second_order(settings.second_order);
         solvers[solvers.size()-1].set_gradient_scheme(settings.gradient_scheme);
         solvers[solvers.size()-1].set_limiter_k(settings.limiter_k);
-
-        if (settings.airfoil_name != "") {
-            auto& mi = solvers[solvers.size()-1].get_mesh();
-            mi.compute_wall_dist(settings.airfoil_name);
-        }
     }
 
     #ifdef RANS_DEBUG
@@ -199,6 +195,10 @@ int multigrid<explicitSolver>::run_solver(
         if (ok == 0) {
             err_last = err;
             err = s.solve(settings.relaxation);
+
+            if ((i == 0)&(err > 2*err_0)) {
+                err_0 = err;
+            }
         } else
             err = -1;
         if (i % s.get_print_interval() == 0) std::cout << "." << std::flush;
@@ -252,6 +252,10 @@ int multigrid<implicitSolver>::run_solver(
         if (ok == 0) {
             err_last = err;
             err = s.solve(settings.relaxation, err_0 * settings.tolerance, settings.rhs_iterations);
+
+            if ((i == 0)&(err > 2*err_0)) {
+                err_0 = err;
+            }
         } else
             err = -1;
         if (i % s.get_print_interval() == 0) std::cout << "." << std::flush;

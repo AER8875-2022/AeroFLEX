@@ -26,6 +26,7 @@ struct gas {
     double mu_L=1e-5;
     double Pr_L=0.72;
     double Pr_T=0.9;
+    double cp = 1.;
     double gamma=1.4;
 
     gas(double R_=0.71428571428, double mu_L_=1e-5, double Pr_L_=0.72, double Pr_T_=0.9, double gamma_=1.4) {
@@ -34,6 +35,10 @@ struct gas {
         Pr_L = Pr_L_;
         Pr_T = Pr_T_;
         gamma = gamma_;
+    }
+
+    double k() {
+        return cp * mu_L / Pr_L;
     }
 };
 
