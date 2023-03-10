@@ -24,7 +24,7 @@ int main(int argc, char **argv){
  
     if (argv[2] = "NLS")    //     /home/olivier/Structure-Dev/examples/Moment.txt NLS 10 1E-10 0.5
     {   
-        double Load_step = std::stod(argv[3]);
+        int Load_step = std::stoi(argv[3]);
         double       tol = std::stod(argv[4]);
         double      amor = std::stod(argv[5]);
 

@@ -22,8 +22,8 @@ namespace structure {
 class MODEL{
 
 public:
-    std::map<int,int>                     indexation_switch;      //     (ni) --> numéro du ddl
-    std::map<int, Eigen::Vector3d>                 Grid_MAP;      //     (ni) --> (x,y,z)
+    std::map<int,int>                     indexation_switch;      //  user_id(ni) --> code_id(numéro du ddl)
+    std::map<int, Eigen::Vector3d>                 Grid_MAP;      //  user_id(ni) --> Initial position(x,y,z)
     std::map<int, MAT1>                            MAT1_MAP;      //  MAT1_ID --> MAT1
     std::map<int, PBAR>                            PBAR_MAP;      //  PBAR_ID --> PBAR
     std::map<int, CBAR>                            CBAR_MAP;      //  CBAR_ID --> CBAR 
@@ -35,8 +35,8 @@ public:
     int Nbr_Element;               //Nombre d'éléments
     int Nbr_Noeud;                 //Nombre de noeud 
 
-    Eigen::VectorXd                           Forces;
-    Eigen::SparseMatrix<double>      K_Global_sparse;
+    Eigen::VectorXd                          Forces;
+    Eigen::SparseMatrix<double>     K_Global_sparse;
     Eigen::SparseMatrix<double>      K_Final_sparse;
 
     // GUI Handlers
@@ -51,11 +51,9 @@ public:
         : gui(gui), iters(iters), residuals(residuals) {
         
         read_data_file(namefile);
-        // K_Global_sparse = Eigen::SparseMatrix<double>( Nbr_Noeud * 6, Nbr_Noeud * 6 );
+
         set_K_global();
-        
-        set_load_vector();
-        
+        set_load_vector();        
         set_K_Final_sparse();
     };
 
@@ -91,6 +89,14 @@ public:
         double          Norm;              
         Eigen::Vector3d Direction;
     };
+
+    void set_FullLoadVector(Eigen::VectorXd New_F)
+    {
+        if(Forces.size() == New_F.size())
+        {
+            Forces = New_F;
+        }
+    }
 
     
     void set_K_global(){
@@ -230,7 +236,7 @@ public:
         return get_Solve(Forces); 
     }
     
-    Eigen::VectorXd get_NonLinSolve(double Max_load_step, double tol, double amor)
+    Eigen::VectorXd get_NonLinSolve(int Max_load_step, double tol, double amor)
     {
         Eigen::VectorXd Dep = Eigen::VectorXd(6 * Nbr_Noeud);
         Dep.setZero();
@@ -240,7 +246,8 @@ public:
 
         for (double Load_Step = 1.; Load_Step <= Max_load_step; Load_Step ++)
         {
-            std::cout<<"Load step: "<< Load_Step <<std::endl;
+            std::cout<<"\n============"<<std::endl;
+            std::cout<<"Load step: "<< Load_Step <<" / "<< Max_load_step <<std::endl;
             Forces_diff = (Load_Step/Max_load_step)*(Forces) - Forces_int;
             
             set_K_global();
@@ -294,11 +301,12 @@ public:
                 
                 if (Residu < 10.*tol) Delta_dep_amor = amor*Delta_dep_full;
 
+                if (iters%500 == 0){
                 std::cout << "Iteration " << iters << std::endl;
                 std::cout << "\t Residual = " << Residu << std::endl;
+                };
 
                 Forces_int.setZero();
-
                 // Incrementing current iteration
                 iters++;
                 residuals.push_back(Residu);
@@ -325,7 +333,6 @@ public:
             QUATERNION_MAP[i] = delta_q ;
         }
     }
-
     
     void read_data_file(std::string namefile)
     {   
