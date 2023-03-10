@@ -155,7 +155,7 @@ namespace Eigen {
             }
 
             const double d = rhs.dot(rhs);
-            const double h = std::max(1e-3, 1e-3*std::sqrt(d));
+            const double h = 1e-6;
 
             for (uint e=0; e<lhs.get_n_edges(); ++e) {
 
@@ -167,14 +167,13 @@ namespace Eigen {
                 Eigen::VectorXd W_L = rhs.segment(4*i, 4);
                 Eigen::VectorXd W_R = rhs.segment(4*j, 4);
 
-                Eigen::VectorXd FB = (*ffx)(q_L, q_R, n, *(lhs.g));
+                Eigen::VectorXd FB = (*ffx)(q_L, q_R);
 
-                dst.segment(4*i, 4) += ((*ffx)(q_L + h*W_L, q_R, n, *(lhs.g)) - FB)/h;
+                dst.segment(4*i, 4) += ((*ffx)(q_L + h*W_L, q_R) - FB)/h;
 
                 if (ffx->two_sided) {
-                    Eigen::VectorXd FB_R = (*ffx)(q_R, q_L, -1*n, *(lhs.g));
 
-                    dst.segment(4*j, 4) += ((*ffx)(q_R + h*W_R, q_L, -1*n, *(lhs.g)) + FB)/h;
+                    dst.segment(4*j, 4) -= ((*ffx)(q_L, q_R + h*W_R) - FB)/h;
                 }
             }
         }

@@ -49,10 +49,10 @@ void Rans::input() {
 
 template<class T>
 void Rans::run() {
-    multigrid<T> multi(ms, settings.bcs, settings.g, settings.second_order, gui, residuals, iters);
+    multigrid<T> multi(ms, settings, gui, residuals, iters);
     gui.event.rans_preprocess = true;
 
-    rans::solver& s = multi.run(true, settings.relaxation);
+    rans::solver& s = multi.run(true);
     gui.event.rans_solve = true;
 
     save(settings.outfilename, s);

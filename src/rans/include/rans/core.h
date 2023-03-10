@@ -28,6 +28,7 @@ struct gas {
     double mu_L=1e-5;
     double Pr_L=0.72;
     double Pr_T=0.9;
+    double cp = 1.;
     double gamma=1.4;
 
     gas(double R_=0.71428571428, double mu_L_=1e-5, double Pr_L_=0.72, double Pr_T_=0.9, double gamma_=1.4) {
@@ -36,6 +37,10 @@ struct gas {
         Pr_L = Pr_L_;
         Pr_T = Pr_T_;
         gamma = gamma_;
+    }
+
+    double k() {
+        return cp * mu_L / Pr_L;
     }
 };
 
@@ -110,17 +115,34 @@ struct boundary_condition {
 
 
 
-struct solution {
-    double gamma;
-    double R;
+class solution {
+private:
+    Eigen::VectorXd &q;
+    gas &g;
 
-    Eigen::VectorXd rho;
-    Eigen::VectorXd rhou;
-    Eigen::VectorXd rhov;
-    Eigen::VectorXd rhoe;
+public:
+
+    solution(Eigen::VectorXd &q, gas &g) : q(q), g(g) {}
+
+    double gamma() const {
+        return g.gamma;
+    }
+
+    double rho(const int& i) const {
+        return q(4*i);
+    }
+    double rhou(const int& i) const {
+        return q(4*i+1);
+    }
+    double rhov(const int& i) const {
+        return q(4*i+2);
+    }
+    double rhoe(const int& i) const {
+        return q(4*i+3);
+    }
 
     double p(const int& i) const {
-        return (gamma - 1)*(rhoe(i) - 0.5/rho(i)*(rhou(i)*rhou(i) + rhov(i)*rhov(i)));
+        return (g.gamma - 1)*(rhoe(i) - 0.5/rho(i)*(rhou(i)*rhou(i) + rhov(i)*rhov(i)));
     }
 
     double u(const int& i) const {
@@ -130,10 +152,10 @@ struct solution {
         return rhov(i)/rho(i);
     }
     double T(const int& i) const {
-        return p(i)/(R*rho(i));
+        return p(i)/(g.R*rho(i));
     }
     double c(const int& i) const {
-        return sqrt(gamma * p(i)/rho(i));
+        return sqrt(g.gamma * p(i)/rho(i));
     }
     double mach(const int& i) const {
         return sqrt(rhou(i)*rhou(i) + rhov(i)*rhov(i))/(rho(i) * c(i));
@@ -150,7 +172,19 @@ struct Settings {
     std::vector<std::string> solver_options = {"explicit", "implicit"};
     int type = 1;
     bool second_order = true;
-    double relaxation = 0.8;
+    double start_cfl = 40.;
+    double slope_cfl = 50.;
+    double max_cfl = 1000.;
+    double relaxation = 1;
+    double tolerance = 1e-4;
+    uint rhs_iterations = 5;
+    uint max_iterations = 30000;
+
+    std::string viscosity_model = "inviscid";
+    std::string gradient_scheme = "least-squares";
+    double limiter_k = 5.;
+
+    std::string airfoil_name = "";
 
     std::string outfilename;
 
