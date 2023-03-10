@@ -105,6 +105,8 @@ Settings parse(int argc, char **argv, std::string compiled_file) {
                         data.g.Pr_L = prop_i;
                     else if (property == "Pr_T")
                         data.g.Pr_T = prop_i;
+                    else if (property == "cp")
+                        data.g.cp = prop_i;
                     infile >> property;
                     if (property == "end")
                         tag = "end";

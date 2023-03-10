@@ -82,7 +82,7 @@ inline void calc_grad_v(Eigen::VectorXd& gv, const Eigen::VectorXd& q, const Eig
 }
 // Smoothed absolute value
 inline double sabs(const double& x) {
-    return sqrt(x*x + 1e-3);
+    return sqrt(x*x + 1e-4);
 }
 
 
@@ -113,6 +113,18 @@ public:
         return Eigen::VectorXd(4);
     }
 
+    virtual Eigen::VectorXd vars(
+        const Eigen::VectorXd& q_L,
+        const Eigen::VectorXd& q_R,
+        const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
+        const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
+        const double& nu_L = 0,
+        const double& nu_R = 0
+    ) {
+        throw std::logic_error( "default flux vars called" );
+        return Eigen::VectorXd(4);
+    }
+
 };
 
 
@@ -126,6 +138,15 @@ public:
         two_sided = true;
     }
     inline Eigen::VectorXd operator()(
+        const Eigen::VectorXd& q_L,
+        const Eigen::VectorXd& q_R,
+        const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
+        const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
+        const double& nu_L = 0,
+        const double& nu_R = 0
+    );
+
+    Eigen::VectorXd vars(
         const Eigen::VectorXd& q_L,
         const Eigen::VectorXd& q_R,
         const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
@@ -210,10 +231,7 @@ inline Eigen::VectorXd internal_flux::operator()(
         // Laminar viscosity model
 
         // Central values
-        Eigen::VectorXd qc(4);
-        for (uint i=0; i<4; ++i) {
-            qc(i) = 0.5*(q_L(i) + q_R(i));
-        }
+        Eigen::VectorXd qc = 0.5*(q_L + q_R);
 
         // Temperature gradient
         Eigen::VectorXd gradT(2);
@@ -230,9 +248,8 @@ inline Eigen::VectorXd internal_flux::operator()(
         const double tau_xy = g.mu_L * (gradu(1) + gradv(0));
 
         Eigen::VectorXd phi(2);
-        const double k = 1* g.mu_L / g.Pr_L;
-        phi(0) = qc(1)/qc(0)*tau_xx + qc(2)/qc(0)*tau_xy + k*gradT(0);
-        phi(1) = qc(1)/qc(0)*tau_xy + qc(2)/qc(0)*tau_yy + k*gradT(1);
+        phi(0) = qc(1)/qc(0)*tau_xx + qc(2)/qc(0)*tau_xy + g.k()*gradT(0);
+        phi(1) = qc(1)/qc(0)*tau_xy + qc(2)/qc(0)*tau_yy + g.k()*gradT(1);
 
         // Viscous fluxes
         f(1) -= nx*tau_xx + ny*tau_xy;
@@ -244,6 +261,18 @@ inline Eigen::VectorXd internal_flux::operator()(
     }
 
     return f;
+}
+
+
+Eigen::VectorXd internal_flux::vars(
+    const Eigen::VectorXd& q_L,
+    const Eigen::VectorXd& q_R,
+    const Eigen::VectorXd& gx,
+    const Eigen::VectorXd& gy,
+    const double& nu_L,
+    const double& nu_R
+) {
+    return (q_L + q_R)*0.5;
 }
 
 
@@ -264,28 +293,50 @@ public:
         const double& nu_R = 0
     ) {
 
-        Eigen::VectorXd q_R(4);
-
-        // q_L is the internal field
-
-        const double& rho = q_L(0);
-        const double& rho_u = q_L(1);
-        const double& rho_v = q_L(2);
-        const double& rho_e = q_L(3);
-
-        const double rhoV = rho_u*nx + rho_v*ny;
-
-        const double rho_u_rev = rho_u - 2.*rhoV*nx;
-        const double rho_v_rev = rho_v - 2.*rhoV*ny;
-
-        q_R(0) = q_L(0);
-        q_R(1) = rho_u_rev;
-        q_R(2) = rho_v_rev;
-        q_R(3) = q_L(3);
+        Eigen::VectorXd q_R = vars(q_L, _q_bc, gx, gy, nu_L, nu_R);
 
         return invf(q_L, q_R);
     }
+
+    Eigen::VectorXd vars(
+        const Eigen::VectorXd& q_L,
+        const Eigen::VectorXd& _q_bc,
+        const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
+        const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
+        const double& nu_L = 0,
+        const double& nu_R = 0
+    );
 };
+
+Eigen::VectorXd slip_wall_flux::vars(
+    const Eigen::VectorXd& q_L,
+    const Eigen::VectorXd& _q_bc,
+    const Eigen::VectorXd& gx,
+    const Eigen::VectorXd& gy,
+    const double& nu_L,
+    const double& nu_R
+) {
+    Eigen::VectorXd q_R(4);
+
+    // q_L is the internal field
+
+    const double& rho = q_L(0);
+    const double& rho_u = q_L(1);
+    const double& rho_v = q_L(2);
+    const double& rho_e = q_L(3);
+
+    const double rhoV = rho_u*nx + rho_v*ny;
+
+    const double rho_u_rev = rho_u - 2.*rhoV*nx;
+    const double rho_v_rev = rho_v - 2.*rhoV*ny;
+
+    q_R(0) = q_L(0);
+    q_R(1) = rho_u_rev;
+    q_R(2) = rho_v_rev;
+    q_R(3) = q_L(3);
+
+    return q_R;
+}
 
 
 
@@ -300,25 +351,58 @@ public:
 
     inline Eigen::VectorXd operator()(
         const Eigen::VectorXd& q_L,
-        const Eigen::VectorXd& _q_bc,
+        const Eigen::VectorXd& q_bc,
         const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
         const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
         const double& nu_L = 0,
         const double& nu_R = 0
     ) {
 
-        Eigen::VectorXd q_R(4);
-
-        // q_L is the internal field
-
-        q_R(0) =   q_L(0);
-        q_R(1) = - q_L(1);
-        q_R(2) = - q_L(2);
-        q_R(3) =   q_L(3);
+        Eigen::VectorXd q_R = vars(q_L, q_bc, gx, gy, nu_L, nu_R);
 
         return invf(q_L, q_R);
     }
+
+    Eigen::VectorXd vars(
+        const Eigen::VectorXd& q_L,
+        const Eigen::VectorXd& q_bc,
+        const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
+        const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
+        const double& nu_L = 0,
+        const double& nu_R = 0
+    );
 };
+
+
+Eigen::VectorXd wall_flux::vars(
+    const Eigen::VectorXd& q_L,
+    const Eigen::VectorXd& _q_bc,
+    const Eigen::VectorXd& gx,
+    const Eigen::VectorXd& gy,
+    const double& nu_L,
+    const double& nu_R
+) {
+    Eigen::VectorXd q_R(4);
+
+    // q_L is the internal field
+
+    const double& rho = q_L(0);
+    const double& rho_u = q_L(1);
+    const double& rho_v = q_L(2);
+    const double& rho_e = q_L(3);
+
+    const double rhoV = rho_u*nx + rho_v*ny;
+
+    const double rho_u_rev = rho_u - 2.*rhoV*nx;
+    const double rho_v_rev = rho_v - 2.*rhoV*ny;
+
+    q_R(0) = q_L(0);
+    q_R(1) = -q_L(1);
+    q_R(2) = -q_L(2);
+    q_R(3) = q_L(3);
+
+    return q_R;
+}
 
 
 
@@ -339,84 +423,111 @@ public:
         const double& nu_R = 0
     ) {
 
-        Eigen::VectorXd q_R(4);
+        Eigen::VectorXd q_R = vars(q_L, q_bc, gx, gy, nu_L, nu_R);
 
         // q_R contains bc info
         // q_L is the internal field
 
-        const double& rho = q_L(0);
-        const double& rho_u = q_L(1);
-        const double& rho_v = q_L(2);
-        const double& rho_e = q_L(3);
-
-        const double& bc_rho = q_bc(0);
-        const double& bc_rhou = q_bc(1);
-        const double& bc_rhov = q_bc(2);
-        const double& bc_rhoe = q_bc(3);
-
-        const double bc_u = bc_rhou / bc_rho;
-        const double bc_v = bc_rhov / bc_rho;
-        const double bc_p = (g.gamma - 1)*(bc_rhoe - 0.5/bc_rho*(bc_rhou*bc_rhou + bc_rhov*bc_rhov));
-
-        const double p = (g.gamma - 1)*(rho_e - 0.5/rho*(rho_u*rho_u + rho_v*rho_v));
-
-        const double c = sqrt(g.gamma * p / rho);
-        const double mach = sqrt(rho_u*rho_u + rho_v*rho_v)/(rho*c);
-        const double inlet_outlet = rho_u*nx + rho_v*ny;
-
-        if (mach > 1) {
-            // Supersonic
-            if (inlet_outlet < 0) {
-                // Inlet
-                q_R(0) = bc_rho;
-                q_R(1) = bc_rho * bc_u;
-                q_R(2) = bc_rho * bc_v;
-                q_R(3) = bc_p/(g.gamma - 1) + 0.5*bc_rho*(bc_u*bc_u + bc_v*bc_v);
-            } else {
-                // Outlet
-                q_R(0) = rho;
-                q_R(1) = rho_u;
-                q_R(2) = rho_v;
-                q_R(3) = rho_e;
-            }
-        } else {
-            // Subsonic
-            // a variables -> outside
-            double pa = bc_p;
-            double rhoa = bc_rho;
-            double ua = bc_u;
-            double va = bc_v;
-            
-            // d variables -> inside
-            double pd = p;
-            double rhod = rho;
-            double ud = rho_u / rho;
-            double vd = rho_v / rho;
-
-            double rho0 = rho;
-            double c0 = c;
-
-            if (inlet_outlet < 0) {
-                // Inlet
-                double pb = 0.5*(pa + pd - rho0*c0*(nx*(ua - ud) + ny*(va - vd)));
-                q_R(0) = rhoa + (pb - pa)/(c0*c0);
-                q_R(1) = q_R(0) * (ua - nx*(pa - pb)/(rho0*c0));
-                q_R(2) = q_R(0) * (va - ny*(pa - pb)/(rho0*c0));
-                q_R(3) = pb / (g.gamma - 1) + 0.5/q_R(0)*(q_R(1)*q_R(1) + q_R(2)*q_R(2));
-            } else {
-                // Outlet
-                double pb = pa;
-                q_R(0) = rhod + (pb - pd)/(c0*c0);
-                q_R(1) = q_R(0) * (ud + nx*(pd - pb)/(rho0*c0));
-                q_R(2) = q_R(0) * (va + ny*(pd - pb)/(rho0*c0));
-                q_R(3) = pb / (g.gamma - 1) + 0.5/q_R(0)*(q_R(1)*q_R(1) + q_R(2)*q_R(2));
-            }
-        }
-
         return invf(q_L, q_R);
     }
+
+    Eigen::VectorXd vars(
+        const Eigen::VectorXd& q_L,
+        const Eigen::VectorXd& _q_bc,
+        const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
+        const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
+        const double& nu_L = 0,
+        const double& nu_R = 0
+    );
+
 };
 
+
+inline Eigen::VectorXd farfield_flux::vars(
+    const Eigen::VectorXd& q_L,
+    const Eigen::VectorXd& q_bc,
+    const Eigen::VectorXd& gx,
+    const Eigen::VectorXd& gy,
+    const double& nu_L,
+    const double& nu_R
+) {
+
+    Eigen::VectorXd q_R(4);
+
+    // q_R contains bc info
+    // q_L is the internal field
+
+    const double& rho = q_L(0);
+    const double& rho_u = q_L(1);
+    const double& rho_v = q_L(2);
+    const double& rho_e = q_L(3);
+
+    const double& bc_rho = q_bc(0);
+    const double& bc_rhou = q_bc(1);
+    const double& bc_rhov = q_bc(2);
+    const double& bc_rhoe = q_bc(3);
+
+    const double bc_u = bc_rhou / bc_rho;
+    const double bc_v = bc_rhov / bc_rho;
+    const double bc_p = (g.gamma - 1)*(bc_rhoe - 0.5/bc_rho*(bc_rhou*bc_rhou + bc_rhov*bc_rhov));
+
+    const double p = (g.gamma - 1)*(rho_e - 0.5/rho*(rho_u*rho_u + rho_v*rho_v));
+
+    const double c = sqrt(g.gamma * p / rho);
+    const double mach = sqrt(rho_u*rho_u + rho_v*rho_v)/(rho*c);
+    const double inlet_outlet = rho_u*nx + rho_v*ny;
+
+    if (mach > 1) {
+        // Supersonic
+        if (inlet_outlet < 0) {
+            // Inlet
+            q_R(0) = bc_rho;
+            q_R(1) = bc_rho * bc_u;
+            q_R(2) = bc_rho * bc_v;
+            q_R(3) = bc_p/(g.gamma - 1) + 0.5*bc_rho*(bc_u*bc_u + bc_v*bc_v);
+        } else {
+            // Outlet
+            q_R(0) = rho;
+            q_R(1) = rho_u;
+            q_R(2) = rho_v;
+            q_R(3) = rho_e;
+        }
+    } else {
+        // Subsonic
+        // a variables -> outside
+        double pa = bc_p;
+        double rhoa = bc_rho;
+        double ua = bc_u;
+        double va = bc_v;
+        
+        // d variables -> inside
+        double pd = p;
+        double rhod = rho;
+        double ud = rho_u / rho;
+        double vd = rho_v / rho;
+
+        double rho0 = rho;
+        double c0 = c;
+
+        if (inlet_outlet < 0) {
+            // Inlet
+            double pb = 0.5*(pa + pd - rho0*c0*(nx*(ua - ud) + ny*(va - vd)));
+            q_R(0) = rhoa + (pb - pa)/(c0*c0);
+            q_R(1) = q_R(0) * (ua - nx*(pa - pb)/(rho0*c0));
+            q_R(2) = q_R(0) * (va - ny*(pa - pb)/(rho0*c0));
+            q_R(3) = pb / (g.gamma - 1) + 0.5/q_R(0)*(q_R(1)*q_R(1) + q_R(2)*q_R(2));
+        } else {
+            // Outlet
+            double pb = pa;
+            q_R(0) = rhod + (pb - pd)/(c0*c0);
+            q_R(1) = q_R(0) * (ud + nx*(pd - pb)/(rho0*c0));
+            q_R(2) = q_R(0) * (va + ny*(pd - pb)/(rho0*c0));
+            q_R(3) = pb / (g.gamma - 1) + 0.5/q_R(0)*(q_R(1)*q_R(1) + q_R(2)*q_R(2));
+        }
+    }
+
+    return q_R;
+}
 
 
 template <typename _flux>
@@ -424,12 +535,18 @@ inline Eigen::MatrixXd calc_convective_jacobian(
     _flux& flux_function,
     Eigen::VectorXd& q_L,
     Eigen::VectorXd& q_R,
+    const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
+    const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
     const double& nu_L = 0,
     const double& nu_R = 0
 ) {
     Eigen::MatrixXd J(8, 8);
 
-    const Eigen::VectorXd f = flux_function(q_L, q_R, Eigen::VectorXd::Zero(4), Eigen::VectorXd::Zero(4), nu_L, nu_R);
+    // F(q_R, q_L)
+    // J_R = F(q_R + h, q_L) - F(q_R, q_L)
+    // J_L = F(q_R, q_L + h) - F(q_R, q_L)
+
+    const Eigen::VectorXd f = flux_function(q_L, q_R, gx, gy, nu_L, nu_R);
 
     for (int i=0; i<4; ++i) {
         // Part of q_L
@@ -437,7 +554,7 @@ inline Eigen::MatrixXd calc_convective_jacobian(
             const double update = std::max(1e-6, abs(q_L(i))*1e-6);
 
             q_L(i) += update;
-            const Eigen::VectorXd fp = flux_function(q_L, q_R, Eigen::VectorXd::Zero(4), Eigen::VectorXd::Zero(4), nu_L, nu_R);
+            const Eigen::VectorXd fp = flux_function(q_L, q_R, gx, gy, nu_L, nu_R);
             q_L(i) -= update;
 
             J.block(0, i, 4, 1) = (fp  - f)/update;
@@ -449,7 +566,7 @@ inline Eigen::MatrixXd calc_convective_jacobian(
             const double update = std::max(1e-6, abs(q_R(i))*1e-6);
 
             q_R(i) += update;
-            const Eigen::VectorXd fp = flux_function(q_L, q_R, Eigen::VectorXd::Zero(4), Eigen::VectorXd::Zero(4), nu_L, nu_R);
+            const Eigen::VectorXd fp = flux_function(q_L, q_R, gx, gy, nu_L, nu_R);
             q_R(i) -= update;
 
             J.block(0, i+4, 4, 1) = (fp  - f)/update;
