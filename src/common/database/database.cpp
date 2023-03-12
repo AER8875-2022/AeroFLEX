@@ -36,13 +36,16 @@ double database::airfoil::interpolate_cl(const double alpha) {
 
 // ---------------------------------
 
-void database::table::importFromFile(const std::string &path,
+void database::table::importFromFile(const std::string &database_path,
+                                     const std::string &location_path,
                                      const vlm::input::solverParam &solvP) {
 
-  std::ifstream file(path);
-  if (!file.is_open()) {
-    std::cerr << "\n\033[1;31m ->VLM ERROR: database file \"" << path
-              << "\" not found! \033[0m" << std::endl;
+  std::ifstream database_file(database_path);
+  std::ifstream location_file(location_path);
+
+  if (!database_file.is_open() || !location_file.is_open()) {
+    std::cerr << "\n\033[1;31m ->VLM ERROR: Error in database file import \""
+              << std::endl;
   }
 
   // Declaring output
@@ -66,7 +69,7 @@ void database::table::importFromFile(const std::string &path,
   std::vector<double> spanLocs;
 
   std::string fileLine;
-  while (std::getline(file, fileLine)) {
+  while (std::getline(database_file, fileLine)) {
 
     // Ignoring empty lines
     if (!fileLine.size()) {
@@ -112,6 +115,29 @@ void database::table::importFromFile(const std::string &path,
       airfoilName = line[1];
       continue;
     }
+  }
+
+  while (std::getline(location_file, fileLine)) {
+
+    // Ignoring empty lines
+    if (!fileLine.size()) {
+      continue;
+    }
+
+    line.clear();
+
+    std::stringstream lineStream(fileLine);
+    std::string word;
+
+    // Splitting into an array
+    while (std::getline(lineStream, word, delimiter)) {
+      line.push_back(word);
+    }
+
+    // Ignoring comments
+    if (!line[0].compare("#")) {
+      continue;
+    }
 
     // Location declaration
     if (!line[0].compare("END") && !line[1].compare("SURFACE")) {
@@ -135,7 +161,8 @@ void database::table::importFromFile(const std::string &path,
     }
   }
 
-  file.close();
+  database_file.close();
+  location_file.close();
 }
 
 std::tuple<double, double, double>

@@ -69,6 +69,8 @@ input::importConfigFile(const std::string path) {
       file.Get<std::string>("IO", "MESH_FILE", std::string("mesh.dat"));
   io.databaseFile =
       file.Get<std::string>("IO", "DATABASE_FILE", std::string("database.dat"));
+  io.locationFile =
+      file.Get<std::string>("IO", "LOCATION_FILE", std::string("locations.dat"));
 
   // [SOLVER]
   solverParam solvP;

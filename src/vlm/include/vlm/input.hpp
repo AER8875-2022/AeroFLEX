@@ -96,6 +96,9 @@ struct ioParam {
 
   /** @brief Path to the database file (if required) */
   std::string databaseFile;
+
+  /** @brief Path to the location file for database evalutation */
+  std::string locationFile;
 };
 
 /** @brief Object holding solver parameters */
