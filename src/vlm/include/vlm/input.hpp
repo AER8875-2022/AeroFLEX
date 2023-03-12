@@ -1,6 +1,6 @@
 
-#ifndef INPUT_HPP
-#define INPUT_HPP
+#ifndef VLM_INPUT_HPP
+#define VLM_INPUT_HPP
 
 #include "Eigen/Dense"
 #include <map>
@@ -121,19 +121,6 @@ struct solverParam {
 
   /** @brief Max number of iterations for the iterative scheme */
   int max_iter;
-};
-
-/** @brief Main struct holding parameters on the current case */
-struct settings {
-
-  /** @brief Object holding case and physics-oriented parameters */
-  simParam sim;
-
-  /** @brief Object holding input/output information */
-  ioParam io;
-
-  /** @brief Object holding solver parameters */
-  solverParam solver;
 };
 
 /** @brief Object holding the connectivity obtained from the mesh file */

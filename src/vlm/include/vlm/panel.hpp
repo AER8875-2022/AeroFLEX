@@ -1,6 +1,6 @@
 
-#ifndef PANEL_HPP
-#define PANEL_HPP
+#ifndef VLM_PANEL_HPP
+#define VLM_PANEL_HPP
 
 #include "Eigen/Dense"
 #include "vlm/input.hpp"

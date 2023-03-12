@@ -10,12 +10,25 @@
 
 namespace vlm {
 
+/** @brief Main struct holding parameters on the current case */
+struct settings {
+
+  /** @brief Object holding case and physics-oriented parameters */
+  input::simParam sim;
+
+  /** @brief Object holding input/output information */
+  input::ioParam io;
+
+  /** @brief Object holding solver parameters */
+  input::solverParam solver;
+};
+
 class VLM {
 
 public:
   vlm::model object;
   database::table database;
-  input::settings data;
+  settings settings;
 
   std::vector<double> residuals;
   std::atomic<int> iters = 0;

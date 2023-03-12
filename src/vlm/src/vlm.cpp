@@ -8,9 +8,9 @@ VLM::VLM(GUIHandler &gui) : gui(gui) {};
 
 void VLM::input() {
   if (!is_initialized) {
-    auto mesh = vlm::input::importMeshFile(data.io);
+    auto mesh = vlm::input::importMeshFile(settings.io);
     model object;
-    object.initialize(mesh, data.sim, data.io);
+    object.initialize(mesh, settings.sim, settings.io);
     is_initialized = true;
   }
 };
@@ -23,11 +23,11 @@ void VLM::solve() {
   // Clear previous solution
   reinitialize();
 
-  if (!data.solver.type.compare("LINEAR")) {
-    linear.initialize(data.solver, object, database::table());
+  if (!settings.solver.type.compare("LINEAR")) {
+    linear.initialize(settings.solver, object, database::table());
     solver = &linear;
-  } else if (!data.solver.type.compare("NONLINEAR")) {
-    nonlinear.initialize(data.solver, object, database);
+  } else if (!settings.solver.type.compare("NONLINEAR")) {
+    nonlinear.initialize(settings.solver, object, database);
     solver = &nonlinear;
   } else {
     return;
