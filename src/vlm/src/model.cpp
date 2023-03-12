@@ -98,14 +98,3 @@ double model::get_cl() const { return cl; }
 double model::get_cd() const { return cd; }
 
 Vector3d model::get_cm() const { return cm; }
-
-Matrix<double, 6, 1>
-model::forces_to_inertial_frame(const int stationID) const {
-  auto &station = wingStations[stationID];
-  Vector3d lift = station.get_cl() * sim.liftAxis();
-  Vector3d drag = station.get_cd() * sim.streamAxis();
-  Vector3d force = (lift + drag) * sim.dynamicPressure() * station.get_area();
-  Vector3d moment = station.get_cm() * sim.dynamicPressure() *
-                    station.get_area() * station.get_chord();
-  return {force(0), force(1), force(2), moment(0), moment(1), moment(2)};
-}

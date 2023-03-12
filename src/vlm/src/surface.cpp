@@ -88,6 +88,8 @@ double wingStation::get_spanLoc() const { return spanLoc; }
 
 std::vector<int> wingStation::get_vortexIDs() const { return vortexIDs; }
 
+Matrix<double, 6, 1> wingStation::get_forces() const { return forces; }
+
 double wingStation::get_cl() const { return cl; }
 
 double wingStation::get_cd() const { return cd; }
@@ -114,11 +116,14 @@ void wingStation::computeChordLength() {
 }
 
 void wingStation::computeForces(const input::simParam &sim) {
+
   Vector3d Qinf = sim.freeStream(local_aoa);
-  Vector3d liftAxis = Qinf.cross(Vector3d::UnitY()).normalized();
-  double lift = 0.0;
-  Vector3d moment = Vector3d::Zero();
   double previousGamma = 0.0;
+
+  forces = Matrix<double, 6, 1>::Zero();
+  cl = 0.0;
+  cm = Vector3d::Zero();
+
   for (auto &vortexID : vortexIDs) {
     auto &vortex = vortices[vortexID];
 
@@ -126,28 +131,25 @@ void wingStation::computeForces(const input::simParam &sim) {
     Vector3d dl = vortex.leadingEdgeDl();
     Vector3d lever = sim.origin - vortex.forceActingPoint();
 
-    // Vectorial force
-    Vector3d force = Qinf.cross(dl);
-    force *= sim.rho * (vortex.get_gamma() - previousGamma);
+    // local vectorial forces
+    vortex.forces({0,1,2}) = Qinf.cross(dl);
+    vortex.forces({0,1,2}) *= sim.rho * (vortex.get_gamma() - previousGamma);
+    vortex.forces({3,4,5}) = forces({0,1,2}).cross(lever);
 
-    // Computing local force and moment
-    double localForce = force.dot(liftAxis);
-    Vector3d localMoment = force.cross(lever);
-
-    // Saving forces of the panel
-    vortex.cl = localForce / (sim.dynamicPressure() * sim.sref);
-    vortex.cm = localMoment / (sim.dynamicPressure() * sim.cref * sim.sref);
+    // Local coefficients
+    vortex.cl = vortex.forces({0,1,2}).dot(sim.liftAxis()) / (sim.dynamicPressure() * sim.sref);
+    vortex.cm = vortex.forces({3,4,5}) / (sim.dynamicPressure() * sim.sref * sim.cref);
 
     // Incrementing wing station forces
-    lift += localForce;
-    moment += localMoment;
+    forces += vortex.forces;
+
+    // Incrementing wing station coefficients
+    cl += vortex.cl * sim.sref/area;
+    cm += vortex.cm * sim.sref/area * sim.cref/chord;
 
     // Setting gamma reference for next panel
     previousGamma = vortex.get_gamma();
   }
-  // Computing coefficients
-  cl = lift / (sim.dynamicPressure() * area);
-  cm = moment / (sim.dynamicPressure() * area * chord);
 }
 
 // ----------------------------
@@ -200,12 +202,12 @@ void wing::computeForces(const input::simParam &sim) {
   cl = 0.0;
   cd = 0.0;
   cm = Vector3d::Zero();
+
   for (auto &stationID : stationIDs) {
     auto &station = stations[stationID];
-    cl += station.get_cl() * station.get_area() / area;
-    cd += station.get_cd() * station.get_area() / area;
-    cm += station.get_cm() * station.get_area() / area * station.get_chord() /
-          sim.cref;
+    cl += station.get_cl() * station.get_area()/area;
+    cd += station.get_cd() * station.get_area()/area;
+    cm += station.get_cm() * station.get_area()/area * station.get_chord()/sim.cref;
   }
 }
 

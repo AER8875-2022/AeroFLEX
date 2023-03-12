@@ -11,7 +11,7 @@
 namespace vlm {
 
 /** @brief Main struct holding parameters on the current case */
-struct settings {
+struct Settings {
 
   /** @brief Object holding case and physics-oriented parameters */
   input::simParam sim;
@@ -26,9 +26,9 @@ struct settings {
 class VLM {
 
 public:
-  vlm::model object;
+  model object;
   database::table database;
-  settings settings;
+  Settings settings;
 
   std::vector<double> residuals;
   std::atomic<int> iters = 0;

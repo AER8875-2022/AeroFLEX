@@ -122,6 +122,9 @@ class vortexRing {
   /** @brief Strength of the vortices of the current element */
   double gamma;
 
+  /** @brief Local force vector */
+  Matrix<double, 6, 1> forces = Matrix<double, 6, 1>::Zero();
+
   /** @brief Local lift coefficient */
   double cl;
 
@@ -205,6 +208,9 @@ public:
   /** @brief Getter method for gamma */
   double get_gamma() const;
 
+  /** @brief Gettter method for forces */
+  Matrix<double, 6, 1> get_forces() const;
+
   /** @brief Getter method for cl */
   double get_cl() const;
 
@@ -218,6 +224,7 @@ public:
   Vector3d get_collocationPoint() const;
 
   friend class surface::wingStation;
+  friend class surface::wing;
   friend class solver::linear::steady;
   friend class solver::linear::unsteady;
   friend class solver::nonlinear::steady;

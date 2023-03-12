@@ -89,10 +89,6 @@ public:
   /** @brief Getter method for the moment coefficients vector */
   Vector3d get_cm() const;
 
-  /** @brief Method to project forces and moments in the inertial frame of
-   * reference  */
-  Matrix<double, 6, 1> forces_to_inertial_frame(const int stationID) const;
-
 private:
   /** @brief Method building the objects from data acquired from the mesh
    *  @param mesh Information on the mesh */
