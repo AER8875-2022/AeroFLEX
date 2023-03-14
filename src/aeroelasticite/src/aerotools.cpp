@@ -164,8 +164,6 @@ namespace aero{
              point_fs[s][1]=nodeStruct[1];
              point_fs[s][2]=nodeStruct[2];
         }
-
-        v
         
         
         
@@ -244,11 +242,11 @@ namespace aero{
         }
    }
 
-   void ComputeStructureForces(interpolation_f for)
+   auto ComputeStructureForces(interpolation_f force)
 
    {
-        n=point_fa.size();
-        m=point_fs.size();
+        n=force.point_fa.size();
+        m=force.point_fs.size();
         
         vector <double> forces_s(6*m,0);
         vector <double> M(3);
@@ -291,6 +289,7 @@ namespace aero{
             forces_s[6*(j+1)+5]   += poids[i][1] * (M_s[2] + forces[i][5]);
             
         }
+        return froces_s;
     }
         
       
