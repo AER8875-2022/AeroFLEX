@@ -29,7 +29,7 @@ void FileDialog::Show(char* buf) {
 
     if (file_dialog_open) {
 
-        ImGui::SetNextWindowSize(ImVec2(740.0f, 410.0f));
+        ImGui::SetNextWindowSize(ImVec2(750.0f, 430.0f));
         const char* window_title = (type == FileDialogType::OpenFile ? "Select a file" : "Select a folder");
         ImGui::Begin(window_title, nullptr, ImGuiWindowFlags_NoResize);
 
@@ -188,6 +188,7 @@ void FileDialog::Show(char* buf) {
             ImGui::NextColumn();
         }
         ImGui::EndChild();
+        ImGui::SetNextItemWidth(724);
 
         if (type == FileDialogType::OpenFile | type == FileDialogType::SelectFolder) {
             std::string complete_path = file_dialog_current_path + (file_dialog_current_path.back() == '\\' ? "" : "\\");
@@ -199,7 +200,7 @@ void FileDialog::Show(char* buf) {
             strcpy(buf, complete_path.c_str());
             ImGui::InputText("##text", buf, max_path_length, ImGuiInputTextFlags_ReadOnly);
         } else if(type == FileDialogType::SaveFile) {
-            ImGui::InputText("##text", buf, max_path_length, ImGuiInputTextFlags_CharsNoBlank);
+            ImGui::InputTextWithHint("##text", "Filename", buf, max_path_length, ImGuiInputTextFlags_CharsNoBlank);
         }
 
         ImGui::PushItemWidth(724);
@@ -229,26 +230,29 @@ void FileDialog::Show(char* buf) {
         ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
         if (ImGui::BeginPopup("NewFolderPopup", ImGuiWindowFlags_Modal)) {
             ImGui::Text("Enter a name for the new folder");
-            std::string new_folder_name;
-            new_folder_name.reserve(256);
-            std::string new_folder_error = "";
+            static char new_folder_name[max_path_length];
+            static char new_folder_error[max_path_length];
 
-            ImGui::InputText("##newfolder", new_folder_name.data(), new_folder_name.capacity());
+            ImGui::InputText("##newfolder", new_folder_name, max_path_length);
             if (ImGui::Button("Create##1")) {
-                if (new_folder_name.empty()) {
-                    new_folder_error = "Folder name can't be empty";
+                if (strlen(new_folder_name) == 0) {
+                    strcpy(new_folder_error,"Folder name can't be empty");
                 }
                 else {
-                    std::string new_file_path = file_dialog_current_path + (file_dialog_current_path.back() == '\\' ? "" : "\\") + new_folder_name;
-                    std::filesystem::create_directory(new_file_path);
+                    std::filesystem::path current_path(file_dialog_current_path);
+                    std::string new_folder_name_str(new_folder_name);
+                    std::filesystem::create_directory(current_path / new_folder_name_str);
+                    strcpy(new_folder_name, "");
                     ImGui::CloseCurrentPopup();
                 }
             }
             ImGui::SameLine();
             if (ImGui::Button("Cancel##1")) {
+                strcpy(new_folder_name, "");
+                strcpy(new_folder_error, "");
                 ImGui::CloseCurrentPopup();
             }
-            ImGui::TextColored(ImColor(1.0f, 0.0f, 0.2f, 1.0f), new_folder_error.c_str());
+            ImGui::TextColored(ImColor(1.0f, 0.0f, 0.2f, 1.0f), new_folder_error);
             ImGui::EndPopup();
         }
 
@@ -303,8 +307,10 @@ void FileDialog::Show(char* buf) {
                     file_dialog_error = "Error: You must name the file!";
                 } else {
                     ready = true;
-                    std::string filename(buf);
-                    strcpy(buf, (file_dialog_current_path + "\\" + filename + ".ini").c_str());
+                    std::string filename_str(buf);
+                    std::filesystem::path filename(filename_str + ".ini");
+                    std::filesystem::path current_path(file_dialog_current_path);
+                    strcpy(buf, (current_path / filename).string().c_str());
                     reset_everything();
                 }
             }
