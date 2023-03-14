@@ -23,7 +23,7 @@ namespace aero{
     struct interpolation;
 
 
-    void DispInterpol( interpolation &pos,std::vector<surface::wingStation> model.wingStations,
+    void DispInterpol( interpolation &pos,std::vector<surface::wingStation> wingStations,
                        std::vector<surface::wing> wings,std::vector<element::vortexRing> vortexRings,std::vector<Vector3d> nodes,map<int,Vector3d> mapStruct,map<int, int> mapStructni) {
         for (k = 0; k <wings.size() ; ++k)
         {
@@ -92,9 +92,10 @@ namespace aero{
         }
     }
 
-    void computeVLMDispalecement(interpolation pos) {
-        for (k = 0; k<; ++k) {
-            for (i = 0; i<; ++i) {
+    auto computeVLMDispalecement(interpolation pos,std::vector<surface::wingStation> wingStations,
+                                 std::vector<surface::wing> wings,std::vector<element::vortexRing> vortexRings,std::vector<Vector3d> nodes) {
+        for (k = 0; k<wings.size(); ++k) {
+            for (i = 0; i<wingStations.size(); ++i) {
 
                 auto wstation = wingStations[wings[0].get_wingStationsIDs()[k]];
                 auto vring = vortexRings[wstation.get_vortexIDs()[i]];
@@ -107,12 +108,12 @@ namespace aero{
                     auto weight1 = pos.weight[2*p];
                     auto weight2 = pos.weight[2*p+1];
 
-                    Eigen::Vector3d disp;
+                    Vector3d disp;
                     disp[0]=weight1*nodeStruct1[0]+weight2*nodeStruct2[0];
                     disp[1]=weight1*nodeStruct1[1]+weight2*nodeStruct2[1];
                     disp[2]=weight1*nodeStruct1[2]+weight2*nodeStruct2[2];
                     //prise en compte de la rotation
-                     Eigen::Vector3d dispRot;
+
 
 
                     
@@ -124,6 +125,7 @@ namespace aero{
                 }
             }
         }
+        return node ;
     }
    auto LoadInterpol(){
     
