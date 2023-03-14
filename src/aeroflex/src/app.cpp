@@ -225,9 +225,9 @@ void Aero::config_save_async(const std::string &conf_path) {
 void Aero::config_save_await() {
 	bool success = future_config_save.get();
 	if (success) {
-		gui.msg.push("Config save success\n");
+		gui.msg.push("Config save success");
 	} else {
-		gui.msg.push("Config save failed\n");
+		gui.msg.push("Config save failed");
 	}
 	signal_status_ready = true;
 	signal_status_busy = false;
@@ -262,6 +262,7 @@ void RansLayer::OnUIRender() {
 
 void ButtonLayer::OnUIRender() {
 	{
+		static FlexGUI::FileDialog fd;
 		ImGui::Begin("Buttons");
 		ImGui::Text("Simulation");
 		if (ImGui::Button("Start Simulation", ImVec2(-1.0f, 0.0f)) && !aero.signal_status_busy && aero.signal_status_ready) {
@@ -283,14 +284,20 @@ void ButtonLayer::OnUIRender() {
 		ImGui::Separator();
 		ImGui::Text("Config");
 		if (ImGui::Button("Open", ImVec2(-1.0f, 0.0f)) && !aero.signal_status_busy && aero.signal_status_ready) {
-			// TODO: Make this a file dialog !!
-			aero.gui.msg.push("Starting parsing");
-			aero.config_open_async("../../../../examples/conf.ini");
+			fd.file_dialog_open = true;
+			fd.type = FlexGUI::FileDialogType::OpenFile;
+			// aero.gui.msg.push("Starting parsing");
+			// aero.config_open_async("../../../../examples/conf.ini");
 		};
 
-		if (ImGui::Button("Save", ImVec2(-1.0f, 0.0f)) && aero.config_file_set) {
-			aero.config_save_async("test.ini");
-		};
+		if (ImGui::Button("Save", ImVec2(-1.0f, 0.0f))) {
+			if (aero.config_file_set) {
+				fd.file_dialog_open = true;
+				fd.type = FlexGUI::FileDialogType::SaveFile;
+			} else {
+				aero.gui.msg.push("No config file set");
+			}
+		}
 
 		if (!aero.signal_status_ready && is_future_done(aero.future_solve)) {
 			aero.solve_await();
@@ -305,19 +312,22 @@ void ButtonLayer::OnUIRender() {
 			aero.config_save_await();
 		};
 
-		static char* file_dialog_buffer = "";
-		
-		static FlexGUI::FileDialog fd;
-
 		if (ImGui::Button("Browse##path")) {
 			fd.file_dialog_open = true;
 			fd.type = FlexGUI::FileDialogType::SaveFile;
 		}
-		
-		auto path = fd.Show(file_dialog_buffer, sizeof(file_dialog_buffer));
+
+		auto path = fd.Show();
 
 		if (path.has_value()) {
-			aero.gui.msg.push(path.value());
+			// TODO: replace these with custom enums (eventually)
+			if (fd.type == FlexGUI::FileDialogType::OpenFile) {
+				aero.gui.msg.push("Starting parsing: " + path.value());
+				aero.config_open_async(path.value());
+			} else if (fd.type == FlexGUI::FileDialogType::SaveFile) {
+				aero.gui.msg.push("Starting save: " + path.value());
+				aero.config_save_async(path.value());
+			}
 		}
 		ImGui::End();
 
@@ -485,8 +495,7 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, Aero& aero)
 }
 
 namespace FlexGUI {
-	int Main(int argc, char** argv)
-	{
+	int Main(int argc, char** argv) {
 		GUIHandler gui;
 
 		// Initialize modules with signal routing
@@ -496,8 +505,7 @@ namespace FlexGUI {
 		// Initialize main application with the modules
 		Aero aero(rans, vlm, gui);
 
-		while (g_ApplicationRunning)
-		{
+		while (g_ApplicationRunning) {
 			FlexGUI::Application* app = CreateApplication(argc, argv, aero);
 			app->Run();
 			delete app;

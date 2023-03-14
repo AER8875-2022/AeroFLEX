@@ -163,7 +163,7 @@ inline bool config::read(const std::string& ifilename) {
 
 inline bool config::write(const std::string& ofilename) {
     std::filesystem::path path(ofilename);
-    if (path.has_parent_path()) std::filesystem::create_directories(path.parent_path());
+    //if (path.has_parent_path()) std::filesystem::create_directories(path.parent_path());
     std::ofstream f(path);
 	if (f.is_open()) {
         write_file(f);
