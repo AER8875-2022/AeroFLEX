@@ -216,9 +216,6 @@ public:
     {
         q_1 = delta_q_1 * q_1;
         q_2 = delta_q_2 * q_2;
-
-        
-        
     }
    
 
@@ -241,10 +238,7 @@ public:
 
    void set_QuaternionFromInterpolation()  //Trouver q_mid à partir de q_1 et q_2
     {
-        if ((q_1.w() - q_2.w()) < 1e-14 && 
-            (q_1.x() - q_2.x()) < 1e-14 &&
-            (q_1.y() - q_2.y()) < 1e-14 &&
-            (q_1.z() - q_2.z()) < 1e-14 )
+        if (1-(q_1.inverse()*q_2).w() < 1e-14)
         {
             q_mid = q_1;
         }
