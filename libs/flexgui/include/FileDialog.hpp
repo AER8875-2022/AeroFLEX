@@ -17,10 +17,15 @@
 
 #pragma once
 
+#include <string>
+#include <optional>
+
 namespace FlexGUI {
+	const int max_path_length = 256;
 
 	enum class FileDialogType {
 		OpenFile,
+		SaveFile,
 		SelectFolder
 	};
 	enum class FileDialogSortOrder {
@@ -31,9 +36,12 @@ namespace FlexGUI {
 
 	class FileDialog {
 		public:
+			bool ready = false;
 			bool file_dialog_open = false;
 			FileDialogType type = FileDialogType::OpenFile;
 
-			void Show(char* buffer, unsigned int buffer_size);
+			char selected_file_path[max_path_length];
+
+			std::optional<std::string> Show(char* buffer, unsigned int buffer_size);
 	};
 }

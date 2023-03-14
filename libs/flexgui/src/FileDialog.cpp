@@ -1,18 +1,19 @@
-#include "FileDialog.hpp"
+#include "FileDialog.hpp" // string and optional
 
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <chrono>
-#include <string>
 #include <filesystem>
 #include <sstream>
 #include <vector>
 #include <algorithm>
+#include <iostream>
+#include <cstring>
 
 using namespace std::chrono_literals;
 using namespace FlexGUI;
 
-void FileDialog::Show(char* buffer, unsigned int buffer_size) {
+std::optional<std::string> FileDialog::Show(char* buffer, unsigned int buffer_size) {
     static int file_dialog_file_select_index = 0;
     static int file_dialog_folder_select_index = 0;
     static std::string file_dialog_current_path = std::filesystem::current_path().string();
@@ -207,10 +208,15 @@ void FileDialog::Show(char* buffer, unsigned int buffer_size) {
         }
         ImGui::EndChild();
 
-        std::string selected_file_path = file_dialog_current_path + (file_dialog_current_path.back() == '\\' ? "" : "\\") + (file_dialog_current_folder.size() > 0 ? file_dialog_current_folder : file_dialog_current_file);
-        char* buf = &selected_file_path[0];
+        if (type == FileDialogType::OpenFile) {
+            std::string complete_path = file_dialog_current_path + (file_dialog_current_path.back() == '\\' ? "" : "\\") + (file_dialog_current_folder.size() > 0 ? file_dialog_current_folder : file_dialog_current_file);
+            strcpy(selected_file_path, complete_path.c_str());
+            ImGui::InputText("##text", selected_file_path, max_path_length, ImGuiInputTextFlags_ReadOnly);
+        } else if(type == FileDialogType::SaveFile) {
+            ImGui::InputText("##text", selected_file_path, max_path_length, ImGuiInputTextFlags_CharsNoBlank);
+        }
+
         ImGui::PushItemWidth(724);
-        ImGui::InputText("##text", buf, sizeof(buf), ImGuiInputTextFlags_ReadOnly);
 
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 6);
 
@@ -240,7 +246,8 @@ void FileDialog::Show(char* buffer, unsigned int buffer_size) {
             std::string new_folder_name;
             new_folder_name.reserve(256);
             std::string new_folder_error = "";
-            ImGui::InputText("##newfolder", new_folder_name.data(), 256);
+
+            ImGui::InputText("##newfolder", new_folder_name.data(), new_folder_name.capacity());
             if (ImGui::Button("Create##1")) {
                 if (new_folder_name.empty()) {
                     new_folder_error = "Folder name can't be empty";
@@ -268,7 +275,7 @@ void FileDialog::Show(char* buffer, unsigned int buffer_size) {
             if (ImGui::Button("Yes")) {
                 std::filesystem::remove(file_dialog_current_path + (file_dialog_current_path.back() == '\\' ? "" : "\\") + file_dialog_current_folder);
                 ImGui::CloseCurrentPopup();
-            }
+            } 
             ImGui::SameLine();
             if (ImGui::Button("No")) {
                 ImGui::CloseCurrentPopup();
@@ -292,22 +299,27 @@ void FileDialog::Show(char* buffer, unsigned int buffer_size) {
         }
 
         ImGui::SameLine();
-        if (ImGui::Button("Choose")) {
+        if (ImGui::Button("Ok")) {
             if (type == FileDialogType::SelectFolder) {
                 if (file_dialog_current_folder == "") {
                     file_dialog_error = "Error: You must select a folder!";
-                }
-                else {
+                } else {
                     strcpy(buffer, (file_dialog_current_path + (file_dialog_current_path.back() == '\\' ? "" : "\\") + file_dialog_current_folder).c_str());
                     reset_everything();
                 }
-            }
-            else if (type == FileDialogType::OpenFile) {
+            } else if (type == FileDialogType::OpenFile) {
                 if (file_dialog_current_file == "") {
                     file_dialog_error = "Error: You must select a file!";
-                }
-                else {
+                } else {
                     strcpy(buffer, (file_dialog_current_path + (file_dialog_current_path.back() == '\\' ? "" : "\\") + file_dialog_current_file).c_str());
+                    reset_everything();
+                }
+            } else if (type == FileDialogType::SaveFile) {
+                std::cout << "Trying to save: " << selected_file_path << std::endl;
+                if (strlen(selected_file_path) == 0) {
+                    file_dialog_error = "Error: You must name the file!";
+                } else {
+                    ready = true;
                     reset_everything();
                 }
             }
@@ -318,5 +330,16 @@ void FileDialog::Show(char* buffer, unsigned int buffer_size) {
         }
 
         ImGui::End();
+    
+        if (ready) {
+            ready = false;
+            if (type == FileDialogType::SaveFile)
+                std::cout << "pushing" << std::endl;
+                std::string res = file_dialog_current_path + selected_file_path;
+                strcpy(selected_file_path, "");
+                return res;
+        } else {
+            return std::nullopt;
+        }
     }
 }

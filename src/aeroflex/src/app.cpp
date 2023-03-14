@@ -284,7 +284,7 @@ void ButtonLayer::OnUIRender() {
 		ImGui::Text("Config");
 		if (ImGui::Button("Open", ImVec2(-1.0f, 0.0f)) && !aero.signal_status_busy && aero.signal_status_ready) {
 			// TODO: Make this a file dialog !!
-			aero.gui.msg.push("Starting parsing\n");
+			aero.gui.msg.push("Starting parsing");
 			aero.config_open_async("../../../../examples/conf.ini");
 		};
 
@@ -305,22 +305,20 @@ void ButtonLayer::OnUIRender() {
 			aero.config_save_await();
 		};
 
-		static char* file_dialog_buffer = nullptr;
-		static char path[500] = "";
+		static char* file_dialog_buffer = "";
+		
 		static FlexGUI::FileDialog fd;
 
-		ImGui::TextUnformatted("Path: ");
-		ImGui::InputText("##path", path, sizeof(path));
-		ImGui::SameLine();
-		
 		if (ImGui::Button("Browse##path")) {
-			file_dialog_buffer = path;
 			fd.file_dialog_open = true;
-			fd.type = FlexGUI::FileDialogType::OpenFile;
+			fd.type = FlexGUI::FileDialogType::SaveFile;
 		}
 		
-		fd.Show(file_dialog_buffer, sizeof(file_dialog_buffer));
+		auto path = fd.Show(file_dialog_buffer, sizeof(file_dialog_buffer));
 
+		if (path.has_value()) {
+			aero.gui.msg.push(path.value());
+		}
 		ImGui::End();
 
 		// ImGui::ShowDemoWindow();
@@ -426,6 +424,11 @@ class ConsoleLog
 				if (Buf[old_size] == '\n')
 					LineOffsets.push_back(old_size + 1);
 		};
+
+		ConsoleLog() {
+			log(""); // Hack
+			log("AeroFLEX v0.1");
+		}
 
 	private:
 		ImGuiTextBuffer Buf;
