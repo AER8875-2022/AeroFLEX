@@ -6,6 +6,7 @@
 #include <string>
 #include <filesystem>
 #include <sstream>
+#include <vector>
 
 using namespace std::chrono_literals;
 using namespace FlexGUI;
@@ -16,7 +17,7 @@ void FileDialog::Show(char* buffer, unsigned int buffer_size) {
     static std::string file_dialog_current_path = std::filesystem::current_path().string();
     static std::string file_dialog_current_file = "";
     static std::string file_dialog_current_folder = "";
-    static char file_dialog_error[500] = "";
+    static std::string file_dialog_error = "";
     static FileDialogSortOrder file_name_sort_order = FileDialogSortOrder::None;
     static FileDialogSortOrder size_sort_order = FileDialogSortOrder::None;
     static FileDialogSortOrder date_sort_order = FileDialogSortOrder::None;
@@ -281,7 +282,7 @@ void FileDialog::Show(char* buffer, unsigned int buffer_size) {
             file_dialog_file_select_index = 0;
             file_dialog_folder_select_index = 0;
             file_dialog_current_file = "";
-            strcpy_s(file_dialog_error, "");
+            file_dialog_error = "";
             initial_path_set = false;
             file_dialog_open = false;
         };
@@ -294,28 +295,26 @@ void FileDialog::Show(char* buffer, unsigned int buffer_size) {
         if (ImGui::Button("Choose")) {
             if (type == FileDialogType::SelectFolder) {
                 if (file_dialog_current_folder == "") {
-                    strcpy_s(file_dialog_error, "Error: You must select a folder!");
+                    file_dialog_error = "Error: You must select a folder!";
                 }
                 else {
                     strcpy(buffer, (file_dialog_current_path + (file_dialog_current_path.back() == '\\' ? "" : "\\") + file_dialog_current_folder).c_str());
-                    strcpy_s(file_dialog_error, "");
                     reset_everything();
                 }
             }
             else if (type == FileDialogType::OpenFile) {
                 if (file_dialog_current_file == "") {
-                    strcpy_s(file_dialog_error, "Error: You must select a file!");
+                    file_dialog_error = "Error: You must select a file!";
                 }
                 else {
                     strcpy(buffer, (file_dialog_current_path + (file_dialog_current_path.back() == '\\' ? "" : "\\") + file_dialog_current_file).c_str());
-                    strcpy_s(file_dialog_error, "");
                     reset_everything();
                 }
             }
         }
 
-        if (strlen(file_dialog_error) > 0) {
-            ImGui::TextColored(ImColor(1.0f, 0.0f, 0.2f, 1.0f), file_dialog_error);
+        if (!file_dialog_error.empty()) {
+            ImGui::TextColored(ImColor(1.0f, 0.0f, 0.2f, 1.0f), file_dialog_error.c_str());
         }
 
         ImGui::End();
