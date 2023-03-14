@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <sstream>
 #include <vector>
+#include <algorithm>
 
 using namespace std::chrono_literals;
 using namespace FlexGUI;
