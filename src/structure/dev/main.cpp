@@ -6,6 +6,7 @@
 #include <structure/proprietes_sections.hpp>
 #include <structure/element.hpp>
 #include <structure/model.hpp>
+#include <structure/structure.hpp>
 #include <common_aeroflex.hpp>
 
 using namespace structure;
@@ -19,10 +20,12 @@ int main(int argc, char **argv){
     std::atomic<int> iters = 0;
     std::vector<double> residuals;
 
+    
     MODEL M1(argv[1], gui, iters, residuals);
     Eigen::VectorXd dep;
+    std::string S ("NLS");
  
-    if (argv[2] = "NLS")    //     /home/olivier/Structure-Dev/examples/Moment.txt NLS 10 1E-10 0.5
+    if(!S.compare(argv[2]))    //     /home/olivier/Structure-Dev/examples/Moment.txt NLS 10 1E-10 0.5
     {   
         int Load_step = std::stoi(argv[3]);
         double       tol = std::stod(argv[4]);

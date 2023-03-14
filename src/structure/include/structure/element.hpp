@@ -216,6 +216,9 @@ public:
     {
         q_1 = delta_q_1 * q_1;
         q_2 = delta_q_2 * q_2;
+
+        
+        
     }
    
 
@@ -238,7 +241,10 @@ public:
 
    void set_QuaternionFromInterpolation()  //Trouver q_mid à partir de q_1 et q_2
     {
-        if (q_1 == q_2)
+        if ((q_1.w() - q_2.w()) < 1e-14 && 
+            (q_1.x() - q_2.x()) < 1e-14 &&
+            (q_1.y() - q_2.y()) < 1e-14 &&
+            (q_1.z() - q_2.z()) < 1e-14 )
         {
             q_mid = q_1;
         }
@@ -249,8 +255,10 @@ public:
                     
             if (abs(acos(theta)) > 1e-14)
             {   
+                
                 Eigen::Quaterniond p;
                 const double cst   = sin(0.5*theta)/sin(theta);
+                
                 p.w() = cst*q_1.w() + cst*q_2.w();
                 p.x() = cst*q_1.x() + cst*q_2.x();
                 p.y() = cst*q_1.y() + cst*q_2.y();
@@ -259,10 +267,11 @@ public:
                 q_mid =p;
             }
             else
-            {
+            {   
                 q_mid =  q_1;
             } 
         }
+       
     };
 
     void set_QuaternionLocalRotations() //Puisqu'on utilise des quaternion unitaire, le conjugate et la transpose sont équivalent.
@@ -298,6 +307,8 @@ public:
         const Eigen::Vector3d dr_2          = R_ec*r2 - r2;                                                           //Déplacement induit par la rotation 
     
         const Eigen::Matrix3d R_gc          = get_RotationMatrixFromQuaternion(q_mid * q_e);
+        
+        
 
         const Eigen::Vector3d d_1_prime     =  R_gc.transpose() * (u_1.segment(0,3) - u_mid.segment(0,3) - dr_1);     //Déplacement du noeud causé pas les déformations dans le repère de l'élément
         const Eigen::Vector3d d_2_prime     =  R_gc.transpose() * (u_2.segment(0,3) - u_mid.segment(0,3) - dr_2);     //Déplacement du noeud causé pas les déformations dans le repère de l'élément
@@ -313,11 +324,13 @@ public:
     };
 
     Eigen::VectorXd get_ForceInGlobalRef(Eigen::VectorXd D_local)
-    {
+    {   
+        
         Eigen::VectorXd F_int_elem_local = K_elem_local * D_local;
                     
         Eigen::MatrixXd Rot  = Eigen::MatrixXd::Zero(12,12);
         Eigen::Matrix3d Diag = get_RotationMatrixFromQuaternion(q_mid*q_e);
+        
 
         Rot.block(0, 0, 3, 3) = Diag;
         Rot.block(3, 3, 3, 3) = Diag;

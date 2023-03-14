@@ -126,10 +126,10 @@ public:
                     K_Global_sparse.coeffRef(6*n2+j,6*n2+k) += Tempo(6+j,6+k);
                     K_Global_sparse.coeffRef(6*n1+j,6*n2+k) += Tempo(j,6+k);
                     K_Global_sparse.coeffRef(6*n2+j,6*n1+k) += Tempo(6+j,k);
-                };
-            };                    
-        };
-    };
+                }
+            }                 
+        }
+    }
 
     void set_load_vector()
     {
@@ -255,6 +255,7 @@ public:
             Eigen::VectorXd delta_dep1, delta_dep2;
             Eigen::VectorXd Delta_dep_full,F_elem_global_ref,d_prime ; 
             Eigen::VectorXd Delta_dep_amor = get_Solve(Forces_diff); 
+            
             int n1,n2;          
             double Residu = 1.0;
 
@@ -289,13 +290,13 @@ public:
                 
                 Forces_int = apply_SPC1_Forces(Forces_int);
                 rotate_force();
-                //std::cout<<Forces.tail(6).transpose()<<std::endl;
                 Forces_diff = (Load_Step/Max_load_step)*(Forces) - Forces_int;
-
+                
                 set_K_global();
                 set_K_Final_sparse();
+                
                 Delta_dep_full = get_Solve(Forces_diff); 
-             
+                
                 Residu = std::sqrt(Delta_dep_full.transpose()*Delta_dep_full);
                 Delta_dep_amor = Delta_dep_full;
                 

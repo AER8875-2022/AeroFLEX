@@ -40,7 +40,7 @@ public:
    
   void solve(Eigen::VectorXd New_F){
     
-    FEM.set_FullLoadVector(New_F);
+    //FEM.set_FullLoadVector(New_F);
 
     if (settings.Solve_type == "Linear")
     {
