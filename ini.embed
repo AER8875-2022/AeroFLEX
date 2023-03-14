@@ -1,0 +1,50 @@
+const char* g_ImGuiIniSettings = R"([Window][DockSpace Demo]
+Pos=0,0
+Size=1600,900
+Collapsed=0
+
+[Window][Debug##Default]
+Pos=60,60
+Size=400,400
+Collapsed=0
+
+[Window][Buttons]
+Pos=0,19
+Size=410,590
+Collapsed=0
+DockId=0x00000001,0
+
+[Window][Graphs]
+Pos=412,19
+Size=865,590
+Collapsed=0
+DockId=0x00000002,0
+
+[Window][RANS]
+Pos=1279,19
+Size=321,881
+Collapsed=0
+DockId=0x00000004,0
+
+[Window][Console]
+Pos=0,611
+Size=1277,289
+Collapsed=0
+DockId=0x00000006,0
+
+[Window][Select a file]
+Pos=60,60
+Size=740,410
+Collapsed=0
+
+[Docking][Data]
+DockSpace       ID=0xF2944C7F Window=0x4647B76E Pos=87,140 Size=1600,881 Split=X
+  DockNode      ID=0x00000003 Parent=0xF2944C7F SizeRef=1277,881 Split=Y
+    DockNode    ID=0x00000005 Parent=0x00000003 SizeRef=1600,590 Split=X
+      DockNode  ID=0x00000001 Parent=0x00000005 SizeRef=410,756 CentralNode=1 Selected=0x296642D0
+      DockNode  ID=0x00000002 Parent=0x00000005 SizeRef=865,756 Selected=0x43C7209E
+    DockNode    ID=0x00000006 Parent=0x00000003 SizeRef=1600,289 Selected=0x49278EEE
+  DockNode      ID=0x00000004 Parent=0xF2944C7F SizeRef=321,881 Selected=0x723E535C
+
+)";
+size_t g_ImGuiIniSettingsSize = 1071;

@@ -40,10 +40,9 @@ namespace FlexGUI {
 			bool file_dialog_open = false;
 			FileDialogType type = FileDialogType::OpenFile;
 
-			char selected_file_path[max_path_length];
 			std::string file_dialog_current_path;
 
-			std::optional<std::string> Show();
+			void Show(char* buf);
 			FileDialog();
 	};
 }

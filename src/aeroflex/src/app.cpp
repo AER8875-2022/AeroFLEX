@@ -8,6 +8,7 @@
 #include "FileDialog.hpp"
 
 #include <string>
+#include <cstring>
 #include <future>
 #include <thread>
 #include <ctime>
@@ -316,18 +317,23 @@ void ButtonLayer::OnUIRender() {
 			fd.file_dialog_open = true;
 			fd.type = FlexGUI::FileDialogType::SaveFile;
 		}
+		static char path_buf[256];
 
-		auto path = fd.Show();
+		fd.Show(path_buf);
 
-		if (path.has_value()) {
+		if (fd.ready) {
+			std::string path(path_buf);
+			fd.ready = false;
+			std::cout << "path has value: " << path << std::endl;
 			// TODO: replace these with custom enums (eventually)
 			if (fd.type == FlexGUI::FileDialogType::OpenFile) {
-				aero.gui.msg.push("Starting parsing: " + path.value());
-				aero.config_open_async(path.value());
+				aero.gui.msg.push("Starting parsing: " + path);
+				aero.config_open_async(path);
 			} else if (fd.type == FlexGUI::FileDialogType::SaveFile) {
-				aero.gui.msg.push("Starting save: " + path.value());
-				aero.config_save_async(path.value());
+				aero.gui.msg.push("Starting save: " + path);
+				aero.config_save_async(path);
 			}
+			strcpy(path_buf, "");
 		}
 		ImGui::End();
 

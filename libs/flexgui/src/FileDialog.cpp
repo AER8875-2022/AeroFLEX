@@ -16,7 +16,7 @@ FileDialog::FileDialog() {
     file_dialog_current_path = std::filesystem::current_path().string();
 }
 
-std::optional<std::string> FileDialog::Show() {
+void FileDialog::Show(char* buf) {
     static int file_dialog_file_select_index = 0;
     static int file_dialog_folder_select_index = 0;
     static std::string file_dialog_current_file = "";
@@ -196,10 +196,10 @@ std::optional<std::string> FileDialog::Show() {
             } else if (type == FileDialogType::SelectFolder) {
                 complete_path += file_dialog_current_folder;
             }
-            strcpy(selected_file_path, complete_path.c_str());
-            ImGui::InputText("##text", selected_file_path, max_path_length, ImGuiInputTextFlags_ReadOnly);
+            strcpy(buf, complete_path.c_str());
+            ImGui::InputText("##text", buf, max_path_length, ImGuiInputTextFlags_ReadOnly);
         } else if(type == FileDialogType::SaveFile) {
-            ImGui::InputText("##text", selected_file_path, max_path_length, ImGuiInputTextFlags_CharsNoBlank);
+            ImGui::InputText("##text", buf, max_path_length, ImGuiInputTextFlags_CharsNoBlank);
         }
 
         ImGui::PushItemWidth(724);
@@ -299,10 +299,12 @@ std::optional<std::string> FileDialog::Show() {
                     reset_everything();
                 }
             } else if (type == FileDialogType::SaveFile) {
-                if (strlen(selected_file_path) == 0) {
+                if (strlen(buf) == 0) {
                     file_dialog_error = "Error: You must name the file!";
                 } else {
                     ready = true;
+                    std::string filename(buf);
+                    strcpy(buf, (file_dialog_current_path + "\\" + filename + ".ini").c_str());
                     reset_everything();
                 }
             }
@@ -313,19 +315,5 @@ std::optional<std::string> FileDialog::Show() {
         }
 
         ImGui::End();
-
-        if (ready) {
-            std::string full_path;
-            ready = false;
-            if (type == FileDialogType::SaveFile) {
-                full_path = file_dialog_current_path + "\\" + selected_file_path + ".ini";
-            } else if (type == FileDialogType::SelectFolder | type == FileDialogType::OpenFile) {
-                full_path = selected_file_path;
-            }
-            strcpy(selected_file_path, "");
-            return full_path;
-        } else {
-            return std::nullopt;
-        }
     }
 }
