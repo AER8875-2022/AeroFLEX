@@ -8,6 +8,7 @@
 #include <rans/rans.h>
 #include <vlm/vlm.hpp>
 #include <structure/structure.hpp>
+#include <aero/aeroelasticity.hpp>
 
 // Temporary
 #include <rans/parser.h>
@@ -26,6 +27,7 @@ class Aero {
 		Rans &rans;
 		vlm::VLM &vlm;
 		structure::Structure &structure;
+		aero::Aero &aero;
 
 		double x = 0.0;
 
@@ -35,7 +37,7 @@ class Aero {
 		bool signal_status_busy = false;
 		bool signal_status_ready = true;
 		GUIHandler &gui;
-		Aero(Rans &rans, vlm::VLM &vlm, structure::Structure &structure, GUIHandler &gui) : rans(rans), vlm(vlm), structure(structure), gui(gui) {};
+		Aero(Rans &rans, vlm::VLM &vlm, structure::Structure &structure, aero::Aero &aero, GUIHandler &gui) : rans(rans), vlm(vlm), structure(structure), aero(aero), gui(gui) {};
 };
 
 template <class T>
@@ -175,8 +177,10 @@ namespace FlexGUI {
 
 		structure::Structure structure(gui);
 
+		aero::Aero aeroelasticity(gui, vlm, structure);
+
 		// Initialize main application with the modules
-		Aero aero(rans, vlm, structure, gui);
+		Aero aero(rans, vlm, structure, aeroelasticity, gui);
 
 		while (g_ApplicationRunning)
 		{

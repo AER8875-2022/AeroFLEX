@@ -3,6 +3,8 @@
 #define __AEROELASTICITY__
 
 #include "common_aeroflex.hpp"
+#include "vlm/vlm.hpp"
+#include "structure/structure.hpp"
 #include <vector>
 
 namespace aero {
@@ -14,15 +16,19 @@ struct Settings {
 class Aero {
 
 public:
-    // TODO: SOLUTION
+    // TODO: STORE SOLUTION
     Settings settings;
 
     std::vector<double> residuals;
     std::atomic<int> iters = 0;
     GUIHandler &gui;
 
+    // Modules
+    vlm::VLM &vlm;
+    structure::Structure &structure;
+
 public:
-    Aero(GUIHandler &gui);
+    Aero(GUIHandler &gui, vlm::VLM &vlm, structure::Structure &structure);
     void input();
     void solve();
 

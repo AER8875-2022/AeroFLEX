@@ -3,9 +3,11 @@
 #include <aero/aeroelasticity.hpp>
 
 using namespace structure;
+using namespace aero;
 
 
-Aero::Aero(GUIHandler &gui) : gui(gui) {};
+Aero::Aero(GUIHandler &gui, vlm::VLM &vlm, structure::Structure &structure)
+    : gui(gui), vlm(vlm), structure(structure) {};
 
 void Aero::input() {
     // TODO
