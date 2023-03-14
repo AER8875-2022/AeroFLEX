@@ -10,20 +10,21 @@
 #include <array>
 #include <vector>
 #include "vlm/model.hpp"
+#include "structure/structure.hpp"
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 
+using namespace Eigen;
+using namespace vlm;
+using namespace structure;
+
 
 namespace aero{
-    struct interpolation{
-        std::vector<double> node;
-        std::vector<double> weight;
-
-    };
+    struct interpolation;
 
 
-    void DispInterpol( interpolation &pos,std::vector<surface::wingStation> wingStations,
-                       std::vector<surface::wing> wings,std::vector<element::vortexRing> vortexRings,std::vector<Vector3d> nodes, ){
+    void DispInterpol( interpolation &pos,std::vector<surface::wingStation> model.wingStations,
+                       std::vector<surface::wing> wings,std::vector<element::vortexRing> vortexRings,std::vector<Vector3d> nodes,map<int,Vector3d> mapStruct,map<int, int> mapStructni) {
         for (k = 0; k <wings.size() ; ++k)
         {
             for (i = 0; i <wingStations.size() ; ++i)
@@ -42,8 +43,8 @@ namespace aero{
                     double bestPoint[2]={10000,10000};
                     //compute the distance between the node on vlm and nodes on structure
 
-                    for (s=0 ; s<numPointsStruct; ++s) {
-                        auto nodeStruct = nodes[struct.get_nodeIDs()[s]];
+                    for (auto s : mapStructni) {
+                        auto nodeStruct = mapStruct[s.first];
                         double distance = sqrt(
                                 pow(nodeStruct[0]-node[0], 2) + pow(nodeStruct[1]-node[1], 2) +
                                 pow(nodeStruct[2]-node[2], 2));
@@ -52,10 +53,10 @@ namespace aero{
                                 bestDistance[1] = bestDistance[0];
                                 bestDistance[0] = distance;
                                 bestPoint[1] = bestPoint[0];
-                                bestPoint[0] = s;
+                                bestPoint[0] = s.first;
                             } else {
                                 bestDistance[1] = distance;
-                                bestPoint[1] = s;
+                                bestPoint[1] = s.first;
                             }
 
 
@@ -64,11 +65,11 @@ namespace aero{
                     }
 
                     //projection of the node on the structure
-                    auto nodeStruct1 = nodes[struct.get_nodeIDs()[bestPoint[0]]];
-                    auto nodeStruct2 = nodes[struct.get_nodeIDs()[bestPoint[1]]];
+                    auto nodeStruct1 = mapStruct[bestPoint[0]];
+                    auto nodeStruct2 = mapStruct[bestPoint[1]];
 
-                    pos.node.push_back(struct.get_nodeIDs()[bestPoint[0]);
-                    pos.node.push_back(struct.get_nodeIDs()[bestPoint[1]);
+                    pos.node.push_back(mapStructni[bestPoint[0]);
+                    pos.node.push_back(mapStructni[bestPoint[1]);
 
                     double x1[3];
                     double x2[3];
@@ -91,7 +92,7 @@ namespace aero{
         }
     }
 
-    void computeVLMDispalecement() {
+    void computeVLMDispalecement(interpolation pos) {
         for (k = 0; k<; ++k) {
             for (i = 0; i<; ++i) {
 
