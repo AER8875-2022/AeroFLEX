@@ -207,8 +207,11 @@ void Aero::config_open_async(const std::string &conf_path) {
 void Aero::config_open_await() {
 	auto settings_op = future_config_open.get();
 	if (settings_op.has_value()) {
+		gui.msg.push("Config loaded.");
 		config_file_set = true;
 		settings = settings_op.value();
+	} else {
+		gui.msg.push("Config load failed.");
 	}
 	signal_status_ready = true;
 	signal_status_busy = false;
@@ -226,9 +229,9 @@ void Aero::config_save_async(const std::string &conf_path) {
 void Aero::config_save_await() {
 	bool success = future_config_save.get();
 	if (success) {
-		gui.msg.push("Config save success");
+		gui.msg.push("Config saved.");
 	} else {
-		gui.msg.push("Config save failed");
+		gui.msg.push("Config save failed.");
 	}
 	signal_status_ready = true;
 	signal_status_busy = false;
@@ -324,7 +327,6 @@ void ButtonLayer::OnUIRender() {
 		if (fd.ready) {
 			std::string path(path_buf);
 			fd.ready = false;
-			std::cout << "path has value: " << path << std::endl;
 			// TODO: replace these with custom enums (eventually)
 			if (fd.type == FlexGUI::FileDialogType::OpenFile) {
 				aero.gui.msg.push("Starting parsing: " + path);
@@ -467,7 +469,6 @@ void ConsoleLayer::OnUIRender() {
 
     if (txt.has_value()) {
         log.log(txt.value().c_str());
-		std::cout << "should print" << std::endl;
     }
     ImGui::End();
     log.draw("Console", NULL);

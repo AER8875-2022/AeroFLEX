@@ -18,7 +18,7 @@
 #pragma once
 
 #include <string>
-#include <optional>
+#include <filesystem>
 
 namespace FlexGUI {
 	const int max_path_length = 256;
@@ -40,7 +40,7 @@ namespace FlexGUI {
 			bool file_dialog_open = false;
 			FileDialogType type = FileDialogType::OpenFile;
 
-			std::string file_dialog_current_path;
+			std::filesystem::path file_dialog_current_path;
 
 			void Show(char* buf);
 			FileDialog();

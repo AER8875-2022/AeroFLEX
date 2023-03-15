@@ -1,19 +1,20 @@
-#include "FileDialog.hpp" // string and optional
+#include "FileDialog.hpp"
 
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <chrono>
-#include <filesystem>
 #include <sstream>
 #include <vector>
 #include <algorithm>
 #include <cstring>
+#include <string>
+#include <filesystem>
 
 using namespace std::chrono_literals;
 using namespace FlexGUI;
 
 FileDialog::FileDialog() {
-    file_dialog_current_path = std::filesystem::current_path().string();
+    file_dialog_current_path = std::filesystem::current_path();
 }
 
 void FileDialog::Show(char* buf) {
@@ -47,7 +48,7 @@ void FileDialog::Show(char* buf) {
         }
         catch (...) {}
 
-        ImGui::Text("%s", file_dialog_current_path.c_str());
+        ImGui::Text("%s", file_dialog_current_path.string().c_str());
 
         ImGui::BeginChild("Directories##1", ImVec2(200, 300), true, ImGuiWindowFlags_HorizontalScrollbar);
 
@@ -61,7 +62,7 @@ void FileDialog::Show(char* buf) {
             if (ImGui::Selectable(folders[i].path().stem().string().c_str(), i == file_dialog_folder_select_index, ImGuiSelectableFlags_AllowDoubleClick, ImVec2(ImGui::GetWindowContentRegionWidth(), 0))) {
                 file_dialog_current_file = "";
                 if (ImGui::IsMouseDoubleClicked(0)) {
-                    file_dialog_current_path = folders[i].path().string();
+                    file_dialog_current_path = folders[i].path();
                     file_dialog_folder_select_index = 0;
                     file_dialog_file_select_index = 0;
                     ImGui::SetScrollHereY(0.0f);
@@ -191,16 +192,15 @@ void FileDialog::Show(char* buf) {
         ImGui::SetNextItemWidth(724);
 
         if (type == FileDialogType::OpenFile | type == FileDialogType::SelectFolder) {
-            std::string complete_path = file_dialog_current_path + (file_dialog_current_path.back() == '\\' ? "" : "\\");
             if (type == FileDialogType::OpenFile) {
-                complete_path += file_dialog_current_file;
+                strcpy(buf, (file_dialog_current_path / file_dialog_current_file).string().c_str());
             } else if (type == FileDialogType::SelectFolder) {
-                complete_path += file_dialog_current_folder;
+                strcpy(buf, (file_dialog_current_path / file_dialog_current_folder).string().c_str());
             }
-            strcpy(buf, complete_path.c_str());
+            
             ImGui::InputText("##text", buf, max_path_length, ImGuiInputTextFlags_ReadOnly);
         } else if(type == FileDialogType::SaveFile) {
-            ImGui::InputTextWithHint("##text", "Filename", buf, max_path_length, ImGuiInputTextFlags_CharsNoBlank);
+            ImGui::InputTextWithHint("##text", "Filename", buf, max_path_length - file_dialog_current_path.string().length() - 2, ImGuiInputTextFlags_CharsNoBlank);
         }
 
         ImGui::PushItemWidth(724);
@@ -239,9 +239,8 @@ void FileDialog::Show(char* buf) {
                     strcpy(new_folder_error,"Folder name can't be empty");
                 }
                 else {
-                    std::filesystem::path current_path(file_dialog_current_path);
                     std::string new_folder_name_str(new_folder_name);
-                    std::filesystem::create_directory(current_path / new_folder_name_str);
+                    std::filesystem::create_directory(file_dialog_current_path / new_folder_name_str);
                     strcpy(new_folder_name, "");
                     ImGui::CloseCurrentPopup();
                 }
@@ -263,7 +262,7 @@ void FileDialog::Show(char* buf) {
             ImGui::TextUnformatted(file_dialog_current_folder.c_str());
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 6);
             if (ImGui::Button("Yes")) {
-                std::filesystem::remove(file_dialog_current_path + (file_dialog_current_path.back() == '\\' ? "" : "\\") + file_dialog_current_folder);
+                std::filesystem::remove(file_dialog_current_path / file_dialog_current_folder);
                 ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
