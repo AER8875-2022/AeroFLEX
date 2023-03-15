@@ -141,7 +141,7 @@ namespace aero{
         
         for (int j=0; j<=n; ++j){
             auto wingstation = wingStations[wings[0].get_wingStationsIDs()[j]];
-            m=sizeowingstation);
+            m=wingstation.size();
             
             auto vortexring= vortexRings[wstation.get_vortexIDs()[i]];
             force.point_fa.push.back(vortexRing[i].ForcesActingPoint(nodes, vortexRings));
@@ -254,7 +254,7 @@ namespace aero{
         vector <double> r(3);
         
         for (int i=0; i<n; ++i){
-            auto forces = model.forces_to_inertial(i);
+            auto forces = object.forces_to_inertial_frame(i);
             j=poids[i][0];
             
             forces_s[6*j]   += poids[i][1] * forces[i][0];
@@ -290,7 +290,7 @@ namespace aero{
             forces_s[6*(j+1)+5]   += poids[i][1] * (M_s[2] + forces[i][5]);
             
         }
-        return froces_s;
+        return forces_s;
     }
         
       

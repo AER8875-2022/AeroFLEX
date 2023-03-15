@@ -22,7 +22,7 @@ public:
     std::vector<double> residuals;
     std::atomic<int> iters = 0;
     GUIHandler &gui;
-    structure Structure;
+
 
     // Modules
     vlm::VLM &vlm;
