@@ -335,7 +335,7 @@ public:
     void set_Quaternion_Map(Eigen::VectorXd delta_dep){
 
         #pragma omp parallel for
-        for (unsigned int i = 0; i < Nbr_Noeud; i++)
+        for (int i = 0; i < Nbr_Noeud; i++)
         {
             double rx = delta_dep(i*6 +3);
             double ry = delta_dep(i*6 +4);
