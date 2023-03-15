@@ -227,19 +227,15 @@ inline void config::write_file(std::ofstream &f) {
             f << setting << " = " << value << "\n";
         }
         for (const auto &entry : config_vec[section]) {
-            if (entry.size() > 2) {
+            if (entry.size() > 1) {
                 f << "<\n";
                 for (const auto& [setting, value] : entry) {
                     f << "\t" << setting << " = " << value << ",\n";
                 }
-            } else {
-                f << "<";
-                for (auto it = entry.begin(); it != std::prev(entry.end()); ++it) {
-                    f << it->first << " = " << it->second << ", ";
-                }
-                f << std::prev(entry.end())->first << " = " << std::prev(entry.end())->second;
+                f << ">\n";
+            } else if (entry.size() == 1){
+                f << "<" << entry.begin()->first << " = " << entry.begin()->second << ">\n";
             }
-            f << ">\n";
         }
         f << "\n";
     }

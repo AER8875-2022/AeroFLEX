@@ -222,7 +222,14 @@ void Aero::config_save_async(const std::string &conf_path) {
 	signal_status_busy = true;
 	future_config_save = std::async(std::launch::async,
 	[this](const std::string &path){
-		return config_save(path, this->settings);
+		bool success = false;
+		try {
+			success = config_save(path, this->settings);
+		} catch (std::exception &e) {
+			// Put this in queue
+			std::cout << e.what() << std::endl;
+		}
+		return success;
 	}, conf_path);
 }
 
