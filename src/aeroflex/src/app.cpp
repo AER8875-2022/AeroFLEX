@@ -54,7 +54,6 @@ class Aero {
 		// Signal routing
 		bool signal_status_busy = false;
 		bool signal_status_ready = true;
-		bool config_file_set = false;
 		GUIHandler &gui;
 		Aero(rans::Rans &rans, vlm::VLM &vlm, GUIHandler &gui);
 };
@@ -208,7 +207,6 @@ void Aero::config_open_await() {
 	auto settings_op = future_config_open.get();
 	if (settings_op.has_value()) {
 		gui.msg.push("Config loaded.");
-		config_file_set = true;
 		settings = settings_op.value();
 	} else {
 		gui.msg.push("Config load failed.");
@@ -297,17 +295,11 @@ void ButtonLayer::OnUIRender() {
 		if (ImGui::Button("Open", ImVec2(-1.0f, 0.0f)) && !aero.signal_status_busy && aero.signal_status_ready) {
 			fd.file_dialog_open = true;
 			fd.type = FlexGUI::FileDialogType::OpenFile;
-			// aero.gui.msg.push("Starting parsing");
-			// aero.config_open_async("../../../../examples/conf.ini");
 		};
 
 		if (ImGui::Button("Save", ImVec2(-1.0f, 0.0f))) {
-			if (aero.config_file_set) {
-				fd.file_dialog_open = true;
-				fd.type = FlexGUI::FileDialogType::SaveFile;
-			} else {
-				aero.gui.msg.push("No config file set");
-			}
+			fd.file_dialog_open = true;
+			fd.type = FlexGUI::FileDialogType::SaveFile;
 		}
 
 		if (!aero.signal_status_ready && is_future_done(aero.future_solve)) {
@@ -316,7 +308,6 @@ void ButtonLayer::OnUIRender() {
 
 		if (!aero.signal_status_ready && is_future_done(aero.future_config_open)) {
 			aero.config_open_await();
-			// aero.gui.msg.push("Done parsing");
 		};
 
 		if (!aero.signal_status_ready && is_future_done(aero.future_config_save)) {
