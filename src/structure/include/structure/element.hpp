@@ -65,7 +65,7 @@ public:
         L       = sqrtl( (noeud1(0)-noeud2(0))*(noeud1(0)-noeud2(0))+   (noeud1(1)-noeud2(1))*(noeud1(1)-noeud2(1)) + (noeud1(2)-noeud2(2))*(noeud1(2)-noeud2(2)) );
         
         set_K_local();
-        set_TRotation();
+        set_T_Rotation();
         set_K_elem_global();
         
         u_1 = Eigen::VectorXd::Zero(6);
@@ -108,7 +108,7 @@ public:
                         0, Y2,  0, 0,  0, Y4, 0,-Y2,  0,  0,  0, Y3;
     };
     
-    void set_TRotation()
+    void set_T_Rotation()
     {
         const double L_inv= 1/L;
         Eigen::MatrixXd Lambda= Eigen::MatrixXd::Zero(3,3);
@@ -142,7 +142,7 @@ public:
         T_Rotation.block(6, 6, 3, 3) = Lambda;
         T_Rotation.block(9, 9, 3, 3) = Lambda;
 
-        set_q_e_FromRotationMatrix(Lambda);            
+        set_qe_From_Rotation_Matrix(Lambda);            
     };
 
 
@@ -161,7 +161,7 @@ public:
     };
 
 
-    void set_q_e_FromRotationMatrix(Eigen::Matrix3d mat)  //Set q_e
+    void set_qe_From_Rotation_Matrix(Eigen::Matrix3d mat)  //Set q_e
     {
         const double dia = mat(0,0) + mat(1,1) + mat(2,2);
         double cst, s, v_x, v_y, v_z;
@@ -212,14 +212,14 @@ public:
         
     }
 
-    void set_q_1Andq_2(Eigen::Quaterniond delta_q_1 ,Eigen::Quaterniond delta_q_2 )
+    void set_q1_And_q2(Eigen::Quaterniond delta_q_1 ,Eigen::Quaterniond delta_q_2 )
     {
         q_1 = delta_q_1 * q_1;
         q_2 = delta_q_2 * q_2;
     }
    
 
-    Eigen::Matrix3d get_RotationMatrixFromQuaternion(Eigen::Quaterniond q)
+    Eigen::Matrix3d get_Rotation_Matrix_From_Quaternion(Eigen::Quaterniond q)
     {
         const double s = q.w();
         const double x = q.x();
@@ -236,7 +236,7 @@ public:
     };
     
 
-   void set_QuaternionFromInterpolation()  //Trouver q_mid à partir de q_1 et q_2
+   void set_qmid_From_Interpolation()  //Trouver q_mid à partir de q_1 et q_2
     {
         if (1-(q_1.inverse()*q_2).w() < 1e-14)
         {
@@ -265,16 +265,15 @@ public:
                 q_mid =  q_1;
             } 
         }
-       
     };
 
-    void set_QuaternionLocalRotations() //Puisqu'on utilise des quaternion unitaire, le conjugate et la transpose sont équivalent.
+    void set_Quaternion_Local_Rotations() //Puisqu'on utilise des quaternion unitaire, le conjugate et la transpose sont équivalent.
     {   
         q_1_rot_prime = q_mid.conjugate()*q_e.conjugate() * q_1 * q_e;
         q_2_rot_prime = q_mid.conjugate()*q_e.conjugate() * q_2 * q_e;
     };
 
-    Eigen::Vector3d get_EulerAnglesFromLocalRotation(Eigen::Quaterniond q_n_rot_local)  //Trouve les déformations angulaires à partir des q_rot,i'
+    Eigen::Vector3d get_Euler_Angles_From_Local_Rotation(Eigen::Quaterniond q_n_rot_local)  //Trouve les déformations angulaires à partir des q_rot,i'
     {
         const double s = q_n_rot_local.w();
         const double a = q_n_rot_local.x();
@@ -290,17 +289,17 @@ public:
         return THETA_local;
     };
 
-    Eigen::VectorXd get_DeformationLocalRef()
+    Eigen::VectorXd get_Deformation_Local_Ref()
     {    
-        const Eigen::Vector3d theta_1_local = get_EulerAnglesFromLocalRotation(q_1_rot_prime);
-        const Eigen::Vector3d theta_2_local = get_EulerAnglesFromLocalRotation(q_2_rot_prime);
+        const Eigen::Vector3d theta_1_local = get_Euler_Angles_From_Local_Rotation(q_1_rot_prime);
+        const Eigen::Vector3d theta_2_local = get_Euler_Angles_From_Local_Rotation(q_2_rot_prime);
 
-        const Eigen::Matrix3d R_ec          = get_RotationMatrixFromQuaternion(q_mid); //R(q_mid)
+        const Eigen::Matrix3d R_ec          = get_Rotation_Matrix_From_Quaternion(q_mid); //R(q_mid)
         
         const Eigen::Vector3d dr_1          = R_ec*r1 - r1;                                                           //Déplacement induit par la rotation
         const Eigen::Vector3d dr_2          = R_ec*r2 - r2;                                                           //Déplacement induit par la rotation 
     
-        const Eigen::Matrix3d R_gc          = get_RotationMatrixFromQuaternion(q_mid * q_e);
+        const Eigen::Matrix3d R_gc          = get_Rotation_Matrix_From_Quaternion(q_mid * q_e);
         
         
 
@@ -317,13 +316,13 @@ public:
         return D_local;
     };
 
-    Eigen::VectorXd get_ForceInGlobalRef(Eigen::VectorXd D_local)
+    Eigen::VectorXd get_Force_In_GlobalRef(Eigen::VectorXd D_local)
     {   
         
         Eigen::VectorXd F_int_elem_local = K_elem_local * D_local;
                     
         Eigen::MatrixXd Rot  = Eigen::MatrixXd::Zero(12,12);
-        Eigen::Matrix3d Diag = get_RotationMatrixFromQuaternion(q_mid*q_e);
+        Eigen::Matrix3d Diag = get_Rotation_Matrix_From_Quaternion(q_mid*q_e);
         
 
         Rot.block(0, 0, 3, 3) = Diag;

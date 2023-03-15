@@ -34,21 +34,21 @@ public:
   {
     FEM.read_data_file(settings.Mesh_file_path);
     FEM.set_K_global();
-    FEM.set_load_vector();        
+    FEM.set_Load_Vector_From_Load_Objects();      
     FEM.set_K_Final_sparse();
   }
    
   void solve(Eigen::VectorXd New_F){
     
-    //FEM.set_FullLoadVector(New_F);
+    FEM.set_Load_Vector_From_Vector(New_F);
 
     if (settings.Solve_type == "Linear")
     {
-      Solutions.push_back(FEM.get_LinSolve());
+      Solutions.push_back(FEM.get_Lin_Solve());
     }
     else if(settings.Solve_type == "Non-Linear")
     {
-      Solutions.push_back(FEM.get_NonLinSolve(settings.N_step, settings.Tolerance, settings.Damping));
+      Solutions.push_back(FEM.get_NonLin_Solve(settings.N_step, settings.Tolerance, settings.Damping));
     }
 
 
