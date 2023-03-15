@@ -13,6 +13,7 @@
 #include "structure/structure.hpp"
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
+#include "vlm/vlm.hpp"
 
 using namespace Eigen;
 using namespace vlm;

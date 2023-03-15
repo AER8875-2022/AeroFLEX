@@ -11,11 +11,12 @@ Aero::Aero(GUIHandler &gui, vlm::VLM &vlm, structure::Structure &structure)
 
 void Aero::input() {
     // TODO
-    structure.input();
+    Structure.input();
+    object.input();
     interpolation pos;
     auto mapStructni= FEM.indexation_switch;
     auto mapStruct= FEM.Grid_MAP;
-    dispInterpol(pos, model.wingStations, model.wings, model.vortexRings, model.nodes, mapStruct, mapStructni);
+    dispInterpol(pos, object.wingStations, object.wings, object.vortexRings, object.nodes, mapStruct, mapStructni);
 
 
 
@@ -27,6 +28,6 @@ void Aero::input() {
 
 void Aero::solve() {
     // TODO
-    structure.solve();
+    Structure.solve();
     computeVLMDispalecement(pos, );
 }
