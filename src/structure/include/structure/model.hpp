@@ -27,7 +27,7 @@ public:
     std::map<int, MAT1>                            MAT1_MAP;      //  MAT1_ID --> MAT1
     std::map<int, PBAR>                            PBAR_MAP;      //  PBAR_ID --> PBAR
     std::map<int, CBAR>                            CBAR_MAP;      //  CBAR_ID --> CBAR
-    std::map<int, Eigen::Quaterniond>        QUATERNION_MAP;      //  CBAR_ID --> CBAR 
+    std::map<int, Eigen::Quaterniond>        QUATERNION_MAP;      //  code_id --> CBAR 
     std::vector<SPC1>                             SPC1_LIST;      //   
     std::vector<FORCE>                           FORCE_LIST;      //
     std::vector<MOMENT>                         MOMENT_LIST;      //
@@ -238,19 +238,25 @@ public:
     Eigen::VectorXd get_NonLin_Solve(int Max_load_step, double tol, double amor)
     {
         Eigen::VectorXd Dep = Eigen::VectorXd(6 * Nbr_Noeud);
-        Dep.setZero();
         Eigen::VectorXd Forces_int(6 * Nbr_Noeud);
-        Forces_int.setZero();
         Eigen::VectorXd Forces_diff(6 * Nbr_Noeud );
+
+        Dep.setZero();
+        Forces_int.setZero();
         Forces_int.setZero();
 
         std::vector<int> CBAR_keys;
         CBAR_keys.reserve(CBAR_MAP.size());
-
-            for (auto& element : CBAR_MAP) 
-            {
+        for (auto& element : CBAR_MAP) 
+        {
                 CBAR_keys.push_back(element.first);
-            }
+        }
+
+        for (int i = 0; i < Nbr_Noeud; i++)
+        {
+            Eigen::Quaterniond delta_q(0.0,0.0,0.0,0.0);
+            QUATERNION_MAP[i] = delta_q ;
+        }
             
 
         for (double Load_Step = 1.; Load_Step <= Max_load_step; Load_Step ++)
@@ -271,10 +277,10 @@ public:
                 while (gui.signal.pause) std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 
                 //Delta déplacements
-                Dep += Delta_dep_amor;
-                
+                Dep += Delta_dep_amor;                
                 set_Quaternion_Map(Delta_dep_amor); 
-                // #pragma omp parallel for
+
+                #pragma omp parallel for
                 for (int i = 0; i < CBAR_keys.size(); ++i)
                 {   
                     int key     = CBAR_keys[i];
@@ -288,24 +294,18 @@ public:
                     Eigen::VectorXd delta_dep2 = Delta_dep_amor.segment(n2*6,6);   
                                    
                     value.set_u_i(delta_dep1,delta_dep2);                                      //Set u_1 and u_2
-                    value.set_q1_And_q2(QUATERNION_MAP[n1],QUATERNION_MAP[n2]);                //Set q_1 and q_2
-                    
-                    value.set_qmid_From_Interpolation();                                       //Set q_mid
-                                         
+                    value.set_q1_And_q2(QUATERNION_MAP[n1],QUATERNION_MAP[n2]);                //Set q_1 and q_2                    
+                    value.set_qmid_From_Interpolation();                                       //Set q_mid                                         
                     value.set_Quaternion_Local_Rotations();                                    //Set q_1_rot_prime and q_2_rot_prime
                     
                     Eigen::VectorXd d_prime           = value.get_Deformation_Local_Ref();     //Déplacements dans le repère local de l'élément
-                    
                     Eigen::VectorXd F_elem_global_ref = value.get_Force_In_GlobalRef(d_prime);
                     
-                    // #pragma omp critical
+                    #pragma omp critical
                     Forces_int.segment(6*n1,6)       += F_elem_global_ref.segment(0,6);      
-                    // #pragma omp critical
+                    #pragma omp critical
                     Forces_int.segment(6*n2,6)       += F_elem_global_ref.segment(6,6);   
-                    
                 }
-                
-                 
                 
                 Forces_int = apply_SPC1_Forces(Forces_int);
                 Rotate_Ext_Loads();
@@ -315,20 +315,19 @@ public:
                 set_K_Final_sparse();
                 Delta_dep_full = get_Solve(Forces_diff); 
                 Residu = std::sqrt(Delta_dep_full.transpose()*Delta_dep_full);
-                Delta_dep_amor = Delta_dep_full;
+                Forces_int.setZero();
                 
                 if (Residu < 10.*tol) Delta_dep_amor = amor*Delta_dep_full;
+                else Delta_dep_amor = Delta_dep_full;
 
                 if (iters%1 == 500 || Residu < tol){
                 std::cout << "Iteration " << iters << std::endl;
                 std::cout << "\t Residual = " << Residu << std::endl;
                 };
-
-                Forces_int.setZero();
+                
                 // Incrementing current iteration
                 iters++;
                 residuals.push_back(Residu);
-
             } while((Residu> tol) && (!gui.signal.stop));
         }
         return Dep;
@@ -336,22 +335,19 @@ public:
 
     void set_Quaternion_Map(Eigen::VectorXd delta_dep){
 
-        // #pragma omp parallel for
+        #pragma omp parallel for
         for (int i = 0; i < Nbr_Noeud; i++)
         {
             double rx = delta_dep(i*6 +3);
             double ry = delta_dep(i*6 +4);
             double rz = delta_dep(i*6 +5);
-            
 
             double s  = cos(0.5*rz) * cos(0.5*ry) * cos(0.5*rx) + sin(0.5*rz) * sin(0.5*ry) * sin(0.5*rx);
             double vx = cos(0.5*rz) * cos(0.5*ry) * sin(0.5*rx) - sin(0.5*rz) * sin(0.5*ry) * cos(0.5*rx);
             double vy = cos(0.5*rz) * sin(0.5*ry) * cos(0.5*rx) + sin(0.5*rz) * cos(0.5*ry) * sin(0.5*rx);
             double vz = sin(0.5*rz) * cos(0.5*ry) * cos(0.5*rx) - cos(0.5*rz) * sin(0.5*ry) * sin(0.5*rx);
             Eigen::Quaterniond delta_q(s,vx,vy,vz);
-            
-            
-
+    
             QUATERNION_MAP[i] = delta_q ;
         }
     }
