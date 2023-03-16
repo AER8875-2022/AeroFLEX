@@ -364,10 +364,6 @@ void ButtonLayer::OnUIRender() {
 			aero.config_save_await();
 		};
 
-		if (ImGui::Button("Browse##path")) {
-			fd.file_dialog_open = true;
-			fd.type = FlexGUI::FileDialogType::SaveFile;
-		}
 		static char path_buf[256];
 
 		fd.Show(path_buf);
