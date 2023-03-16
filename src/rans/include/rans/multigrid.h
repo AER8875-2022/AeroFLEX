@@ -27,6 +27,8 @@ namespace rans {
 
 template<class solverType>
 class multigrid {
+    public:
+
     GUIHandler &gui;
     Settings &settings;
     std::vector<double> &residuals;
@@ -40,12 +42,9 @@ class multigrid {
 
     int run_solver(solverType& s);
 
-public:
-
     multigrid(std::vector<mesh> ms, Settings &settings, GUIHandler &gui, std::vector<double> &residuals, std::atomic<int> &iters);
 
     solverType& run(const bool reinit=true);
-
 };
 
 template<class solverType>

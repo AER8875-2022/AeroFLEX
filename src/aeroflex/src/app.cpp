@@ -14,6 +14,8 @@
 #include <ctime>
 
 #include "common_aeroflex.hpp"
+#include "database/database.hpp"
+
 #include <rans/rans.h>
 #include <vlm/vlm.hpp>
 
@@ -82,10 +84,22 @@ struct ConsoleLayer : public FlexGUI::Layer {
 	ConsoleLayer(Aero &aero) : aero(aero) {};
 };
 
-void solve(rans::Rans &rans) {
-	rans.input();
-	rans.solve();
+// SOLVE =================================================================================================
+
+void solve(rans::Rans &rans, vlm::VLM &vlm) {
+	database::table vlm_table;
+	vlm_table.airfoils["naca0012_coarse"];
+	vlm_table.airfoils["naca0012_coarse"].alpha = {0.0, 2.5, 5.0};
+
+	for (auto& [airfoil, db] : vlm_table.airfoils) {
+		rans.solve_airfoil(airfoil, db);
+	}
+
+	// rans.input();
+	// rans.solve();
 }
+
+// =================================================================================================
 
 std::optional<Settings> config_open(const std::string &conf_path) {
 	Settings settings;
@@ -181,10 +195,10 @@ bool config_save(const std::string &conf_path, Settings &settings) {
 }
 
 Aero::Aero(rans::Rans &rans, vlm::VLM &vlm, GUIHandler &gui) : rans(rans), vlm(vlm), gui(gui) {
-	settings.rans.bcs["Farfield"];
-	settings.rans.bcs["Farfield"].bc_type = "farfield";
-	settings.rans.bcs["Airfoil"];
-	settings.rans.bcs["Airfoil"].bc_type = "slip-wall";
+	settings.rans.bcs["farfield"];
+	settings.rans.bcs["farfield"].bc_type = "farfield";
+	settings.rans.bcs["wall"];
+	settings.rans.bcs["wall"].bc_type = "slip-wall";
 
 	// TEMPORARY !!!!
 	settings.rans.meshes.push_back("../../../../examples/rans/airfoil_API2_coarse.msh");
@@ -195,12 +209,12 @@ Aero::Aero(rans::Rans &rans, vlm::VLM &vlm, GUIHandler &gui) : rans(rans), vlm(v
 void Aero::solve_async() {
 	signal_status_ready = false;
 	signal_status_busy = true;
-	gui.msg.push("Starting simulation");
+	gui.msg.push("-- Starting simulation --");
 	rans.settings = settings.rans;
 	future_solve = std::async(std::launch::async, 
-	[this](){
+	[&](){
 		try {
-			solve(this->rans);
+			solve(rans, vlm);
 		} catch (std::exception &e) {
 			gui.msg.push(e.what());
 		}
@@ -209,6 +223,11 @@ void Aero::solve_async() {
 
 void Aero::solve_await() {
 	future_solve.get();
+	if (gui.signal.stop) {
+		gui.msg.push("-- Simulation stopped --");
+	} else {
+		gui.msg.push("-- Simulation done --");
+	}
 	signal_status_ready = true;
 	signal_status_busy = false;
 	gui.signal.stop = false;
@@ -291,10 +310,10 @@ void RansLayer::OnUIRender() {
 
 	ImGui::Separator();
 	ImGui::Text("Farfield");
-	ImGui::InputDouble("Mach", &aero.settings.rans.bcs["Farfield"].vars_far.mach, 0.01f, 1.0f, "%.4f");
-	ImGui::InputDouble("AoA", &aero.settings.rans.bcs["Farfield"].vars_far.angle, 0.01f, 1.0f, "%.4f");
-	ImGui::InputDouble("Temperature", &aero.settings.rans.bcs["Farfield"].vars_far.T, 0.01f, 1.0f, "%.4f");
-	ImGui::InputDouble("Pressure", &aero.settings.rans.bcs["Farfield"].vars_far.p, 0.01f, 1.0f, "%.4f");
+	ImGui::InputDouble("Mach", &aero.settings.rans.bcs["farfield"].vars_far.mach, 0.01f, 1.0f, "%.4f");
+	ImGui::InputDouble("AoA", &aero.settings.rans.bcs["farfield"].vars_far.angle, 0.01f, 1.0f, "%.4f");
+	ImGui::InputDouble("Temperature", &aero.settings.rans.bcs["farfield"].vars_far.T, 0.01f, 1.0f, "%.4f");
+	ImGui::InputDouble("Pressure", &aero.settings.rans.bcs["farfield"].vars_far.p, 0.01f, 1.0f, "%.4f");
 
 	ImGui::Separator();
 	ImGui::Text("Solver");
