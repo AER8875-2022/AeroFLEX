@@ -94,12 +94,16 @@ public:
     gas& g;
     double& nx;
     double& ny;
+    double& l;
+    double& a0;
+    double& a1;
 
     bool two_sided;
 
     int viscous_type;
 
-    flux(gas& g, double& nx, double& ny, int viscous_type) : g(g), nx(nx), ny(ny), viscous_type(viscous_type) {}
+    flux(gas& g, double& nx, double& ny, double& l, double& a0, double& a1, int viscous_type) 
+    : g(g), nx(nx), ny(ny), l(l), a0(a0), a1(a1), viscous_type(viscous_type) {}
 
     virtual Eigen::VectorXd operator()(
         const Eigen::VectorXd& q_L,
@@ -134,7 +138,8 @@ private:
         return l > d ? l : (l*l + d*d)/(2*d);
     }
 public:
-    internal_flux(gas& g, double& nx, double& ny, int viscous_type) : flux(g, nx, ny, viscous_type) {
+    internal_flux(gas& g, double& nx, double& ny, double& l, double& a0, double& a1, int viscous_type) 
+    : flux(g, nx, ny, l, a0, a1, viscous_type) {
         two_sided = true;
     }
     inline Eigen::VectorXd operator()(
@@ -282,7 +287,8 @@ class slip_wall_flux : public flux {
 protected:
     internal_flux invf;
 public:
-    slip_wall_flux(gas& g, double& nx, double& ny, int viscous_type) : flux(g, nx, ny, viscous_type), invf(g, nx, ny, viscous_type) {
+    slip_wall_flux(gas& g, double& nx, double& ny, double& l, double& a0, double& a1, int viscous_type) 
+    : flux(g, nx, ny, l, a0, a1, viscous_type), invf(g, nx, ny, l, a0, a1, viscous_type) {
         two_sided = false;
     }
 
@@ -347,7 +353,8 @@ class wall_flux : public flux {
 protected:
     internal_flux invf;
 public:
-    wall_flux(gas& g, double& nx, double& ny, int viscous_type) : flux(g, nx, ny, viscous_type), invf(g, nx, ny, viscous_type) {
+    wall_flux(gas& g, double& nx, double& ny, double& l, double& a0, double& a1, int viscous_type) 
+    : flux(g, nx, ny, l, a0, a1, viscous_type), invf(g, nx, ny, l, a0, a1, viscous_type) {
         two_sided = false;
     }
 
@@ -400,7 +407,8 @@ class farfield_flux : public flux {
 protected:
     internal_flux invf;
 public:
-    farfield_flux(gas& g, double& nx, double& ny, int viscous_type) : flux(g, nx, ny, viscous_type), invf(g, nx, ny, viscous_type) {
+    farfield_flux(gas& g, double& nx, double& ny, double& l, double& a0, double& a1, int viscous_type) 
+    : flux(g, nx, ny, l, a0, a1, viscous_type), invf(g, nx, ny, l, a0, a1, viscous_type) {
         two_sided = false;
     }
 
@@ -525,8 +533,8 @@ inline Eigen::MatrixXd calc_convective_jacobian(
     _flux& flux_function,
     Eigen::VectorXd& q_L,
     Eigen::VectorXd& q_R,
-    const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
-    const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
+    Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
+    Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
     const double& nu_L = 0,
     const double& nu_R = 0
 ) {
@@ -544,8 +552,12 @@ inline Eigen::MatrixXd calc_convective_jacobian(
             const double update = std::max(1e-6, abs(q_L(i))*1e-6);
 
             q_L(i) += update;
+            gx(i) += update * 0.5 * flux_function.nx * flux_function.l / flux_function.a0;
+            gy(i) += update * 0.5 * flux_function.ny * flux_function.l / flux_function.a0;
             const Eigen::VectorXd fp = flux_function(q_L, q_R, gx, gy, nu_L, nu_R);
             q_L(i) -= update;
+            gx(i) -= update * 0.5 * flux_function.nx * flux_function.l / flux_function.a0;
+            gy(i) -= update * 0.5 * flux_function.ny * flux_function.l / flux_function.a0;
 
             J.block(0, i, 4, 1) = (fp  - f)/update;
             J.block(4, i, 4, 1) = -J.block(0, i, 4, 1);
@@ -556,8 +568,12 @@ inline Eigen::MatrixXd calc_convective_jacobian(
             const double update = std::max(1e-6, abs(q_R(i))*1e-6);
 
             q_R(i) += update;
+            gx(i) += update * 0.5 * flux_function.nx * flux_function.l / flux_function.a0;
+            gy(i) += update * 0.5 * flux_function.ny * flux_function.l / flux_function.a0;
             const Eigen::VectorXd fp = flux_function(q_L, q_R, gx, gy, nu_L, nu_R);
             q_R(i) -= update;
+            gx(i) -= update * 0.5 * flux_function.nx * flux_function.l / flux_function.a0;
+            gy(i) -= update * 0.5 * flux_function.ny * flux_function.l / flux_function.a0;
 
             J.block(0, i+4, 4, 1) = (fp  - f)/update;
             J.block(4, i+4, 4, 1) = -J.block(0, i+4, 4, 1);

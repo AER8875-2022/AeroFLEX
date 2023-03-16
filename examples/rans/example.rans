@@ -3,7 +3,7 @@
 [gas]
     gamma   1.4
     R       0.71428571428
-    mu_L    2e-5
+    mu_L    1e-5
 end
 
 
@@ -44,11 +44,11 @@ end
     second_order        true
     viscosity_model     laminar
     tolerance           1e-6
-    start_cfl           1
-    slope_cfl           0
-    max_cfl             200
+    start_cfl           2.
+    slope_cfl           0.
+    max_cfl             400
     relaxation          0.8
-    gradients           least-squares
+    gradients           green-gauss
     limiter_k           5.
     rhs_iterations      5
 end
