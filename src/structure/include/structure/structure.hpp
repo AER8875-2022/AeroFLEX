@@ -14,7 +14,7 @@ struct Settings {
   std::string Mesh_file_path;
   std::string Solve_type;
   double Tolerance;
-  double N_step;
+  int N_step;
   double Damping; 
 };
 

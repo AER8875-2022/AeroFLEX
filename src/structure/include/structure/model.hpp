@@ -283,18 +283,20 @@ public:
                     int n1,n2;
                     n1 = value.N1_ID;
                     n2 = value.N2_ID;
-
+                    
                     Eigen::VectorXd delta_dep1 = Delta_dep_amor.segment(n1*6,6);
-                    Eigen::VectorXd delta_dep2 = Delta_dep_amor.segment(n2*6,6);                    
+                    Eigen::VectorXd delta_dep2 = Delta_dep_amor.segment(n2*6,6);   
+                                   
                     value.set_u_i(delta_dep1,delta_dep2);                                      //Set u_1 and u_2
                     value.set_q1_And_q2(QUATERNION_MAP[n1],QUATERNION_MAP[n2]);                //Set q_1 and q_2
+                    
                     value.set_qmid_From_Interpolation();                                       //Set q_mid
+                                         
                     value.set_Quaternion_Local_Rotations();                                    //Set q_1_rot_prime and q_2_rot_prime
                     
                     Eigen::VectorXd d_prime           = value.get_Deformation_Local_Ref();     //Déplacements dans le repère local de l'élément
                     
                     Eigen::VectorXd F_elem_global_ref = value.get_Force_In_GlobalRef(d_prime);
-                    
                     
                     #pragma omp critical
                     Forces_int.segment(6*n1,6)       += F_elem_global_ref.segment(0,6);      
@@ -340,12 +342,15 @@ public:
             double rx = delta_dep(i*6 +3);
             double ry = delta_dep(i*6 +4);
             double rz = delta_dep(i*6 +5);
+            
 
             double s  = cos(0.5*rz) * cos(0.5*ry) * cos(0.5*rx) + sin(0.5*rz) * sin(0.5*ry) * sin(0.5*rx);
             double vx = cos(0.5*rz) * cos(0.5*ry) * sin(0.5*rx) - sin(0.5*rz) * sin(0.5*ry) * cos(0.5*rx);
             double vy = cos(0.5*rz) * sin(0.5*ry) * cos(0.5*rx) + sin(0.5*rz) * cos(0.5*ry) * sin(0.5*rx);
             double vz = sin(0.5*rz) * cos(0.5*ry) * cos(0.5*rx) - cos(0.5*rz) * sin(0.5*ry) * sin(0.5*rx);
             Eigen::Quaterniond delta_q(s,vx,vy,vz);
+            
+            
 
             QUATERNION_MAP[i] = delta_q ;
         }
