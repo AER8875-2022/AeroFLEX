@@ -88,8 +88,8 @@ struct ConsoleLayer : public FlexGUI::Layer {
 
 void solve(rans::Rans &rans, vlm::VLM &vlm) {
 	database::table vlm_table;
-	vlm_table.airfoils["airfoil_API2_coarse"];
-	vlm_table.airfoils["airfoil_API2_coarse"].alpha = {0.0, 2.5, 5.0};
+	vlm_table.airfoils["naca0012_coarse"];
+	vlm_table.airfoils["naca0012_coarse"].alpha = {0.0, 2.5, 5.0};
 
 	for (auto& [airfoil, db] : vlm_table.airfoils) {
 		rans.solve_airfoil(airfoil, db);
@@ -195,10 +195,10 @@ bool config_save(const std::string &conf_path, Settings &settings) {
 }
 
 Aero::Aero(rans::Rans &rans, vlm::VLM &vlm, GUIHandler &gui) : rans(rans), vlm(vlm), gui(gui) {
-	settings.rans.bcs["Farfield"];
-	settings.rans.bcs["Farfield"].bc_type = "farfield";
-	settings.rans.bcs["Airfoil"];
-	settings.rans.bcs["Airfoil"].bc_type = "slip-wall";
+	settings.rans.bcs["farfield"];
+	settings.rans.bcs["farfield"].bc_type = "farfield";
+	settings.rans.bcs["wall"];
+	settings.rans.bcs["wall"].bc_type = "slip-wall";
 
 	// TEMPORARY !!!!
 	settings.rans.meshes.push_back("../../../../examples/rans/airfoil_API2_coarse.msh");
@@ -310,10 +310,10 @@ void RansLayer::OnUIRender() {
 
 	ImGui::Separator();
 	ImGui::Text("Farfield");
-	ImGui::InputDouble("Mach", &aero.settings.rans.bcs["Farfield"].vars_far.mach, 0.01f, 1.0f, "%.4f");
-	ImGui::InputDouble("AoA", &aero.settings.rans.bcs["Farfield"].vars_far.angle, 0.01f, 1.0f, "%.4f");
-	ImGui::InputDouble("Temperature", &aero.settings.rans.bcs["Farfield"].vars_far.T, 0.01f, 1.0f, "%.4f");
-	ImGui::InputDouble("Pressure", &aero.settings.rans.bcs["Farfield"].vars_far.p, 0.01f, 1.0f, "%.4f");
+	ImGui::InputDouble("Mach", &aero.settings.rans.bcs["farfield"].vars_far.mach, 0.01f, 1.0f, "%.4f");
+	ImGui::InputDouble("AoA", &aero.settings.rans.bcs["farfield"].vars_far.angle, 0.01f, 1.0f, "%.4f");
+	ImGui::InputDouble("Temperature", &aero.settings.rans.bcs["farfield"].vars_far.T, 0.01f, 1.0f, "%.4f");
+	ImGui::InputDouble("Pressure", &aero.settings.rans.bcs["farfield"].vars_far.p, 0.01f, 1.0f, "%.4f");
 
 	ImGui::Separator();
 	ImGui::Text("Solver");

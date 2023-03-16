@@ -79,12 +79,12 @@ void Rans::run_airfoil(const std::string& airfoil, database::airfoil& db) {
 
     for (auto& alpha: db.alpha) {
         gui.msg.push("[RANS] Solving for alpha = " + std::to_string(alpha) + "°");
-        settings.bcs["Farfield"].vars_far.angle = alpha;
+        settings.bcs["farfield"].vars_far.angle = alpha * 0.01745; // deg to rad
         for (auto& s: multi.solvers) {
             s.set_bcs(settings.bcs);
         };
         rans::solver& s = multi.run(false);
-        wallProfile wp = get_wall_profile(s, "Airfoil");
+        wallProfile wp = get_wall_profile(s, "wall");
         db.cl.push_back(wp.cl);
         db.cd.push_back(wp.cd);
         db.cmy.push_back(wp.cm);

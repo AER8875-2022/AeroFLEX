@@ -189,7 +189,7 @@ struct Settings {
 
     double limiter_k = 5.;
 
-    std::string airfoil_name = "Airfoil";
+    std::string airfoil_name = "wall";
     std::string outfilename;
 
     int read_failure = 1;
