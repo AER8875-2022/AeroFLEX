@@ -1,15 +1,11 @@
 
-#include "vlm/input.hpp"
-#include "vlm/model.hpp"
-#include "vlm/solver.hpp"
-#include "vlm/utils.hpp"
-#include "common_aeroflex.hpp"
+#include "vlm/vlm.hpp"
 #include <atomic>
 #include <iostream>
 
 int main(int argc, char **argv) {
 
-  vlm::utils::printArtwork();
+  vlm::info::printArtwork();
 
   // Verifying and handling input arguments
   if (argc < 2) {
@@ -29,26 +25,29 @@ int main(int argc, char **argv) {
   // LOADING SIMULATION PARAMETERS
   // #############################
   std::cout << "==>Loading simulation parameters...";
-  auto [io, sim, solvP] = vlm::input::importConfigFile(argv[1]);
+  vlm::Settings settings;
+  tiny::config config;
+	config.read(argv[1]);
+  settings.import_config_file(config);
   std::cout << "\033[1;36mDone\033[0m" << std::endl;
 
-  vlm::utils::printCaseInfo(sim, io, solvP);
+  vlm::info::printCaseInfo(settings);
 
   // #############################
   // IMPORTING MESH FILE
   // #############################
   std::cout << "==>Loading mesh file...";
-  auto mesh = vlm::input::importMeshFile(io);
+  auto mesh = vlm::input::importMeshFile(settings.io);
   std::cout << "\033[1;36mDone\033[0m" << std::endl;
 
-  vlm::utils::printMeshInfo(mesh);
+  vlm::info::printMeshInfo(mesh);
 
   // #############################
   // INITIALIZING VLM MODEL
   // #############################
   std::cout << "==>Initializing vortex lattice model...";
   vlm::model object;
-  object.initialize(mesh, sim, io);
+  object.initialize(mesh, settings);
   std::cout << "\033[1;36mDone\033[0m" << std::endl;
 
   // #############################
@@ -56,10 +55,10 @@ int main(int argc, char **argv) {
   // #############################
   database::table database;
 
-  if (!solvP.type.compare("NONLINEAR")) {
+  if (!settings.solver.type.compare("NONLINEAR")) {
     std::cout << "\n";
     std::cout << "==>Initializing viscous database...";
-    database.importFromFile(io.databaseFile, io.locationFile, solvP);
+    database.importFromFile(settings);
     std::cout << "\033[1;36mDone\033[0m" << std::endl;
   }
 
@@ -78,11 +77,11 @@ int main(int argc, char **argv) {
   vlm::solver::linear::steady linear(iters, residuals, gui);
   vlm::solver::nonlinear::steady nonlinear(iters, residuals, gui);
 
-  if (!solvP.type.compare("LINEAR")) {
-    linear.initialize(solvP, object, database::table());
+  if (!settings.solver.type.compare("LINEAR")) {
+    linear.initialize(settings.solver, object, database::table());
     solver = &linear;
-  } else if (!solvP.type.compare("NONLINEAR")) {
-    nonlinear.initialize(solvP, object, database);
+  } else if (!settings.solver.type.compare("NONLINEAR")) {
+    nonlinear.initialize(settings.solver, object, database);
     solver = &nonlinear;
   } else {
     std::cerr << "\033[1;31m==>ERROR: Unknown VLM solver \033[0m" << std::endl;

@@ -70,12 +70,8 @@ struct table {
   std::unordered_map<int, std::vector<double>> sectionSpanLocs;
 
   /** @brief Import database from a file
-   *  @param database_path Path to the file containing the database
-   *  @param location_path Path to the file containing the locations
-   *  @param solvP Struct holding parameters for the solver */
-  void importFromFile(const std::string &database_path,
-                      const std::string &location_path,
-                      const vlm::input::solverParam &solvP);
+   *  @param settings Struct holding vlm parameters*/
+  void importFromFile(const vlm::Settings &settings);
 
   /** @brief Interpolates the 3 viscous coefficients at specified angle of
    * attack, surface and spanwise location

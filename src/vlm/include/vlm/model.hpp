@@ -62,8 +62,7 @@ public:
    *  @param mesh Object holding information on the mesh
    *  @param sim Object holding simulation parameters
    *  @param io Object holding input/output parameters */
-  void initialize(const input::meshData &mesh, const input::simParam &sim,
-                  const input::ioParam &io);
+  void initialize(const input::meshData &mesh, const Settings &settings);
 
   /** @brief Wrapper method initializing wake elements for each lifting surface
    *  @param wakeLength Length of the generated wake in the x direction

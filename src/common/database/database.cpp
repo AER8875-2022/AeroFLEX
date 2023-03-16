@@ -36,12 +36,10 @@ double database::airfoil::interpolate_cl(const double alpha) {
 
 // ---------------------------------
 
-void database::table::importFromFile(const std::string &database_path,
-                                     const std::string &location_path,
-                                     const vlm::input::solverParam &solvP) {
+void database::table::importFromFile(const vlm::Settings &settings) {
 
-  std::ifstream database_file(database_path);
-  std::ifstream location_file(location_path);
+  std::ifstream database_file(settings.io.databaseFile);
+  std::ifstream location_file(settings.io.locationFile);
 
   if (!database_file.is_open() || !location_file.is_open()) {
     std::cerr << "\n\033[1;31m ->VLM ERROR: Error in database file import \""

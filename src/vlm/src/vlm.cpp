@@ -1,6 +1,7 @@
 
 #include "vlm/vlm.hpp"
 #include "common_aeroflex.hpp"
+#include "vlm/input.hpp"
 
 using namespace vlm;
 
@@ -10,7 +11,7 @@ void VLM::input() {
   if (!is_initialized) {
     auto mesh = vlm::input::importMeshFile(settings.io);
     model object;
-    object.initialize(mesh, settings.sim, settings.io);
+    object.initialize(mesh, settings);
     is_initialized = true;
   }
 };

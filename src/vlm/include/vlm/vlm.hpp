@@ -6,22 +6,9 @@
 #include "vlm/input.hpp"
 #include "vlm/model.hpp"
 #include "vlm/solver.hpp"
-#include "vlm/utils.hpp"
+#include "vlm/info.hpp"
 
 namespace vlm {
-
-/** @brief Main struct holding parameters on the current case */
-struct Settings {
-
-  /** @brief Object holding case and physics-oriented parameters */
-  input::simParam sim;
-
-  /** @brief Object holding input/output information */
-  input::ioParam io;
-
-  /** @brief Object holding solver parameters */
-  input::solverParam solver;
-};
 
 class VLM {
 

@@ -6,6 +6,7 @@
 #include <map>
 #include <string>
 #include <tuple>
+#include "tinyconfig.hpp"
 
 #ifndef M_PI
 #define M_PI 3.141592653589793115997963468544185161590576171875
@@ -151,17 +152,6 @@ struct meshData {
   std::map<unsigned int, std::vector<int>> patchIDs;
 };
 
-/** @brief Function wrapper that imports user parameters from the .ini
- * configuration file
- *  @param path Path to the configuration file
- *  @return Tuple holding the three parameters objects */
-std::tuple<ioParam, simParam, solverParam>
-importConfigFile(const std::string path);
-
-/** @brief Function that checks for disrepencies in the imported mesh
- *  @param mesh meshData object that holds information on the input mesh */
-void meshCheck(const meshData &mesh);
-
 /** @brief Function wrapper that import connectivity data specified in the mesh
  * file
  *  @param names input/output parameters object
@@ -169,6 +159,23 @@ void meshCheck(const meshData &mesh);
 meshData importMeshFile(const ioParam &names);
 
 } // namespace input
+
+/** @brief Main struct holding parameters on the current case */
+struct Settings {
+
+  /** @brief Object holding case and physics-oriented parameters */
+  input::simParam sim;
+
+  /** @brief Object holding input/output information */
+  input::ioParam io;
+
+  /** @brief Object holding solver parameters */
+  input::solverParam solver;
+
+  /** @brief Function to import parameters from config file */
+  void import_config_file(tiny::config &config);
+};
+
 } // namespace vlm
 
 #endif

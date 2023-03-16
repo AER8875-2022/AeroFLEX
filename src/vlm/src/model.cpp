@@ -7,11 +7,10 @@
 using namespace vlm;
 using namespace Eigen;
 
-void model::initialize(const input::meshData &mesh, const input::simParam &sim,
-                       const input::ioParam &io) {
+void model::initialize(const input::meshData &mesh, const Settings &settings) {
   // Initializing inputs
-  this->sim = sim;
-  this->io = io;
+  this->sim = settings.sim;
+  this->io = settings.io;
   // Allocating memory for each objects
   nodes.reserve(mesh.nodes.size());
   vortexRings.reserve(mesh.vortexIDs.size());
