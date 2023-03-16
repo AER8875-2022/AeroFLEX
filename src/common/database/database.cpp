@@ -36,12 +36,11 @@ double database::airfoil::interpolate_cl(const double alpha) {
 
 // ---------------------------------
 
-void database::table::importFromFile(const vlm::Settings &settings) {
+void database::table::importAirfoils(const std::string &path) {
 
-  std::ifstream database_file(settings.io.databaseFile);
-  std::ifstream location_file(settings.io.locationFile);
+  std::ifstream database_file(path);
 
-  if (!database_file.is_open() || !location_file.is_open()) {
+  if (!database_file.is_open()) {
     std::cerr << "\n\033[1;31m ->VLM ERROR: Error in database file import \""
               << std::endl;
   }
@@ -52,19 +51,13 @@ void database::table::importFromFile(const vlm::Settings &settings) {
 
   // Flags
   bool isAirfoil = false;
-  bool isLocation = false;
   std::string airfoilName;
 
-  int surfaceID;
-
-  // coefficients & locations
+  // coefficients
   std::vector<double> alpha;
   std::vector<double> cl;
   std::vector<double> cd;
   std::vector<double> cmy;
-
-  std::vector<std::string> sections;
-  std::vector<double> spanLocs;
 
   std::string fileLine;
   while (std::getline(database_file, fileLine)) {
@@ -115,6 +108,31 @@ void database::table::importFromFile(const vlm::Settings &settings) {
     }
   }
 
+  database_file.close();
+}
+
+void database::table::importLocations(const std::string &path) {
+
+  std::ifstream location_file(path);
+
+  if (!location_file.is_open()) {
+    std::cerr << "\n\033[1;31m ->VLM ERROR: Error in database file import \""
+              << std::endl;
+  }
+
+  // Declaring output
+  std::vector<std::string> line;
+  const char delimiter = ' ';
+
+  // Flags
+  bool isLocation = false;
+  int surfaceID;
+
+  // locations
+  std::vector<std::string> sections;
+  std::vector<double> spanLocs;
+
+  std::string fileLine;
   while (std::getline(location_file, fileLine)) {
 
     // Ignoring empty lines
@@ -159,7 +177,6 @@ void database::table::importFromFile(const vlm::Settings &settings) {
     }
   }
 
-  database_file.close();
   location_file.close();
 }
 

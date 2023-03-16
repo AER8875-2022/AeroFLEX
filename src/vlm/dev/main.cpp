@@ -58,7 +58,8 @@ int main(int argc, char **argv) {
   if (!settings.solver.type.compare("NONLINEAR")) {
     std::cout << "\n";
     std::cout << "==>Initializing viscous database...";
-    database.importFromFile(settings);
+    database.importAirfoils(settings.io.databaseFile);
+    database.importLocations(settings.io.locationFile);
     std::cout << "\033[1;36mDone\033[0m" << std::endl;
   }
 

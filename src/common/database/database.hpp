@@ -71,8 +71,12 @@ struct table {
   std::unordered_map<int, std::vector<double>> sectionSpanLocs;
 
   /** @brief Import database from a file
-   *  @param settings Struct holding vlm parameters*/
-  void importFromFile(const vlm::Settings &settings);
+   *  @param path Path to the file*/
+  void importAirfoils(const std::string &path);
+
+  /** @brief Import evaluation wing sections from a file
+   *  @param path Path to the file */
+  void importLocations(const std::string &path);
 
   /** @brief Interpolates the 3 viscous coefficients at specified angle of
    * attack, surface and spanwise location
