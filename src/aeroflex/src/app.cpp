@@ -88,8 +88,8 @@ struct ConsoleLayer : public FlexGUI::Layer {
 
 void solve(rans::Rans &rans, vlm::VLM &vlm) {
 	database::table vlm_table;
-	vlm_table.airfoils["naca0012_coarse"];
-	vlm_table.airfoils["naca0012_coarse"].alpha = {0.0, 2.5, 5.0};
+	vlm_table.airfoils["airfoil_API2_coarse"];
+	vlm_table.airfoils["airfoil_API2_coarse"].alpha = {0.0, 2.5, 5.0};
 
 	for (auto& [airfoil, db] : vlm_table.airfoils) {
 		rans.solve_airfoil(airfoil, db);
