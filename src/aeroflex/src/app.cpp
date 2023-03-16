@@ -209,7 +209,7 @@ Aero::Aero(rans::Rans &rans, vlm::VLM &vlm, GUIHandler &gui) : rans(rans), vlm(v
 void Aero::solve_async() {
 	signal_status_ready = false;
 	signal_status_busy = true;
-	gui.msg.push("Starting simulation");
+	gui.msg.push("-- Starting simulation --");
 	rans.settings = settings.rans;
 	future_solve = std::async(std::launch::async, 
 	[&](){
@@ -223,6 +223,7 @@ void Aero::solve_async() {
 
 void Aero::solve_await() {
 	future_solve.get();
+	gui.msg.push("-- Simulation done --");
 	signal_status_ready = true;
 	signal_status_busy = false;
 	gui.signal.stop = false;

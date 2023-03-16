@@ -73,7 +73,7 @@ void Rans::run_airfoil(const std::string& airfoil, database::airfoil& db) {
     ms.clear();
     // TODO: check with geom for the naming convention
     // For the moment we will only load 1 mesh
-    ms.push_back(mesh(airfoil + ".gmsh"));
+    ms.push_back(mesh(airfoil + ".msh"));
     multigrid<T> multi(ms, settings, gui, residuals, iters);
     multi.solvers[0].init();
 
@@ -101,6 +101,7 @@ void Rans::solve() {
 };
 
 void Rans::solve_airfoil(const std::string& airfoil, database::airfoil& db) {
+    iters = 0;
     if (settings.solver_type() == "implicit") {
         run_airfoil<implicitSolver>(airfoil, db);
     } else if (settings.solver_type() == "explicit") {

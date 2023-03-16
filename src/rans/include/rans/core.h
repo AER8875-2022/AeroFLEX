@@ -175,13 +175,13 @@ struct Settings {
     std::vector<std::string> viscosity_options = {"inviscid", "laminar", "spallart-allmaras"};
 
     int solver = 1;
-    int gradient = 0;
+    int gradient = 1;
     int viscosity = 0;
 
     bool second_order = true;
     double start_cfl = 40.;
     double slope_cfl = 50.;
-    double max_cfl = 1000.;
+    double max_cfl = 200.;
     double relaxation = 1.0;
     double tolerance = 1e-4;
     int rhs_iterations = 5;
