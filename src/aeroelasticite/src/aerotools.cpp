@@ -245,7 +245,7 @@ namespace aero{
         }
    }
 
-   auto ComputeStructureForces(interpolation_f force)
+   auto ComputeStructureForces(interpolation_f force,Matrix<double, 6, 1> forces_to_inertial_frame)
 
    {
         n=force.point_fa.size();
