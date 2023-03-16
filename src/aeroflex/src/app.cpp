@@ -29,8 +29,21 @@ const std::string bool_to_string(const bool b) {
     return b ? "true" : "false";
 }
 
+static void HelpMarker(const char* desc)
+{
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {	
+		ImGui::BeginTooltip();
+        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+        ImGui::TextUnformatted(desc);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
+}
+
 struct Settings {
 	rans::Settings rans;
+	vlm::input::settings vlm;
 };
 
 class Aero {
@@ -64,6 +77,12 @@ struct RansLayer : public FlexGUI::Layer {
 	virtual void OnUIRender() override;
 	Aero &aero;
 	RansLayer(Aero &aero) : aero(aero) {};
+};
+
+struct VlmLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	Aero &aero;
+	VlmLayer(Aero &aero) : aero(aero) {};
 };
 
 struct ButtonLayer : public FlexGUI::Layer {
@@ -336,6 +355,27 @@ void RansLayer::OnUIRender() {
 	ImGui::End();
 }
 
+void VlmLayer::OnUIRender() {
+	ImGui::Begin("VLM");
+
+	ImGui::Separator();
+	ImGui::Text("Case Parameters");
+	ImGui::InputDouble("Sideslip", &aero.settings.vlm.sim.sideslip, 0.01f, 1.0f, "%.4f"); 
+	ImGui::SameLine(); HelpMarker("Geometric angle of side slip in degrees");
+	ImGui::InputDouble("V inf", &aero.settings.vlm.sim.sideslip, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Free stream magnitude velocity");
+	ImGui::InputDouble("rho", &aero.settings.vlm.sim.rho, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Density of the fluid");
+	ImGui::InputDouble("cref", &aero.settings.vlm.sim.cref, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Reference chord length");
+	ImGui::InputDouble("sref", &aero.settings.vlm.sim.sref, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Reference surface area");
+	ImGui::InputDouble("coreRadius", &aero.settings.vlm.sim.origin[0], 0.01f, 1.0f, "%.4f");
+	ImGui::InputDouble("coreRadius", &aero.settings.vlm.sim.coreRadius, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Viscous relaxation value applied on the vortex filament kernel");
+	ImGui::End();
+}
+
 void ButtonLayer::OnUIRender() {
 	{
 		static FlexGUI::FileDialog fd;
@@ -546,6 +586,7 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, Aero& aero)
 	app->PushLayer(std::make_shared<ButtonLayer>(aero));
 	app->PushLayer(std::make_shared<GraphLayer>(aero));
 	app->PushLayer(std::make_shared<RansLayer>(aero));
+	app->PushLayer(std::make_shared<VlmLayer>(aero));
 	app->PushLayer(std::make_shared<ConsoleLayer>(aero));
 
 	app->SetMenubarCallback([app]()
