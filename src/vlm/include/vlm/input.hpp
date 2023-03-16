@@ -220,7 +220,7 @@ struct Settings {
   void import_config_file(tiny::config &config);
 
   /** @brief Function to export parameters to config file */
-  void export_config_file();
+  void export_config_file(tiny::config &config);
 };
 
 } // namespace vlm

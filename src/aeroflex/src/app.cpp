@@ -15,6 +15,7 @@
 
 #include "common_aeroflex.hpp"
 #include "database/database.hpp"
+#include "vlm/input.hpp"
 
 #include <rans/rans.h>
 #include <vlm/vlm.hpp>
@@ -31,6 +32,7 @@ const std::string bool_to_string(const bool b) {
 
 struct Settings {
 	rans::Settings rans;
+	vlm::Settings vlm;
 };
 
 class Aero {
@@ -94,8 +96,9 @@ void solve(rans::Rans &rans, vlm::VLM &vlm) {
 		rans.solve_airfoil(airfoil, db);
 	}
 
-	// vlm.database.importLocations();
-	vlm.solve();
+	// vlm.input();
+	// vlm.database.importLocations(vlm.settings.io.locationFile);
+	// vlm.solve();
 
 	// rans.input();
 	// rans.solve();
@@ -144,6 +147,10 @@ std::optional<Settings> config_open(const std::string &conf_path) {
 	for (int i = 0; i < io.how_many("rans-mesh"); i++) {
 		settings.rans.meshes.push_back(io.get_i<std::string>("rans-mesh", "file", i));
 	}
+
+	// Parsing for vlm
+	// settings.vlm.import_config_file(io);
+
 	return settings;
 }
 
@@ -193,6 +200,9 @@ bool config_save(const std::string &conf_path, Settings &settings) {
 		});
 	};
 
+	// Exporting for VLM
+	// settings.vlm.export_config_file(io);
+
 	return io.write(conf_path);
 }
 
@@ -213,6 +223,7 @@ void Aero::solve_async() {
 	signal_status_busy = true;
 	gui.msg.push("-- Starting simulation --");
 	rans.settings = settings.rans;
+	vlm.settings = settings.vlm;
 	future_solve = std::async(std::launch::async, 
 	[&](){
 		try {

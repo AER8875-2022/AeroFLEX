@@ -17,6 +17,9 @@ void VLM::input() {
 };
 
 void VLM::solve() {
+
+  gui.msg.push("[VLM] Solving VLM with solver: " + settings.solver.get_type());
+
   solver::base *solver;
   solver::linear::steady linear(iters, residuals, gui);
   solver::nonlinear::steady nonlinear(iters, residuals, gui);

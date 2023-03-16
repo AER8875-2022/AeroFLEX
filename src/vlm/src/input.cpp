@@ -202,7 +202,7 @@ void Settings::import_config_file(tiny::config &config) {
 
   try {
 
-  // [SIMULATION]
+  // [vlm-simulation]
   sim.aoa = config.get<double>("vlm-simulation", "aoa", 5.0);
   sim.sideslip = config.get<double>("vlm-simulation", "sideslip", 0.0);
   sim.vinf = config.get<double>("vlm-simulation", "v_inf", 1.0);
@@ -215,7 +215,7 @@ void Settings::import_config_file(tiny::config &config) {
   sim.coreRadius = config.get<double>("vlm-simulation", "lamb-oseen_radius", 0.0);
   sim.set_databaseFormat(config.get<std::string>("vlm-simulation", "database_format"));
 
-  // [IO]
+  // [vlm-io]
   io.baseName = config.get<std::string>("vlm-io", "basename");
   io.outDir = config.get<std::string>("vlm-io", "output_dir");
   io.meshFile =
@@ -225,7 +225,7 @@ void Settings::import_config_file(tiny::config &config) {
   io.locationFile =
       config.get<std::string>("vlm-io", "location_file");
 
-  // [SOLVER]
+  // [vlm-solver]
   solver.set_timeDomain(
       config.get<std::string>("vlm-solver", "time_domain"));
   solver.set_type(config.get<std::string>("vlm-solver", "type"));
@@ -234,6 +234,49 @@ void Settings::import_config_file(tiny::config &config) {
       config.get<std::string>("vlm-solver", "linear_solver"));
   solver.relaxation = config.get<double>("vlm-solver", "relaxation", 1.0);
   solver.max_iter = config.get<int>("vlm-solver", "max_iter", 100);
+
+  } catch (std::exception &e) {
+    std::cout << e.what() << std::endl;
+  }
+
+}
+
+void Settings::export_config_file(tiny::config &config) {
+
+  try {
+
+  // Appending sections to config file
+  config.sections.push_back("vlm-simulation");
+  config.sections.push_back("vlm-io");
+  config.sections.push_back("vlm-solver");
+
+  // Adding to config map
+  // [vlm-simulation]
+  config.config["vlm-simulation"]["aoa"] = std::to_string(sim.aoa);
+  config.config["vlm-simulation"]["sideslip"] = std::to_string(sim.sideslip);
+  config.config["vlm-simulation"]["v_inf"] = std::to_string(sim.vinf);
+  config.config["vlm-simulation"]["density"] = std::to_string(sim.rho);
+  config.config["vlm-simulation"]["c_ref"] = std::to_string(sim.cref);
+  config.config["vlm-simulation"]["s_ref"] = std::to_string(sim.sref);
+  config.config["vlm-simulation"]["x_ref"] = std::to_string(sim.x0);
+  config.config["vlm-simulation"]["y_ref"] = std::to_string(sim.y0);
+  config.config["vlm-simulation"]["z_ref"] = std::to_string(sim.z0);
+  config.config["vlm-simulation"]["lamb-oseen_radius"] = std::to_string(sim.coreRadius);
+  config.config["vlm-simulation"]["database_format"] = sim.get_databaseFormat();
+
+  // [vlm-io]
+  config.config["vlm-io"]["basename"] = io.baseName;
+  config.config["vlm-io"]["output_dir"] = io.outDir;
+  config.config["vlm-io"]["database_file"] = io.databaseFile;
+  config.config["vlm-io"]["location_file"] = io.locationFile;
+
+  // [vlm-solver]
+  config.config["vlm-solver"]["time_domain"] = solver.get_timeDomain();
+  config.config["vlm-solver"]["type"] = solver.get_type();
+  config.config["vlm-solver"]["tolerance"] = solver.tolerance;
+  config.config["vlm-solver"]["linear_solver"] = solver.get_linearSolver();
+  config.config["vlm-solver"]["relaxation"] = solver.relaxation;
+  config.config["vlm-solver"]["max_iter"] = solver.max_iter;
 
   } catch (std::exception &e) {
     std::cout << e.what() << std::endl;

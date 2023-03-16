@@ -353,8 +353,13 @@ void nonlinear::steady::solve(model &object) {
     iterateLift(object);
     // Step 2: One iteration of aoa correction
     residual = iterate(object);
+
+    // gui.msg.push("Iteration " + std::to_string(iter));
+    // gui.msg.push("\t Residual = " + std::to_string(residual));
+
     std::cout << "Iteration " << iter << std::endl;
     std::cout << "\t Residual = " << residual << std::endl;
+
     residuals.push_back(residual);
     iter++;
   } while ((residual > solvP.tolerance) && (iter <= solvP.max_iter) &&

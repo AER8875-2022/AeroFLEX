@@ -116,7 +116,7 @@ void database::table::importLocations(const std::string &path) {
   std::ifstream location_file(path);
 
   if (!location_file.is_open()) {
-    std::cerr << "\n\033[1;31m ->VLM ERROR: Error in database file import \""
+    std::cerr << "\n\033[1;31m ->VLM ERROR: Error in database file"
               << std::endl;
   }
 
