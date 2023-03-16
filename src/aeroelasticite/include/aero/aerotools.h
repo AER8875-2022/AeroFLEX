@@ -16,13 +16,13 @@ namespace aero{
     auto computeVLMDispalecement(interpolation pos,std::vector<surface::wingStation> wingStations,
                                  std::vector<surface::wing> wings,std::vector<element::vortexRing> vortexRings,std::vector<Vector3d> nodes);
     
-    struct interpolation_f {std::vector<vector<double>> point_fa, std::vector<vector<double>> point_fs
-                      std::vector<vector<double>> poids };
+    struct interpolation_f {std::vector<vector<double>> point_fa, std::vector<vector<double>> point_fs,
+                        std::vector<vector<double>> poids };
     
     void LoadInterpol(interpolation_f &force, std::vector<surface::wingStation> wingStations,
-                       std::vector<surface::wing> wings,std::vector<element::vortexRing> vortexRings,map<int,Vector3d> mapStruct,map<int, int> mapStructni)
+                       std::vector<surface::wing> wings,std::vector<element::vortexRing> vortexRings,std::vector<Vector3d> nodes,map<int,Vector3d> mapStruct,map<int, int> mapStructni)
 
-    auto ComputeStructureForces(interpolation_f force);
+    auto ComputeStructureForces(interpolation_f force,Matrix<double, 6, 1> forces_to_inertial_frame);
 
     std::vector<double> crossProduct(const std::vector<double>& i, const std::vector<double>& j);
 
