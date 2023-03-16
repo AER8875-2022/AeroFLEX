@@ -24,7 +24,7 @@ class Rans {
     // This is a mess because of no separation of IO and computation...
     std::vector<double> residuals;
     std::atomic<int> iters = 0;
-    Settings data;
+    Settings settings;
 
     std::vector<mesh> ms;
     bool mesh_loaded = false;
@@ -40,7 +40,7 @@ class Rans {
 
 void Rans::input() {
     if (!mesh_loaded) {
-        for (const auto& mesh_name : data.meshes) {
+        for (const auto& mesh_name : settings.meshes) {
             ms.push_back(mesh(mesh_name));
         }
         mesh_loaded = true;
@@ -49,21 +49,21 @@ void Rans::input() {
 
 template<class T>
 void Rans::run() {
-    multigrid<T> multi(ms, data, gui, residuals, iters);
+    multigrid<T> multi(ms, settings, gui, residuals, iters);
     gui.event.rans_preprocess = true;
 
     rans::solver& s = multi.run(true);
     gui.event.rans_solve = true;
 
-    save(data.outfilename, s);
+    save(settings.outfilename, s);
     gui.event.rans_postprocess = true;
-    std::cout << "Saved results to file " << data.outfilename << "\n" << std::endl;
+    std::cout << "Saved results to file " << settings.outfilename << "\n" << std::endl;
 }
 
 void Rans::solve() {
-    if (data.solver_type == "implicit") {
+    if (settings.solver_type() == "implicit") {
         run<implicitSolver>();
-    } else if (data.solver_type == "explicit") {
+    } else if (settings.solver_type() == "explicit") {
         run<explicitSolver>();
     }
 };

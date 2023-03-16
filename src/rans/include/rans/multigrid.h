@@ -56,10 +56,10 @@ multigrid<solverType>::multigrid(std::vector<mesh> ms, Settings &settings, GUIHa
     solvers.reserve(ms.size());
     for (auto& mi : ms) {
         mi.compute_wall_dist(settings.bcs);
-        solvers.push_back(solverType(mi, settings.g, settings.viscosity_model));
+        solvers.push_back(solverType(mi, settings.g, settings.viscosity_model()));
         solvers[solvers.size()-1].set_bcs(settings.bcs);
         solvers[solvers.size()-1].set_second_order(settings.second_order);
-        solvers[solvers.size()-1].set_gradient_scheme(settings.gradient_scheme);
+        solvers[solvers.size()-1].set_gradient_scheme(settings.gradient_scheme());
         solvers[solvers.size()-1].set_limiter_k(settings.limiter_k);
     }
 
@@ -69,19 +69,19 @@ multigrid<solverType>::multigrid(std::vector<mesh> ms, Settings &settings, GUIHa
         #endif
     #endif
 
-    std::cout << "\nMultigrid : Precompute " << ms.size()-1 << " matrices" << std::endl;
-
+    //std::cout << "\nMultigrid : Precompute " << ms.size()-1 << " matrices" << std::endl;
+    gui.msg.push("[RANS] Multigrid : Precompute " + std::to_string(ms.size()-1) + " matrices");
     if (ms.size() > 1) {
         mappers.resize(ms.size()-1);
 
         for (uint i=0; i<ms.size()-1; ++i) {
-            std::cout << " - " << i+1 << " ";
+            //std::cout << " - " << i+1 << " ";
             mappers[i] = gen_mapper(i);
-            std::cout << " done\n" << std::flush;
+            //std::cout << " done\n" << std::flush;
+            gui.msg.push("[RANS] Matrix " + std::to_string(i+1) + " done");
         }
     }
 }
-
 
 template<class solverType>
 Eigen::SparseMatrix<double> multigrid<solverType>::gen_mapper(const uint i) {
@@ -121,7 +121,7 @@ Eigen::SparseMatrix<double> multigrid<solverType>::gen_mapper(const uint i) {
             }
         }
 
-        if (i % print_interval == 0) std::cout << "." << std::flush;
+        //if (i % print_interval == 0) std::cout << "." << std::flush;
     }
 
     Eigen::SparseMatrix<double> mapper(4*m, 4*n);
@@ -281,7 +281,7 @@ int multigrid<implicitSolver>::run_solver(
 
 template<>
 explicitSolver& multigrid<explicitSolver>::run(const bool reinit) {
-    const uint max_iters = settings.max_iterations;
+    const int max_iters = settings.max_iterations;
     residuals.resize(solvers.size() * (max_iters / 10));
 
     if (reinit) solvers[0].init();
@@ -312,7 +312,7 @@ explicitSolver& multigrid<explicitSolver>::run(const bool reinit) {
 
 template<>
 implicitSolver& multigrid<implicitSolver>::run(const bool reinit) {
-    const uint max_iters = settings.max_iterations;
+    const int max_iters = settings.max_iterations;
     residuals.resize(solvers.size() * max_iters);
 
     if (reinit) solvers[0].init();

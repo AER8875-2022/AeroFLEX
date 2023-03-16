@@ -15,6 +15,8 @@
 #include <cmath>
 #include <string>
 #include <map>
+#include <vector>
+#include <Eigen/Core>
 
 using uint = unsigned int;
 
@@ -56,7 +58,7 @@ struct conservative_variables {
 
 
 struct boundary_variables {
-    double mach=0;
+    double mach=0.2;
     double angle=0;
     double T=1;
     double p=1.;
@@ -161,35 +163,64 @@ public:
 };
 
 struct Settings {
-
     gas g;
 
     std::vector<std::string> meshes;
 
     std::map<std::string, boundary_condition> bcs;
 
-    std::string solver_type;
+    // Note: Cannot put those as const because std::optional doesnt like it
+    std::vector<std::string> solver_options = {"explicit", "implicit"};
+    std::vector<std::string> gradient_options = {"least-squares", "green-gauss"};
+    std::vector<std::string> viscosity_options = {"inviscid", "laminar", "spallart-allmaras"};
+
+    int solver = 1;
+    int gradient = 0;
+    int viscosity = 0;
+
     bool second_order = true;
     double start_cfl = 40.;
     double slope_cfl = 50.;
     double max_cfl = 1000.;
-    double relaxation = 1;
+    double relaxation = 1.0;
     double tolerance = 1e-4;
-    uint rhs_iterations = 5;
-    uint max_iterations = 30000;
+    int rhs_iterations = 5;
+    int max_iterations = 30000;
 
-    std::string viscosity_model = "inviscid";
-    std::string gradient_scheme = "least-squares";
     double limiter_k = 5.;
 
     std::string airfoil_name = "";
-
     std::string outfilename;
-
-    boundary_variables vars_far;
 
     int read_failure = 1;
 
+    // I hate this...........
+    inline std::string solver_type() {return solver_options.at(solver);};
+    inline void set_solver_type(const std::string& type_) {
+        if (type_ == "explicit") {
+            solver = 0;
+        } else if (type_ == "implicit") {
+            solver = 1;
+        }
+    };
+    inline std::string gradient_scheme() {return gradient_options.at(gradient);};
+    inline void set_gradient_scheme(const std::string& gradient_) {
+        if (gradient_ == "least-squares") {
+            gradient = 0;
+        } else if (gradient_ == "green-gauss") {
+            gradient = 1;
+        }
+    };
+    inline std::string viscosity_model() {return viscosity_options.at(viscosity);};
+    inline void set_viscosity_model(const std::string& viscosity_) {
+        if (viscosity_ == "inviscid") {
+            viscosity = 0;
+        } else if (viscosity_ == "laminar") {
+            viscosity = 1;
+        } else if (viscosity_ == "spallart-allmaras") {
+            viscosity = 2;
+        }
+    };
 };
 
 }
