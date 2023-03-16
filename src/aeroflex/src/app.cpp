@@ -223,7 +223,11 @@ void Aero::solve_async() {
 
 void Aero::solve_await() {
 	future_solve.get();
-	gui.msg.push("-- Simulation done --");
+	if (gui.signal.stop) {
+		gui.msg.push("-- Simulation stopped --");
+	} else {
+		gui.msg.push("-- Simulation done --");
+	}
 	signal_status_ready = true;
 	signal_status_busy = false;
 	gui.signal.stop = false;
