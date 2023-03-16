@@ -10,6 +10,17 @@ using namespace vlm;
 using namespace input;
 using namespace Eigen;
 
+void simParam::set_databaseFormat(const std::string &item) {
+  if (!item.compare("NONE")) {
+    databaseFormat = 0;
+  }
+  else if (!item.compare("FILE")) {
+    databaseFormat = 1;
+  }
+}
+
+std::string simParam::get_databaseFormat() const { return databaseFormat_options.at(databaseFormat); }
+
 Vector3d simParam::freeStream() const {
   return Vector3d(
       {vinf * std::cos(aoa * M_PI / 180.0) * std::cos(sideslip * M_PI / 180.0),
@@ -40,6 +51,49 @@ Vector3d simParam::liftAxis(const double alpha) const {
 }
 
 double simParam::dynamicPressure() const { return (0.5 * rho * vinf * vinf); }
+
+Vector3d simParam::origin() const { return Vector3d(x0,y0,z0); }
+
+// -------------------------------------
+
+void solverParam::set_timeDomain(const std::string &item) {
+  if (!item.compare("STEADY")) {
+    timeDomain = 0;
+  }
+  else if (!item.compare("UNSTEADY")) {
+    timeDomain = 1;
+  }
+}
+
+std::string solverParam::get_timeDomain() const {
+  return timeDomain_options.at(timeDomain);
+}
+
+void solverParam::set_type(const std::string &item) {
+  if (!item.compare("LINEAR")) {
+    type = 0;
+  }
+  else if (!item.compare("NONLINEAR")) {
+    type = 1;
+  }
+}
+
+std::string solverParam::get_type() const {
+  return type_options.at(type);
+}
+
+void solverParam::set_linearSolver(const std::string &item) {
+  if (!item.compare("BICGSTAB")) {
+    linearSolver = 0;
+  }
+  else if (!item.compare("DIRECT")) {
+    linearSolver = 1;
+  }
+}
+
+std::string solverParam::get_linearSolver() const {
+  return linearSolver_options.at(linearSolver);
+}
 
 // -------------------------------------
 
@@ -155,12 +209,11 @@ void Settings::import_config_file(tiny::config &config) {
   sim.rho = config.get<double>("vlm-simulation", "density", 1.0);
   sim.cref = config.get<double>("vlm-simulation", "c_ref", 1.0);
   sim.sref = config.get<double>("vlm-simulation", "s_ref", 1.0);
-  auto xref = config.get<double>("vlm-simulation", "x_ref", 0.0);
-  auto yref = config.get<double>("vlm-simulation", "y_ref", 0.0);
-  auto zref = config.get<double>("vlm-simulation", "z_ref", 0.0);
-  sim.origin = {xref, yref, zref};
+  sim.x0 = config.get<double>("vlm-simulation", "x_ref", 0.0);
+  sim.y0 = config.get<double>("vlm-simulation", "y_ref", 0.0);
+  sim.z0 = config.get<double>("vlm-simulation", "z_ref", 0.0);
   sim.coreRadius = config.get<double>("vlm-simulation", "lamb-oseen_radius", 0.0);
-  sim.databaseFormat = config.get<std::string>("vlm-simulation", "database_format");
+  sim.set_databaseFormat(config.get<std::string>("vlm-simulation", "database_format"));
 
   // [IO]
   io.baseName = config.get<std::string>("vlm-io", "basename");
@@ -173,13 +226,12 @@ void Settings::import_config_file(tiny::config &config) {
       config.get<std::string>("vlm-io", "location_file");
 
   // [SOLVER]
-  solver.timeDomain =
-      config.get<std::string>("vlm-solver", "time_domain");
-  solver.type = config.get<std::string>("vlm-solver", "type");
+  solver.set_timeDomain(
+      config.get<std::string>("vlm-solver", "time_domain"));
+  solver.set_type(config.get<std::string>("vlm-solver", "type"));
   solver.tolerance = config.get<double>("vlm-solver", "tolerance", 1e-15);
-  solver.interpolation = config.get<std::string>("vlm-solver", "interpolation_type");
-  solver.linearSolver =
-      config.get<std::string>("vlm-solver", "linear_solver");
+  solver.set_linearSolver(
+      config.get<std::string>("vlm-solver", "linear_solver"));
   solver.relaxation = config.get<double>("vlm-solver", "relaxation", 1.0);
   solver.max_iter = config.get<int>("vlm-solver", "max_iter", 100);
 

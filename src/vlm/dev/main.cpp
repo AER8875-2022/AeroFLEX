@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
   // #############################
   database::table database;
 
-  if (!settings.solver.type.compare("NONLINEAR")) {
+  if (!settings.solver.get_type().compare("NONLINEAR")) {
     std::cout << "\n";
     std::cout << "==>Initializing viscous database...";
     database.importAirfoils(settings.io.databaseFile);
@@ -78,10 +78,10 @@ int main(int argc, char **argv) {
   vlm::solver::linear::steady linear(iters, residuals, gui);
   vlm::solver::nonlinear::steady nonlinear(iters, residuals, gui);
 
-  if (!settings.solver.type.compare("LINEAR")) {
+  if (!settings.solver.get_type().compare("LINEAR")) {
     linear.initialize(settings.solver, object, database::table());
     solver = &linear;
-  } else if (!settings.solver.type.compare("NONLINEAR")) {
+  } else if (!settings.solver.get_type().compare("NONLINEAR")) {
     nonlinear.initialize(settings.solver, object, database);
     solver = &nonlinear;
   } else {

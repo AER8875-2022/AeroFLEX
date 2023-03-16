@@ -444,7 +444,7 @@ void nonlinear::steady::computeForces(model &object) {
       auto [cl, cd, cmy] =
           database.coefficients(aoa_eff, wing.get_globalIndex(), spanLoc);
       // Lever used to transfer to 2D moment to 3D moment at specified origin
-      double lever = object.sim.origin(0) - station.forceActingPoint()(0);
+      double lever = object.sim.origin()(0) - station.forceActingPoint()(0);
       // Updating station's force coefficients
       station.cl = cl;
       station.cd = cd;

@@ -24,10 +24,10 @@ void VLM::solve() {
   // Clear previous solution
   reinitialize();
 
-  if (!settings.solver.type.compare("LINEAR")) {
+  if (!settings.solver.get_type().compare("LINEAR")) {
     linear.initialize(settings.solver, object, database::table());
     solver = &linear;
-  } else if (!settings.solver.type.compare("NONLINEAR")) {
+  } else if (!settings.solver.get_type().compare("NONLINEAR")) {
     nonlinear.initialize(settings.solver, object, database);
     solver = &nonlinear;
   } else {

@@ -129,7 +129,7 @@ void wingStation::computeForces(const input::simParam &sim) {
 
     // Computing distances
     Vector3d dl = vortex.leadingEdgeDl();
-    Vector3d lever = sim.origin - vortex.forceActingPoint();
+    Vector3d lever = sim.origin() - vortex.forceActingPoint();
 
     // local vectorial forces
     vortex.forces({0,1,2}) = Qinf.cross(dl);
