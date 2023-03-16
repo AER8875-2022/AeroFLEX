@@ -34,6 +34,7 @@ struct airfoil {
    *  @param interpolationMethod Interpolation method based on the values of
    * interpolationType
    * */
+  airfoil() = default;
   airfoil(std::vector<double> &alpha, std::vector<double> &cl,
           std::vector<double> &cd, std::vector<double> &cmy);
 
