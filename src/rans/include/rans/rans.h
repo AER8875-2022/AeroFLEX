@@ -89,6 +89,7 @@ void Rans::run_airfoil(const std::string& airfoil, database::airfoil& db) {
         db.cd.push_back(wp.cd);
         db.cmy.push_back(wp.cm);
         save(airfoil + "_" + std::to_string(alpha) + ".vtu", s);
+        if (gui.signal.stop) break;
     }
 }
 
