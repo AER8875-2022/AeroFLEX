@@ -151,7 +151,7 @@ void Settings::import_config_file(tiny::config &config) {
   // [SIMULATION]
   sim.aoa = config.get<double>("vlm-simulation", "aoa", 5.0);
   sim.sideslip = config.get<double>("vlm-simulation", "sideslip", 0.0);
-  sim.vinf = config.get<double>("vlm-simulation", "v_ing", 1.0);
+  sim.vinf = config.get<double>("vlm-simulation", "v_inf", 1.0);
   sim.rho = config.get<double>("vlm-simulation", "density", 1.0);
   sim.cref = config.get<double>("vlm-simulation", "c_ref", 1.0);
   sim.sref = config.get<double>("vlm-simulation", "s_ref", 1.0);
