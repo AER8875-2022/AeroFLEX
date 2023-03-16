@@ -112,10 +112,19 @@ std::optional<Settings> config_open(const std::string &conf_path) {
 		}
 	}
 
-	settings.rans.set_solver_type(io.get<std::string>("rans-solver", "type"));
+	settings.rans.set_solver_type(io.get<std::string>("rans-solver", "solver"));
+	settings.rans.set_gradient_scheme(io.get<std::string>("rans-solver", "gradient"));
+	settings.rans.set_viscosity_model(io.get<std::string>("rans-solver", "viscosity"));
 	settings.rans.second_order = io.get<bool>("rans-solver", "second_order");
 	settings.rans.relaxation = io.get<double>("rans-solver", "relaxation");
-
+	settings.rans.start_cfl = io.get<double>("rans-solver", "start_cfl");
+	settings.rans.slope_cfl = io.get<double>("rans-solver", "slope_cfl");
+	settings.rans.max_cfl = io.get<double>("rans-solver", "max_cfl");
+	settings.rans.tolerance = io.get<double>("rans-solver", "tolerance");
+	settings.rans.rhs_iterations = io.get<int>("rans-solver", "rhs_iterations");
+	settings.rans.max_iterations = io.get<int>("rans-solver", "max_iterations");
+	settings.rans.limiter_k = io.get<double>("rans-solver", "limiter_k");
+ 
 	for (int i = 0; i < io.how_many("rans-mesh"); i++) {
 		settings.rans.meshes.push_back(io.get_i<std::string>("rans-mesh", "file", i));
 	}
@@ -136,6 +145,7 @@ bool config_save(const std::string &conf_path, Settings &settings) {
 
 	io.config_vec["rans-bc"] = {};
 	for (auto &[name, bc] : settings.rans.bcs) {
+		std::cout << name << " | " << bc.bc_type << std::endl;
 		io.config_vec["rans-bc"].push_back({
 			{"type", bc.bc_type},
 			{"name", name},
@@ -146,9 +156,19 @@ bool config_save(const std::string &conf_path, Settings &settings) {
 		});
 	};
 
-	io.config["rans-solver"]["type"] = settings.rans.solver_type();
+	io.config["rans-solver"]["solver"] = settings.rans.solver_type();
+	io.config["rans-solver"]["gradient"] = settings.rans.gradient_scheme();
+	io.config["rans-solver"]["viscosity"] = settings.rans.viscosity_model();
+
 	io.config["rans-solver"]["second_order"] = bool_to_string(settings.rans.second_order);
 	io.config["rans-solver"]["relaxation"] = bool_to_string(settings.rans.relaxation);
+	io.config["rans-solver"]["start_cfl"] = std::to_string(settings.rans.start_cfl);
+	io.config["rans-solver"]["slope_cfl"] = std::to_string(settings.rans.slope_cfl);
+	io.config["rans-solver"]["max_cfl"] = std::to_string(settings.rans.max_cfl);
+	io.config["rans-solver"]["tolerance"] = std::to_string(settings.rans.tolerance);
+	io.config["rans-solver"]["rhs_iterations"] = std::to_string(settings.rans.rhs_iterations);
+	io.config["rans-solver"]["max_iterations"] = std::to_string(settings.rans.max_iterations);
+	io.config["rans-solver"]["limiter_k"] = std::to_string(settings.rans.limiter_k);
 
 	io.config_vec["rans-mesh"] = {};
 	for (auto &mesh : settings.rans.meshes) {
@@ -161,22 +181,30 @@ bool config_save(const std::string &conf_path, Settings &settings) {
 }
 
 Aero::Aero(rans::Rans &rans, vlm::VLM &vlm, GUIHandler &gui) : rans(rans), vlm(vlm), gui(gui) {
-	settings.rans.bcs["farfield"];
-	settings.rans.bcs["farfield"].bc_type = "farfield";
-	settings.rans.bcs["wall"];
-	settings.rans.bcs["wall"].bc_type = "slip-wall";
+	settings.rans.bcs["Farfield"];
+	settings.rans.bcs["Farfield"].bc_type = "farfield";
+	settings.rans.bcs["Airfoil"];
+	settings.rans.bcs["Airfoil"].bc_type = "slip-wall";
 
 	// TEMPORARY !!!!
-	settings.rans.meshes.push_back("../../../../examples/rans/naca0012q_coarse.msh");
-	settings.rans.meshes.push_back("../../../../examples/rans/naca0012q_mid.msh");
-	settings.rans.meshes.push_back("../../../../examples/rans/naca0012q_fine.msh");
+	settings.rans.meshes.push_back("../../../../examples/rans/airfoil_API2_coarse.msh");
+	settings.rans.meshes.push_back("../../../../examples/rans/airfoil_API2_mid.msh");
+	settings.rans.meshes.push_back("../../../../examples/rans/airfoil_API2_fine.msh");
 }
 
 void Aero::solve_async() {
 	signal_status_ready = false;
 	signal_status_busy = true;
+	gui.msg.push("Starting simulation");
 	rans.settings = settings.rans;
-	future_solve = std::async(std::launch::async, [this](){return solve(this->rans);});
+	future_solve = std::async(std::launch::async, 
+	[this](){
+		try {
+			solve(this->rans);
+		} catch (std::exception &e) {
+			gui.msg.push(e.what());
+		}
+	});
 }
 
 void Aero::solve_await() {
@@ -190,14 +218,14 @@ void Aero::config_open_async(const std::string &conf_path) {
 	signal_status_ready = false;
 	signal_status_busy = true;
 	outfile = conf_path;
+	gui.msg.push("Starting parsing: " + conf_path);
 	future_config_open = std::async(std::launch::async,
 	[this](const std::string &path){
 		std::optional<Settings> new_settings_op{};
 		try {
 			new_settings_op = config_open(path);
 		} catch (std::exception &e) {
-			// Put this in queue
-			std::cout << e.what() << std::endl;
+			gui.msg.push(e.what());
 		}
 		return new_settings_op;
 	}, conf_path);
@@ -218,14 +246,14 @@ void Aero::config_open_await() {
 void Aero::config_save_async(const std::string &conf_path) {
 	signal_status_ready = false;
 	signal_status_busy = true;
+	gui.msg.push("Starting save: " + conf_path);
 	future_config_save = std::async(std::launch::async,
 	[this](const std::string &path){
 		bool success = false;
 		try {
 			success = config_save(path, this->settings);
 		} catch (std::exception &e) {
-			// Put this in queue
-			std::cout << e.what() << std::endl;
+			gui.msg.push(e.what());
 		}
 		return success;
 	}, conf_path);
@@ -242,6 +270,17 @@ void Aero::config_save_await() {
 	signal_status_busy = false;
 }
 
+inline void Combo(std::vector<std::string> &vec, int &index, const char* label) {
+	if (ImGui::BeginCombo(label, vec[index].c_str())) {
+		for (int i = 0; i < vec.size(); i++) {
+			bool is_selected = (index == i);
+			if (ImGui::Selectable(vec[i].c_str(), is_selected)) index = i;
+			if (is_selected) ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+	}
+}
+
 void RansLayer::OnUIRender() {
 	ImGui::Begin("RANS");
 
@@ -252,19 +291,28 @@ void RansLayer::OnUIRender() {
 
 	ImGui::Separator();
 	ImGui::Text("Farfield");
-	ImGui::InputDouble("Mach", &aero.settings.rans.bcs["farfield"].vars_far.mach, 0.01f, 1.0f, "%.4f");
-	ImGui::InputDouble("AoA", &aero.settings.rans.bcs["farfield"].vars_far.angle, 0.01f, 1.0f, "%.4f");
-	ImGui::InputDouble("Temperature", &aero.settings.rans.bcs["farfield"].vars_far.T, 0.01f, 1.0f, "%.4f");
-	ImGui::InputDouble("Pressure", &aero.settings.rans.bcs["farfield"].vars_far.p, 0.01f, 1.0f, "%.4f");
+	ImGui::InputDouble("Mach", &aero.settings.rans.bcs["Farfield"].vars_far.mach, 0.01f, 1.0f, "%.4f");
+	ImGui::InputDouble("AoA", &aero.settings.rans.bcs["Farfield"].vars_far.angle, 0.01f, 1.0f, "%.4f");
+	ImGui::InputDouble("Temperature", &aero.settings.rans.bcs["Farfield"].vars_far.T, 0.01f, 1.0f, "%.4f");
+	ImGui::InputDouble("Pressure", &aero.settings.rans.bcs["Farfield"].vars_far.p, 0.01f, 1.0f, "%.4f");
 
 	ImGui::Separator();
 	ImGui::Text("Solver");
 
-	ImGui::RadioButton("Explicit", &aero.settings.rans.type, 0); ImGui::SameLine();
-	ImGui::RadioButton("Implicit", &aero.settings.rans.type, 1);
-
 	ImGui::Checkbox("Second Order", &aero.settings.rans.second_order);
+
+	Combo(aero.settings.rans.solver_options, aero.settings.rans.solver, "Type");
+	Combo(aero.settings.rans.gradient_options, aero.settings.rans.gradient, "Gradient");
+	Combo(aero.settings.rans.viscosity_options, aero.settings.rans.viscosity, "Viscosity");
+
 	ImGui::InputDouble("Relaxation", &aero.settings.rans.relaxation, 0.1f, 1.0f, "%.2f");
+	ImGui::InputDouble("Tolerance", &aero.settings.rans.tolerance, 0.0f, 0.0f, "%e");
+	ImGui::InputDouble("Start CFL", &aero.settings.rans.start_cfl, 0.1f, 1.0f, "%.1f");
+	ImGui::InputDouble("Slope CFL", &aero.settings.rans.slope_cfl, 0.1f, 1.0f, "%.1f");
+	ImGui::InputDouble("Limiter K", &aero.settings.rans.limiter_k, 0.1f, 1.0f, "%.1f");
+	ImGui::InputDouble("Max CFL", &aero.settings.rans.max_cfl, 0.1f, 1.0f, "%.1f");
+	ImGui::SliderInt("RHS Iterations", &aero.settings.rans.rhs_iterations, 1, 10);
+	ImGui::InputInt("Max Iterations", &aero.settings.rans.max_iterations);
 
 	ImGui::End();
 }
@@ -280,10 +328,12 @@ void ButtonLayer::OnUIRender() {
 
 		if (ImGui::Button("Stop Simulation", ImVec2(-1.0f, 0.0f)) && aero.signal_status_busy) {
 			aero.gui.signal.stop = true;
+			aero.gui.msg.push("Stopping simulation");
 		};
 
 		if (ImGui::Button("Pause", ImVec2(-1.0f, 0.0f)) && aero.signal_status_busy) {
 			aero.gui.signal.pause = true;
+			aero.gui.msg.push("Pausing simulation");
 		};
 
 		if (ImGui::Button("Resume", ImVec2(-1.0f, 0.0f)) && aero.signal_status_busy) {
@@ -327,10 +377,8 @@ void ButtonLayer::OnUIRender() {
 			fd.ready = false;
 			// TODO: replace these with custom enums (eventually)
 			if (fd.type == FlexGUI::FileDialogType::OpenFile) {
-				aero.gui.msg.push("Starting parsing: " + path);
 				aero.config_open_async(path);
 			} else if (fd.type == FlexGUI::FileDialogType::SaveFile) {
-				aero.gui.msg.push("Starting save: " + path);
 				aero.config_save_async(path);
 			}
 			strcpy(path_buf, "");

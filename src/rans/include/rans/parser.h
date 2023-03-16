@@ -169,9 +169,9 @@ Settings parse(int argc, char **argv, std::string compiled_file) {
                     } else if (property == "slope_cfl") {
                         data.slope_cfl = std::stod(prop_i);
                     } else if (property == "rhs_iterations") {
-                        data.rhs_iterations = (uint) std::stoi(prop_i);
+                        data.rhs_iterations = std::stoi(prop_i);
                     } else if (property == "max_iterations") {
-                        data.max_iterations = (uint) std::stoi(prop_i);
+                        data.max_iterations = std::stoi(prop_i);
                     } else if (property == "gradients") {
                         data.gradient_scheme = prop_i;
                     } else if (property == "limiter_k") {
