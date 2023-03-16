@@ -51,7 +51,8 @@ void linear::steady::solve(model &object) {
   // Computing forces
   computeForces(object);
   computeInducedDrag(object);
-  std::cout << "apres induced drag (debug)" << std::endl;
+  computePressure(object);
+
   // Exporting solution
   exportSolution(object);
 
@@ -62,15 +63,21 @@ void linear::steady::solve(model &object) {
 void linear::steady::saveSolution(model &object, const VectorXd &X) {
 #pragma omp parallel
   {
-    // Saving gamma to vortex rings
+// Saving gamma to vortex rings
 #pragma omp for
     for (auto &vortex : object.vortexRings) {
       vortex.updateGamma(X[vortex.get_globalIndex()]);
+      //std::cout<< vortex.get_gamma() << std::endl;
     }
 // Saving gamma to wake panels
 #pragma omp for
     for (auto &wake : object.wakePanels) {
       wake.updateGamma(X[wake.get_globalIndex()]);
+    }
+// Saving doublets to doublet panels
+#pragma omp for
+    for (auto &doub : object.doubletPanels) {
+      doub.updateMu(X[object.vortexRings.size()+doub.get_globalIndex()]);
     }
   }
 }
@@ -83,7 +90,7 @@ void linear::steady::computeInducedDrag(model &object) {
   for (auto &influencedWake : object.wakePanels) {
     Vector3d v = Vector3d::Zero();
     for (auto &influencingWake : object.wakePanels) {
-      v += influencingWake.influence(influencedWake.get_collocationPoint(),
+      v += influencingWake.influence_wing(influencedWake.get_collocationPoint(),
                                      object.wakeNodes);
     }
     Vector3d dl = influencedWake.leadingEdgeDl(object.wakeNodes);
@@ -111,6 +118,15 @@ void linear::steady::computeForces(model &object) {
   }
 }
 
+void linear::steady::computePressure(model &object){
+  object.cp = 0.0;
+  // Computing pression at each patch (non lifting surface)
+ #pragma omp parallel for
+  for (auto &patch : object.patches) {
+    patch.computePressure(object.sim, object.doubletPanels);
+  }
+}
+
 void linear::steady::exportSolution(const model &object) {
   output::exportForces(object, 0);
   output::exportSurfacesVTU(object, 0);
@@ -127,7 +143,7 @@ void linear::steady::buildLHS(const model &object) {
     for (auto &influencedVortex : object.vortexRings) {
       // influence Vortex -> Vortex
       for (auto &influencingVortex : object.vortexRings) {
-        auto v1 = influencingVortex.influence(
+        auto v1 = influencingVortex.influence_wing(
             influencedVortex.get_collocationPoint(), object.nodes);
         lhs(influencedVortex.get_globalIndex(),
             influencingVortex.get_globalIndex()) =
@@ -135,7 +151,7 @@ void linear::steady::buildLHS(const model &object) {
       }
       // influence Doublets -> Vortex
       for (auto &influencingDoublets : object.doubletPanels) {
-        auto v2 = influencingDoublets.influence(influencingDoublets.ProjectingCollocation(influencedVortex.get_collocationPoint()),
+        auto v2 = influencingDoublets.influence_wing(influencingDoublets.ProjectingCollocation(influencedVortex.get_collocationPoint()),
             object.nodes); // modifier la fonction doublets.influence dans
                            // panel.cpp
         lhs(influencedVortex.get_globalIndex(),
@@ -143,32 +159,34 @@ void linear::steady::buildLHS(const model &object) {
             v2.dot(influencedVortex.get_normal());
       }
     }
-    // influence de tous les panneaux sur les doublets
+  // influence de tous les panneaux sur les doublets
 #pragma omp for
     for (auto &influencedDoublets : object.doubletPanels) {
       // influence Vortex -> Doublets
       for (auto &influencingVortex : object.vortexRings) {
-        auto v3 = influencingVortex.influence(
+        auto v3 = influencingVortex.influence_patch(
             influencedDoublets.get_center(),
             object.nodes); // modifier la fonction doublets.influence dans
                            // panel.cpp
 
         lhs(size_Vortex + influencedDoublets.get_globalIndex(),
             influencingVortex.get_globalIndex()) =
-            v3.dot(influencedDoublets.get_normal());
+            v3;//.dot(influencedDoublets.get_normal());
       }
       // influence Doublets -> Doublets
       for (auto &influencingDoublets : object.doubletPanels) {
-        auto v4 = influencingDoublets.influence(
-            influencingDoublets.ProjectingCollocation(influencedDoublets.get_center()),
-            object.nodes); // modifier la fonction doublets.influence dans
-                           // panel.cpp
+        auto v4 = influencingDoublets.influence_patch(
+        influencingDoublets.ProjectingCollocation(influencedDoublets.get_center()),
+            object.nodes);
+
+
         lhs(size_Vortex + influencedDoublets.get_globalIndex(),
             size_Vortex + influencingDoublets.get_globalIndex()) =
-            v4.dot(influencedDoublets.get_normal());
+            v4;//.dot(influencedDoublets.get_normal());
         DoubletMatrixINF(influencedDoublets.get_globalIndex(),
                          influencingDoublets.get_globalIndex()) =
-            v4.dot(influencedDoublets.get_normal());
+            v4;//.dot(influencedDoublets.get_normal());
+        //std::cout<< v4<< std::endl;
       }
     }
 
@@ -176,7 +194,7 @@ void linear::steady::buildLHS(const model &object) {
 #pragma omp for
     for (auto &influencedVortex : object.vortexRings) {
       for (auto &influencingWake : object.wakePanels) {
-        auto v = influencingWake.influence(
+        auto v = influencingWake.influence_wing(
             influencedVortex.get_collocationPoint(), object.wakeNodes);
         lhs(influencedVortex.get_globalIndex(),
             influencingWake.get_globalIndex()) +=
@@ -186,11 +204,11 @@ void linear::steady::buildLHS(const model &object) {
 #pragma omp for
     for (auto &influencedDoublets : object.doubletPanels) {
       for (auto &influencingWake : object.wakePanels) {
-        auto v = influencingWake.influence(influencedDoublets.get_center(),
+        auto v = influencingWake.influence_patch(influencedDoublets.get_center(),
                                            object.wakeNodes);
-        lhs(size_Vortex + influencedDoublets.get_globalIndex(),
+        lhs(size_Vortex + influencedDoublets.get_globalIndex(), 
             influencingWake.get_globalIndex()) +=
-            v.dot(influencedDoublets.get_normal());
+            v;//.dot(influencedDoublets.get_normal());
       }
     }
   }
@@ -206,7 +224,6 @@ void linear::steady::buildRHS(const model &object) {
       rhs_VLM(vortex.get_globalIndex()) =
           -object.sim.freeStream().dot(vortex.get_normal());
     }
-
     // Building sources vector
 #pragma omp for
     for (auto &doubs : object.doubletPanels) {
@@ -214,6 +231,8 @@ void linear::steady::buildRHS(const model &object) {
           -object.sim.freeStream().dot(doubs.get_normal());
     }
   }
+  //Adding the sources influence to the VLM 
+  rhs_VLM += lhs.block(0, object.vortexRings.size(), object.vortexRings.size(), object.doubletPanels.size()) * sources;
 
   VectorXd rhs_PanMethod = DoubletMatrixINF * sources;
   // concatenate rhs vectors
@@ -258,6 +277,8 @@ void nonlinear::steady::buildRHS(const model &object) {
           -object.sim.freeStream().dot(doubs.get_normal());
     }
   }
+  //Adding the sources influence to the VLM 
+  rhs_VLM += lhs.block(0, object.vortexRings.size(), object.vortexRings.size(),object.doubletPanels.size()) * sources;
 
   VectorXd rhs_PanMethod = DoubletMatrixINF * sources;
   // concatenate rhs vectors
@@ -300,6 +321,8 @@ void nonlinear::steady::solve(model &object) {
   computeForces(object);
   // Computing 3D effects on drag
   computeInducedDrag(object);
+  // Computing pressure coefficient
+  computePressure(object);
   // Exporting solution
   exportSolution(object);
 }

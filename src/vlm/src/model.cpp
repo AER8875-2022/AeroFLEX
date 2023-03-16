@@ -39,6 +39,7 @@ void model::initializeMesh(const input::meshData &mesh) {
   }
   for (auto &patch : patches) {
     patch.initialize(nodes, doubletPanels, sim);
+    patch.ScanNeighbor(doubletPanels);
   }
 }
 

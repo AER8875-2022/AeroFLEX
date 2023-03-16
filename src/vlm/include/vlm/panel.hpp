@@ -58,6 +58,8 @@ class panel {
   /** @brief Coordinates of the panel's center */
   Vector3d center;
 
+  std::vector<Vector3d> edge_center;
+
   /** @brief Vector holding the geometry of the panel's edges */
   std::vector<geom::edgeLine> edges;
 
@@ -139,6 +141,8 @@ class vortexRing {
   /** @brief local angle of attack correction */
   double local_aoa;
 
+  std::array<Vector3d, 3> Localreference;
+
 public:
   /** @param globalIndex Unique global index of the current element
    *  @param nodeIDs Nodes defining the element
@@ -162,12 +166,17 @@ public:
    *  @return Vector defining the trailing edge of the ring */
   Vector3d leadingEdgeDl(const std::vector<Vector3d> &nodes);
 
+  void LocalCoordinate(const std::vector<Vector3d> &nodes);  // (l,m,normal)
+
   /** @brief Method computing the influence of the current vortex ring on a
    * collocation point
    *  @param collocationPoint Point in tridimensional space
    *  @param nodes Nodes of the mesh
    *  @return Induced velocity vector at collocation point */
-  Vector3d influence(const Vector3d &collocationPoint,
+  Vector3d influence_wing(const Vector3d &collocationPoint,
+                     const std::vector<Vector3d> &nodes) const;
+
+  double influence_patch(const Vector3d &collocationPoint,
                      const std::vector<Vector3d> &nodes) const;
 
   /** @brief Method computing the streamwise influence (only) of the current
@@ -231,11 +240,18 @@ public:
 
 class doubletPanel {
   int globalIndex;
-  double sigma;
+  double sigma; //remove during clean up
+  double mu;
   std::array<Vector3d, 3> Localreference; // (l,m,normal)
   std::vector<Vector3d> ProjectedNodes;   // temporary label (to be removed)
-  double SMP;                             // potentiellement inutile
-  double SMQ;                             // potentiellement inutile
+  std::vector<int> NeighborPanel_IDs;
+  std::vector<int> nondirectNeighbor_IDs;
+  Vector3d local_velocity;
+  Vector3d T; //not sure what this is used for
+  double SMP;                             
+  double SMQ;                             
+  /** @brief Local pressure coefficient */
+  double cp;
   std::vector<fil::vortexLine> Doublets_vortices;
   geom::panel panel;
 
@@ -244,8 +260,10 @@ public:
                const double sigma);
   void initialize(const std::vector<Vector3d> &nodes,
                   const input::simParam &sim);
-  Vector3d influence(const Vector3d &collocationPoint,
+  Vector3d influence_wing(const Vector3d &collocationPoint,
                      const std::vector<Vector3d> &nodes) const;
+  double influence_patch(const Vector3d &collocationPoint,
+                     const std::vector<Vector3d> &nodes) const;                   
   void updateGeometry(const std::vector<Vector3d> &nodes);
   void LocalCoordinate(const std::vector<Vector3d> &nodes);
   void updateNodes(const std::vector<Vector3d>
@@ -253,14 +271,27 @@ public:
                            // of the node onto the mean of the panel (co-planor
                            // panel in the localcoordinates)
   Vector3d ProjectingCollocation(const Vector3d &collocationPoint) const;
+
+  void storing_velocity(Vector3d velocity);
+
+  /** @brief Saves and updates the strength of the current doublets
+   *  @param mu Strength to be saved to the current element */
+  void updateMu(const double mu);
+
+  /** @brief Getter method for edges */
+  std::vector<geom::edgeLine> get_edges() const;
   
   double get_area() const;
   Vector3d get_normal() const;
+  double get_cp() const;
   Vector3d get_center() const;
+  std::vector<int> get_neighbor()const;
   std::vector<int> get_nodeIDs() const;
+  std::vector<Vector3d> get_edge_center() const;
   int get_globalIndex() const;
-  std::array<Vector3d, 3> get_LocalCoordinate() const; // À ajouter dans le .cpp
+  std::array<Vector3d, 3> get_LocalCoordinate() const;
   double get_sigma() const;
+  double get_mu() const;
 
   friend class surface::patch;
   friend class solver::linear::steady;

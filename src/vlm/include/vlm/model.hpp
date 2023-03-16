@@ -54,6 +54,9 @@ private:
   /** @brief Global drag coefficient */
   double cd = 0.0;
 
+  /** @brief Global pressure coefficient */
+  double cp = 0.0;
+
   /** @brief Global moment coefficients vector */
   Vector3d cm = Vector3d::Zero();
 

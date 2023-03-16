@@ -1,6 +1,7 @@
 
 #include "vlm/potential.hpp"
 #include <cmath>
+#include <iostream>
 
 using namespace vlm;
 using namespace geom;
@@ -38,7 +39,6 @@ Vector3d vortexLine::influence(const Vector3d &collocationPoint,
                                const edgeLine &edge) const {
   auto [r1, r2] =
       distToPoint(collocationPoint, nodes[edge.get_n1()], nodes[edge.get_n2()]);
-
   // Geometric computations
   auto r1r2 = r1.cross(r2);
   auto norm = r1r2.norm();
@@ -57,10 +57,54 @@ Vector3d vortexLine::influence(const Vector3d &collocationPoint,
   return (gamma / (4.0 * M_PI * h) * lo * direction);
 }
 
+double vortexLine::influence_patch(const Vector3d &collocationPoint,
+                     const std::vector<Vector3d> &nodes,
+                     const geom::edgeLine &edge, 
+                     const std::array<Vector3d, 3> &Localreference,
+                     const Vector3d &center_point) const {
+  
+  if (nodes[edge.get_n1()]==nodes[edge.get_n2()]){
+    //Pour les points coincidents, l'influence est nul
+    //std::cout<< "same" << std::endl;
+    return 0;
+  } else {
+
+  auto [a, b] = distToPoint(collocationPoint, nodes[edge.get_n1()], nodes[edge.get_n2()]);
+  // (l,m,normal)
+  auto SM = edge.get_dl().dot(Localreference[1]);
+  auto SL = edge.get_dl().dot(Localreference[0]);
+  auto A = a.norm(); 
+  auto B = b.norm();
+  auto AL = a.dot(Localreference[0]);
+  auto AM = a.dot(Localreference[1]);
+  auto BM = b.dot(Localreference[1]);
+  auto Al2= Localreference[2].dot(edge.get_dl().cross(a)); // erreur possible sur la normal
+  auto Al= AM*SL - AL*SM;
+
+//std::cout<< "new value" << std::endl;
+//std::cout<< Al << std::endl;
+//std::cout<< Al2 << std::endl; //l'un est le négatif de l'autre
+  //auto Rck = center_point; //Erreur possible (Centre local ou **centre global**)  
+  auto Pjk = collocationPoint - center_point;
+  auto PN = Pjk.dot(Localreference[2]);
+
+  auto PA= (PN*PN) * SL + Al2 * AM;  
+  auto PB= (PN*PN) * SL + Al2 * BM;
+
+  auto RNUM = SM * PN * (B * PA - A * PB);
+  auto DNOM = PA * PB + (PN*PN) * A * B * (SM*SM);
+
+  //std::cout << "vector new" << std::endl;
+  //std::cout << DNOM << std::endl;
+
+  //atan is in radians
+  return {atan(RNUM/DNOM)};
+  }
+}
+
 double vortexLine::get_gamma() const { return gamma; }
 
-std::tuple<Vector3d, Vector3d>
-vortexLine::distToPoint(const Vector3d &collocationPoint, const Vector3d &p1,
+std::tuple<Vector3d, Vector3d> vortexLine::distToPoint(const Vector3d &collocationPoint, const Vector3d &p1,
                         const Vector3d &p2) const {
   Vector3d r1 = collocationPoint - p1;
   Vector3d r2 = collocationPoint - p2;

@@ -13,6 +13,7 @@ using namespace Eigen;
 // Forward declaration of vortexRing class
 namespace vlm::element {
 class vortexRing;
+class doubletPanel;
 }
 
 namespace vlm {
@@ -65,6 +66,9 @@ class vortexLine {
   /** @brief Strength of the vortex filament */
   double gamma;
 
+  /** @brief Strength of the doublet filament */
+  double mu;
+
   /** @brief Core radius associated with current vortex filament */
   double coreRadius;
 
@@ -82,6 +86,11 @@ public:
   Vector3d influence(const Vector3d &collocationPoint,
                      const std::vector<Vector3d> &nodes,
                      const geom::edgeLine &edge) const;
+
+  double influence_patch(const Vector3d &collocationPoint,
+                     const std::vector<Vector3d> &nodes,
+                     const geom::edgeLine &edge, const std::array<Vector3d, 3> &Localreference,
+                     const Vector3d &center_point) const;
 
   /** @brief Getter method for gamma */
   double get_gamma() const;
@@ -104,6 +113,7 @@ private:
   Vector3d inducedVelOrientation(const Vector3d &dl, const Vector3d &r) const;
 
   friend element::vortexRing;
+  friend element::doubletPanel;
 };
 
 } // namespace fil

@@ -233,6 +233,9 @@ class patch {
   std::vector<int> doubletIDs;
   double area;
 
+  /** @brief Drag coefficient of the current surface */
+  double cp = 0.0;
+
 public:
   patch(const int globalIndex, const std::vector<int> &doubletIDs);
   void initialize(const std::vector<Vector3d> &nodes,
@@ -240,8 +243,18 @@ public:
                   const input::simParam &sim);
   void updateGeometry(const std::vector<Vector3d> &nodes,
                       std::vector<element::doubletPanel> &doublets);
+  
+  void ScanNeighbor(std::vector<element::doubletPanel> &doublets);
+  
+  void Storing_nondirectPanel(std::vector<element::doubletPanel> &doublets);
+  /** @brief Method computing the local pressure on the current non lifting surface
+   */
+  void computePressure(const input::simParam &sim,
+              std::vector<element::doubletPanel> &doublets);
+
   double get_globalIndex() const;
   double get_area() const;
+  double get_cp() const;
   std::vector<int> get_doubletIDs() const;
 
 private:

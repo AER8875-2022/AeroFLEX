@@ -73,6 +73,8 @@ protected:
    *  @param object Model holding the VLM elements */
   virtual void computeForces(model &object) = 0;
 
+  virtual void computePressure(model &object) = 0;
+
   /** @brief Pure virtual function to export the solution to output files
    *  @param object Model holding the VLM elements */
   virtual void exportSolution(const model &object) = 0;
@@ -124,6 +126,8 @@ protected:
   /** @brief Method to compute inviscid forces
    *  @param object Model holding the VLM elements */
   virtual void computeForces(model &object) override;
+
+  virtual void computePressure(model &object) override;
 
   /** @brief Method to export the solution to output files
    *  @param object Model holding the VLM elements */
