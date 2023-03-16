@@ -132,14 +132,14 @@ public:
     void set_Load_Vector_From_Load_Objects()
     {      
         Forces.setZero(6*Nbr_Noeud);
-        #pragma omp parallel for
+        // #pragma omp parallel for
         for(int i=0 ; i < FORCE_LIST.size();i++)
         { 
             FORCE f_obj       = FORCE_LIST[i];
             Eigen::Vector3d f = f_obj.get_xyz_force();
             Forces.segment(f_obj.Node_ID *6,3) += f;
         };
-        #pragma omp parallel for
+        // #pragma omp parallel for
         for(int i=0 ; i<MOMENT_LIST.size();i++)
         {
             MOMENT m_obj       = MOMENT_LIST[i];
@@ -150,7 +150,7 @@ public:
 
     Eigen::VectorXd apply_SPC1_Forces(Eigen::VectorXd force)
     {   
-        #pragma omp parallel for
+        // #pragma omp parallel for
         for (int i=0 ; i<SPC1_LIST.size();i++)
         {   
             SPC1 spc_obj     = SPC1_LIST[i];
@@ -168,7 +168,7 @@ public:
     void set_K_Final_sparse()
     {
         K_Final_sparse = K_Global_sparse;
-        #pragma omp parallel for
+        // #pragma omp parallel for
         for (int i=0 ; i<SPC1_LIST.size();i++)
         {
             SPC1 spc_obj     = SPC1_LIST[i];
@@ -274,7 +274,7 @@ public:
                 Dep += Delta_dep_amor;
                 
                 set_Quaternion_Map(Delta_dep_amor); 
-                #pragma omp parallel for
+                // #pragma omp parallel for
                 for (int i = 0; i < CBAR_keys.size(); ++i)
                 {   
                     int key     = CBAR_keys[i];
@@ -298,9 +298,9 @@ public:
                     
                     Eigen::VectorXd F_elem_global_ref = value.get_Force_In_GlobalRef(d_prime);
                     
-                    #pragma omp critical
+                    // #pragma omp critical
                     Forces_int.segment(6*n1,6)       += F_elem_global_ref.segment(0,6);      
-                    #pragma omp critical
+                    // #pragma omp critical
                     Forces_int.segment(6*n2,6)       += F_elem_global_ref.segment(6,6);   
                     
                 }
@@ -336,7 +336,7 @@ public:
 
     void set_Quaternion_Map(Eigen::VectorXd delta_dep){
 
-        #pragma omp parallel for
+        // #pragma omp parallel for
         for (int i = 0; i < Nbr_Noeud; i++)
         {
             double rx = delta_dep(i*6 +3);

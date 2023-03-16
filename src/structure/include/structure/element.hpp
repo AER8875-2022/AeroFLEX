@@ -312,12 +312,11 @@ public:
         const Eigen::Vector3d d_2_prime     =  R_gc.transpose() * (u_2.segment(0,3) - u_mid.segment(0,3) - dr_2);     //Déplacement du noeud causé pas les déformations dans le repère de l'élément
 
 
-        std::cout<<"============\n"<<std::endl;
-        std::cout<<dr_1.transpose()<<std::endl; 
-        std::cout<<dr_2.transpose()<<std::endl;
-        std::cout<<d_1_prime.transpose()<<std::endl; 
-        std::cout<<d_2_prime.transpose()<<std::endl;  
-          
+        // std::cout<<"============\n"<<std::endl;
+        // std::cout<<dr_1.transpose()<<std::endl;
+        // std::cout<<dr_2.transpose()<<std::endl;
+        // std::cout<<d_1_prime.transpose()<<std::endl;
+        // std::cout<<d_2_prime.transpose()<<std::endl;
 
         Eigen::VectorXd D_local(12);
         

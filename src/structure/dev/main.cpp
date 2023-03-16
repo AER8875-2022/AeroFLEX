@@ -12,24 +12,28 @@
 using namespace structure;
 
 int main(int argc, char **argv){
-    
-    std::cout << "You have entered " << argc << " arguments:" << "\n";
 
+    // Reading config file
+    tiny::config config;
+    config.read(argv[1]);
+
+    // Importing settings
+    Settings settings;
+    settings.import_config_file(config);
+    
     // Dummy GUI variables
     GUIHandler gui;
     std::atomic<int> iters = 0;
     std::vector<double> residuals;
 
-    
-    MODEL M1(argv[1], gui, iters, residuals);
+    MODEL M1(settings.Mesh_file_path, gui, iters, residuals);
     Eigen::VectorXd dep;
-    std::string S ("NLS");
- 
-    if(!S.compare(argv[2]))    //     /home/olivier/Structure-Dev/examples/Moment.txt NLS 10 1E-10 0.5
+
+    if(!settings.Solve_type.compare("NLS"))
     {   
-        int Load_step = std::stoi(argv[3]);
-        double       tol = std::stod(argv[4]);
-        double      amor = std::stod(argv[5]);
+        int Load_step = settings.N_step;
+        double       tol = settings.Tolerance;
+        double      amor = settings.Damping;
 
         dep = M1.get_NonLin_Solve(Load_step, tol, amor);
     }
@@ -39,7 +43,7 @@ int main(int argc, char **argv){
 
     }
 
-    std::string arg1 = argv[1];
+    std::string arg1 = settings.Mesh_file_path;
     std::cout<<"Test"<<std::endl;
 
     int L_string = arg1.length();

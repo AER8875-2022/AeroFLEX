@@ -3,19 +3,39 @@
 #define __STRUCTURE__
 
 #include "common_aeroflex.hpp"
+#include <iostream>
+#include <string>
+#include <exception>
 #include <vector>
 #include <atomic>
 #include "structure/model.hpp"
+#include "tinyconfig.hpp"
 
 namespace structure {
 
 struct Settings {
-  // TODO  Tol, n_step, amor --> Done
   std::string Mesh_file_path;
   std::string Solve_type;
   double Tolerance;
   int N_step;
-  double Damping; 
+  double Damping;
+
+  void import_config_file(tiny::config &config) {
+
+    try {
+
+      Mesh_file_path = config.get<std::string>("structure-io", "mesh_file");
+      Solve_type = config.get<std::string>("structure-solver", "type");
+      Tolerance = config.get<double>("structure-solver", "tolerance");
+      N_step = config.get<int>("structure-solver", "n_steps");
+      Damping = config.get<double>("structure-solver", "damping");
+
+    } catch (std::exception &e) {
+      std::cout << e.what() << std::endl;
+    }
+
+  }
+
 };
 
 class Structure {
@@ -30,7 +50,7 @@ public:
 
 public:
   Structure(GUIHandler &gui): gui(gui), FEM(gui, iters, residuals) {}
-  void input() // TODO --> read_mesh
+  void input()
   {
     FEM.read_data_file(settings.Mesh_file_path);
     FEM.set_K_global();
@@ -52,7 +72,7 @@ public:
     }
 
 
-  } // TODO --> set_loads , Lin_solve , NonLin_solve
+  }
 };
 
 }
