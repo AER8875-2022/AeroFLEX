@@ -14,6 +14,8 @@
 #include <ctime>
 
 #include "common_aeroflex.hpp"
+#include "database/database.hpp"
+
 #include <rans/rans.h>
 #include <vlm/vlm.hpp>
 
@@ -82,10 +84,22 @@ struct ConsoleLayer : public FlexGUI::Layer {
 	ConsoleLayer(Aero &aero) : aero(aero) {};
 };
 
-void solve(rans::Rans &rans) {
-	rans.input();
-	rans.solve();
+// SOLVE =================================================================================================
+
+void solve(rans::Rans &rans, vlm::VLM &vlm) {
+	database::table vlm_table;
+	vlm_table.airfoils["naca0012_coarse"];
+	vlm_table.airfoils["naca0012_coarse"].alpha = {0.0, 2.5, 5.0};
+
+	for (auto& [airfoil, db] : vlm_table.airfoils) {
+		rans.solve_airfoil(airfoil, db);
+	}
+
+	// rans.input();
+	// rans.solve();
 }
+
+// =================================================================================================
 
 std::optional<Settings> config_open(const std::string &conf_path) {
 	Settings settings;
@@ -198,9 +212,9 @@ void Aero::solve_async() {
 	gui.msg.push("Starting simulation");
 	rans.settings = settings.rans;
 	future_solve = std::async(std::launch::async, 
-	[this](){
+	[&](){
 		try {
-			solve(this->rans);
+			solve(rans, vlm);
 		} catch (std::exception &e) {
 			gui.msg.push(e.what());
 		}
