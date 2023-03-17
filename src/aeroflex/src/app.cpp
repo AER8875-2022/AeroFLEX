@@ -121,16 +121,22 @@ struct ConsoleLayer : public FlexGUI::Layer {
 void solve(rans::Rans &rans, vlm::VLM &vlm) {
 
 	database::table table;
-	table.airfoils["airfoil_demo_fine"];
-	table.airfoils["airfoil_demo_fine"].alpha = {1.0, 5.0, 10.0};
 
-	for (auto& [airfoil, db] : table.airfoils) {
-		rans.solve_airfoil(airfoil, db);
+	if (!vlm.settings.sim.get_databaseFormat().compare("NONE")) {
+		table.airfoils["airfoil_demo_fine"];
+		table.airfoils["airfoil_demo_fine"].alpha = {1.0, 5.0, 10.0};
+
+		for (auto& [airfoil, db] : table.airfoils) {
+			rans.solve_airfoil(airfoil, db);
+		}
+	}
+	else if (!vlm.settings.sim.get_databaseFormat().compare("FILE")) {
+		table.importAirfoils(vlm.settings.io.databaseFile);
 	}
 
 	vlm.initialize();
 	vlm.database = table;
-	vlm.database.importLocations(vlm.settings.io.locationFile);
+	vlm.database.importLocations(vlm.settings.io.locationFile); // Temporary
 	vlm.solve();
 
 	// rans.input();
