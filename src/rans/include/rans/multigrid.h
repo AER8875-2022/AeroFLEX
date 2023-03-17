@@ -33,6 +33,7 @@ class multigrid {
     Settings &settings;
     std::vector<double> &residuals;
     std::atomic<int> &iters;
+    CpProfile &profile;
 
     std::vector<solverType> solvers;
 
@@ -42,14 +43,27 @@ class multigrid {
 
     int run_solver(solverType& s);
 
-    multigrid(std::vector<mesh> ms, Settings &settings, GUIHandler &gui, std::vector<double> &residuals, std::atomic<int> &iters);
+    multigrid(
+        std::vector<mesh> ms,
+        Settings &settings,
+        GUIHandler &gui,
+        std::vector<double> &residuals,
+        std::atomic<int> &iters,
+        CpProfile &profile
+    );
 
     solverType& run(const bool reinit=true);
 };
 
 template<class solverType>
-multigrid<solverType>::multigrid(std::vector<mesh> ms, Settings &settings, GUIHandler &gui, std::vector<double> &residuals, std::atomic<int> &iters)
-: gui(gui), settings(settings), residuals(residuals), iters(iters)
+multigrid<solverType>::multigrid(
+    std::vector<mesh> ms,
+    Settings &settings,
+    GUIHandler &gui,
+    std::vector<double> &residuals,
+    std::atomic<int> &iters,
+    CpProfile &profile
+): gui(gui), settings(settings), residuals(residuals), iters(iters), profile(profile)
 {
 
     solvers.reserve(ms.size());
@@ -269,10 +283,10 @@ int multigrid<implicitSolver>::run_solver(
         i++;
 
         if (err < 0) return 1;
+        profile.calc_cp(s, settings.airfoil_name);
         residuals[iters] = err;
         iters++;
-        // do-while c'est cursed
-        // Do smt if max iters is reached
+        
     } while ((err > settings.tolerance) && (i < settings.max_iterations) && !gui.signal.stop);
 
     return 0;
@@ -287,7 +301,7 @@ explicitSolver& multigrid<explicitSolver>::run(const bool reinit) {
     solvers[0].refill_bcs();
 
     for (uint i=0; i<solvers.size(); ++i) {
-
+        profile.calc_chord_coords(solvers[i], settings.airfoil_name);
         // Multigrid loop
 
         std::cout << "\nMultigrid : Stage " << i+1 << "/" << solvers.size() << "\n" << std::endl;
@@ -318,6 +332,7 @@ implicitSolver& multigrid<implicitSolver>::run(const bool reinit) {
     solvers[0].refill_bcs();
 
     for (uint i=0; i<solvers.size(); ++i) {
+        profile.calc_chord_coords(solvers[i], settings.airfoil_name);
         // Multigrid loop
 
         std::cout << "\nMultigrid : Stage " << i+1 << "/" << solvers.size() << "\n" << std::endl;

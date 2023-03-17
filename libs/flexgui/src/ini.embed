@@ -32,8 +32,14 @@ Size=1277,289
 Collapsed=0
 DockId=0x00000006,0
 
+[Window][Rans-Cp]
+Pos=412,19
+Size=865,590
+Collapsed=0
+DockId=0x00000002,1
+
 [Docking][Data]
-DockSpace       ID=0xF2944C7F Window=0x4647B76E Pos=175,97 Size=1600,881 Split=X
+DockSpace       ID=0xF2944C7F Window=0x4647B76E Pos=89,92 Size=1600,881 Split=X
   DockNode      ID=0x00000003 Parent=0xF2944C7F SizeRef=1277,881 Split=Y
     DockNode    ID=0x00000005 Parent=0x00000003 SizeRef=1600,590 Split=X
       DockNode  ID=0x00000001 Parent=0x00000005 SizeRef=410,756 CentralNode=1 Selected=0x296642D0
@@ -42,4 +48,4 @@ DockSpace       ID=0xF2944C7F Window=0x4647B76E Pos=175,97 Size=1600,881 Split=X
   DockNode      ID=0x00000004 Parent=0xF2944C7F SizeRef=321,881 Selected=0x723E535C
 
 )";
-size_t g_ImGuiIniSettingsSize = 1011;
+size_t g_ImGuiIniSettingsSize = 1085;

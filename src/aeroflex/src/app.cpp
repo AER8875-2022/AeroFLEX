@@ -78,6 +78,12 @@ struct GraphLayer : public FlexGUI::Layer {
 	GraphLayer(Aero &aero) : aero(aero) {};
 };
 
+struct CpLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	Aero &aero;
+	CpLayer(Aero &aero) : aero(aero) {};
+};
+
 struct ConsoleLayer : public FlexGUI::Layer {
 	virtual void OnUIRender() override;
 	Aero &aero;
@@ -429,6 +435,24 @@ void GraphLayer::OnUIRender() {
 	}
 };
 
+void CpLayer::OnUIRender() {
+	{
+		ImGui::Begin("Rans-Cp");
+		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
+		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit|ImPlotAxisFlags_Invert;
+		const double xticks = 1;
+
+		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,400))) {
+			ImPlot::SetupAxisLimits(ImAxis_X1, -0.1, 1.1, ImPlotCond_Always);
+			ImPlot::SetupAxes("x","Cp",xflags,yflags);
+			ImPlot::PlotLine("Cp", aero.rans.profile.x.data(), aero.rans.profile.cp.data(), aero.rans.profile.x.size());
+			ImPlot::EndPlot();
+		}
+
+		ImGui::End();
+	}
+};
+
 class ConsoleLog
 {
 	public:
@@ -545,6 +569,7 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, Aero& aero)
 	FlexGUI::Application* app = new FlexGUI::Application(spec);
 	app->PushLayer(std::make_shared<ButtonLayer>(aero));
 	app->PushLayer(std::make_shared<GraphLayer>(aero));
+	app->PushLayer(std::make_shared<CpLayer>(aero));
 	app->PushLayer(std::make_shared<RansLayer>(aero));
 	app->PushLayer(std::make_shared<ConsoleLayer>(aero));
 
