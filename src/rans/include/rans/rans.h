@@ -26,8 +26,11 @@ class Rans {
     public:
     // This is a mess because of no separation of IO and computation...
     std::vector<double> residuals;
-    //wallProfile wp;
     std::atomic<int> iters = 0;
+
+    std::vector<double> airfoil_x;
+    VectorMutex<double> airfoil_cp;
+
     Settings settings;
 
     std::vector<mesh> ms;

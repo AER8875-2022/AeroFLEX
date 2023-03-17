@@ -33,6 +33,8 @@ class multigrid {
     Settings &settings;
     std::vector<double> &residuals;
     std::atomic<int> &iters;
+    std::vector<double> &airfoil_x;
+    VectorMutex<double> &airfoil_cp;
 
     std::vector<solverType> solvers;
 
@@ -42,14 +44,29 @@ class multigrid {
 
     int run_solver(solverType& s);
 
-    multigrid(std::vector<mesh> ms, Settings &settings, GUIHandler &gui, std::vector<double> &residuals, std::atomic<int> &iters);
+    multigrid(
+        std::vector<mesh> ms,
+        Settings &settings,
+        GUIHandler &gui,
+        std::vector<double> &residuals,
+        std::atomic<int> &iters,
+        std::vector<double> &airfoil_x,
+        VectorMutex<double> &airfoil_cp
+    );
 
     solverType& run(const bool reinit=true);
 };
 
 template<class solverType>
-multigrid<solverType>::multigrid(std::vector<mesh> ms, Settings &settings, GUIHandler &gui, std::vector<double> &residuals, std::atomic<int> &iters)
-: gui(gui), settings(settings), residuals(residuals), iters(iters)
+multigrid<solverType>::multigrid(
+    std::vector<mesh> ms,
+    Settings &settings,
+    GUIHandler &gui,
+    std::vector<double> &residuals,
+    std::atomic<int> &iters,
+    std::vector<double> &airfoil_x,
+    VectorMutex<double> &airfoil_cp
+): gui(gui), settings(settings), residuals(residuals), iters(iters), airfoil_x(airfoil_x), airfoil_cp(airfoil_cp)
 {
 
     solvers.reserve(ms.size());
