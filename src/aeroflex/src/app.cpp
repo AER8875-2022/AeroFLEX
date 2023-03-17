@@ -30,6 +30,18 @@ const std::string bool_to_string(const bool b) {
     return b ? "true" : "false";
 }
 
+static void HelpMarker(const char* desc)
+{
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {	
+		ImGui::BeginTooltip();
+        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+        ImGui::TextUnformatted(desc);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
+}
+
 struct Settings {
 	rans::Settings rans;
 	vlm::Settings vlm;
@@ -68,6 +80,12 @@ struct RansLayer : public FlexGUI::Layer {
 	RansLayer(Aero &aero) : aero(aero) {};
 };
 
+struct VlmLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	Aero &aero;
+	VlmLayer(Aero &aero) : aero(aero) {};
+};
+
 struct ButtonLayer : public FlexGUI::Layer {
 	virtual void OnUIRender() override;
 	Aero &aero;
@@ -95,8 +113,6 @@ void solve(rans::Rans &rans, vlm::VLM &vlm) {
 	// for (auto& [airfoil, db] : vlm.database.airfoils) {
 	// 	rans.solve_airfoil(airfoil, db);
 	// }
-
-	// vlm.gui.msg.push(vlm.settings.io.locationFile);
 
 	vlm.input();
 	vlm.database.importLocations(vlm.settings.io.locationFile);
@@ -351,6 +367,43 @@ void RansLayer::OnUIRender() {
 	ImGui::End();
 }
 
+void VlmLayer::OnUIRender() {
+	ImGui::Begin("VLM");
+
+	ImGui::Separator();
+	ImGui::Text("Case Parameters");
+	ImGui::InputDouble("Sideslip", &aero.settings.vlm.sim.sideslip, 0.01f, 1.0f, "%.4f"); 
+	ImGui::SameLine(); HelpMarker("Geometric angle of side slip in degrees");
+	ImGui::InputDouble("V inf", &aero.settings.vlm.sim.sideslip, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Free stream magnitude velocity");
+	ImGui::InputDouble("rho", &aero.settings.vlm.sim.rho, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Density of the fluid");
+	ImGui::InputDouble("cref", &aero.settings.vlm.sim.cref, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Reference chord length");
+	ImGui::InputDouble("sref", &aero.settings.vlm.sim.sref, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Reference surface area");
+	ImGui::InputDouble("coreRadius", &aero.settings.vlm.sim.coreRadius, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Viscous relaxation value applied on the vortex filament kernel");
+	ImGui::InputDouble("X ref", &aero.settings.vlm.sim.x0, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("X component of origin to which the x and z moment are computed");
+	ImGui::InputDouble("Y ref", &aero.settings.vlm.sim.y0, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Y component of origin to which the x and z moment are computed");
+	ImGui::InputDouble("Z ref", &aero.settings.vlm.sim.z0, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Z component of origin to which the x and z moment are computed");
+	Combo(aero.settings.vlm.sim.databaseFormat_options, aero.settings.vlm.sim.databaseFormat, "Db Format");
+	
+	ImGui::Separator();
+	ImGui::Text("Solver");
+	Combo(aero.settings.vlm.solver.timeDomain_options, aero.settings.vlm.solver.timeDomain, "Time Domain");
+	Combo(aero.settings.vlm.solver.type_options, aero.settings.vlm.solver.type, "Type");
+	Combo(aero.settings.vlm.solver.linearSolver_options, aero.settings.vlm.solver.linearSolver, "Linear solver");
+	ImGui::InputDouble("Tolerance", &aero.settings.vlm.solver.tolerance, 0.01f, 1.0f, "%e");
+	ImGui::InputDouble("Relaxation", &aero.settings.vlm.solver.relaxation, 0.01f, 1.0f, "%.4f");
+	ImGui::InputInt("Max Iterations", &aero.settings.vlm.solver.max_iter);
+
+	ImGui::End();
+}
+
 void ButtonLayer::OnUIRender() {
 	{
 		static FlexGUI::FileDialog fd;
@@ -561,6 +614,7 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, Aero& aero)
 	app->PushLayer(std::make_shared<ButtonLayer>(aero));
 	app->PushLayer(std::make_shared<GraphLayer>(aero));
 	app->PushLayer(std::make_shared<RansLayer>(aero));
+	app->PushLayer(std::make_shared<VlmLayer>(aero));
 	app->PushLayer(std::make_shared<ConsoleLayer>(aero));
 
 	app->SetMenubarCallback([app]()
