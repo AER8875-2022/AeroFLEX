@@ -71,8 +71,8 @@ namespace aero{
                     auto nodeStruct1 = mapStruct[bestPoint[0]];
                     auto nodeStruct2 = mapStruct[bestPoint[1]];
 
-                    pos.node.push_back(mapStructni[bestPoint[0]);
-                    pos.node.push_back(mapStructni[bestPoint[1]);
+                    pos.node.push_back(bestPoint[0]);
+                    pos.node.push_back(bestPoint[1]);
 
                     double x1[3];
                     double x2[3];
@@ -96,7 +96,7 @@ namespace aero{
     }
 
     auto computeVLMDispalecement(interpolation pos,std::vector<surface::wingStation> wingStations,
-                                 std::vector<surface::wing> wings,std::vector<element::vortexRing> vortexRings,std::vector<Vector3d> nodes) {
+                                 std::vector<surface::wing> wings,std::vector<element::vortexRing> vortexRings,std::vector<Vector3d> nodes,map<int,Vector3d> mapStruct,map<int, int> mapStructni) {
         for (k = 0; k<wings.size(); ++k) {
             for (i = 0; i<wingStations.size(); ++i) {
 
@@ -106,8 +106,8 @@ namespace aero{
                 for (p=0; p<numPointsVort; ++p)
                 {
                     auto node = nodes[vring.get_nodeIDs()[p]];
-                    auto nodeStruct1 = nodes[pos.node[2*p]];
-                    auto nodeStruct2 = nodes[pos.node[2*p+1]];
+                    auto nodeStruct1 = mapStruct[pos.node[2*p]];
+                    auto nodeStruct2 = mapStruct[pos.node[2*p+1]];
                     auto weight1 = pos.weight[2*p];
                     auto weight2 = pos.weight[2*p+1];
 

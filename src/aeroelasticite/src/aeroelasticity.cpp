@@ -34,7 +34,7 @@ void Aero::solve() {
 
     vlm.solve();
 
-    Structure.solve(computeVLMForce(force));
+    structure.solve(computeVLMForce(force));
 
     object.updateGeometry(computeVLMDispalecement(pos,object.wingStations,object.wings,object.vortexRings,object.nodes ));
 }
