@@ -374,7 +374,7 @@ void VlmLayer::OnUIRender() {
 	ImGui::Text("Case Parameters");
 	ImGui::InputDouble("Sideslip", &aero.settings.vlm.sim.sideslip, 0.01f, 1.0f, "%.4f"); 
 	ImGui::SameLine(); HelpMarker("Geometric angle of side slip in degrees");
-	ImGui::InputDouble("V inf", &aero.settings.vlm.sim.sideslip, 0.01f, 1.0f, "%.4f");
+	ImGui::InputDouble("V inf", &aero.settings.vlm.sim.vinf, 0.01f, 1.0f, "%.4f");
 	ImGui::SameLine(); HelpMarker("Free stream magnitude velocity");
 	ImGui::InputDouble("rho", &aero.settings.vlm.sim.rho, 0.01f, 1.0f, "%.4f");
 	ImGui::SameLine(); HelpMarker("Density of the fluid");
