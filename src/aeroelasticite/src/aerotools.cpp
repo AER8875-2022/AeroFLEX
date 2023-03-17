@@ -14,6 +14,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include "vlm/vlm.hpp"
+#include <cmath>
 
 using namespace Eigen;
 using namespace vlm;
@@ -138,7 +139,7 @@ namespace aero{
         
         int n=wings.size(); // nombre de wingstations=size (wings)
         int m=wingStations.size(); // nombre de vortexRings sur une wingstation
-        int i=0 // numéro du premier vortexring d une wingstation
+        int i=0; // numéro du premier vortexring d une wingstation
         
         for (int j=0; j<n; ++j)
         {
