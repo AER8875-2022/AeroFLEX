@@ -29,9 +29,6 @@ namespace solver {
 class base {
 
 protected:
-  /** @brief Solver parameters */
-  input::solverParam solvP;
-
   /** @brief Left hand side of the linear system */
   MatrixXd lhs;
 
@@ -45,7 +42,7 @@ public:
   /** @brief Method to initialize the solver object
    *  @param solvP Struct holding the solver parameters
    *  @param object Model holding the VLM elements */
-  virtual void initialize(const input::solverParam &solvP, const model &object,
+  virtual void initialize(const model &object,
                           const database::table &) = 0;
 
   /** @brief Main method to solve non linear VLM
@@ -85,6 +82,9 @@ namespace linear {
 class steady : public base {
 
 public:
+  /** @brief Solver parameters */
+  input::solverParam &solvP;
+
   /** @brief Iteration counter */
   std::atomic<int> &iter;
 
@@ -97,13 +97,13 @@ public:
 public:
   /** @param iter Iteration counter
    *  @param residuals Iteration residuals vector */
-  steady(std::atomic<int> &iter, std::vector<double> &residuals,
+  steady(input::solverParam &solvP, std::atomic<int> &iter, std::vector<double> &residuals,
          GUIHandler &gui);
 
   /** @brief Method to initialize the solver object
    *  @param solvP Struct holding the solver parameters
    *  @param object Model holding the VLM elements */
-  virtual void initialize(const input::solverParam &solvP, const model &object,
+  virtual void initialize(const model &object,
                           const database::table &) override;
 
   /** @brief Main method to solve non linear VLM
@@ -154,13 +154,13 @@ class steady : public linear::steady {
 public:
   /** @param iter Iteration counter
    *  @param residuals Iteration residuals vector */
-  steady(std::atomic<int> &iter, std::vector<double> &residuals,
+  steady(input::solverParam &solvp, std::atomic<int> &iter, std::vector<double> &residuals,
          GUIHandler &gui);
 
   /** @brief Method to initialize the solver object
    *  @param solvP Struct holding the solver parameters
    *  @param object Model holding the VLM elements */
-  virtual void initialize(const input::solverParam &solvP, const model &object,
+  virtual void initialize(const model &object,
                           const database::table &database) override;
 
   /** @brief Main method to solve non linear VLM

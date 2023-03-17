@@ -7,11 +7,10 @@
 using namespace vlm;
 using namespace Eigen;
 
-void model::initialize(const input::meshData &mesh, const input::simParam &sim,
-                       const input::ioParam &io) {
+void model::initialize(const input::meshData &mesh, const Settings &settings) {
   // Initializing inputs
-  this->sim = sim;
-  this->io = io;
+  this->sim = settings.sim;
+  this->io = settings.io;
   // Allocating memory for each objects
   nodes.reserve(mesh.nodes.size());
   vortexRings.reserve(mesh.vortexIDs.size());
@@ -58,7 +57,7 @@ void model::resetWake() {
 
 void model::clear() {
   for (auto &vortex : vortexRings) {
-    vortex.updateGamma(0.0);
+    vortex.updateGamma(1.0);
   }
   // TODO: Update Doublet solution
   for (auto &wingStation : wingStations) {
@@ -98,14 +97,3 @@ double model::get_cl() const { return cl; }
 double model::get_cd() const { return cd; }
 
 Vector3d model::get_cm() const { return cm; }
-
-Matrix<double, 6, 1>
-model::forces_to_inertial_frame(const int stationID) const {
-  auto &station = wingStations[stationID];
-  Vector3d lift = station.get_cl() * sim.liftAxis();
-  Vector3d drag = station.get_cd() * sim.streamAxis();
-  Vector3d force = (lift + drag) * sim.dynamicPressure() * station.get_area();
-  Vector3d moment = station.get_cm() * sim.dynamicPressure() *
-                    station.get_area() * station.get_chord();
-  return {force(0), force(1), force(2), moment(0), moment(1), moment(2)};
-}

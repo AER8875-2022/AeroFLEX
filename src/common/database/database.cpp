@@ -36,13 +36,14 @@ double database::airfoil::interpolate_cl(const double alpha) {
 
 // ---------------------------------
 
-void database::table::importFromFile(const std::string &path,
-                                     const vlm::input::solverParam &solvP) {
+void database::table::importAirfoils(const std::string &path) {
 
-  std::ifstream file(path);
-  if (!file.is_open()) {
-    std::cerr << "\n\033[1;31m ->VLM ERROR: database file \"" << path
-              << "\" not found! \033[0m" << std::endl;
+  std::ifstream database_file(path);
+
+  if (!database_file.is_open()) {
+    std::cerr << "\n\033[1;31m ->VLM ERROR: Error in database file import \033[0m"
+              << std::endl;
+    return;
   }
 
   // Declaring output
@@ -51,22 +52,16 @@ void database::table::importFromFile(const std::string &path,
 
   // Flags
   bool isAirfoil = false;
-  bool isLocation = false;
   std::string airfoilName;
 
-  int surfaceID;
-
-  // coefficients & locations
+  // coefficients
   std::vector<double> alpha;
   std::vector<double> cl;
   std::vector<double> cd;
   std::vector<double> cmy;
 
-  std::vector<std::string> sections;
-  std::vector<double> spanLocs;
-
   std::string fileLine;
-  while (std::getline(file, fileLine)) {
+  while (std::getline(database_file, fileLine)) {
 
     // Ignoring empty lines
     if (!fileLine.size()) {
@@ -112,6 +107,55 @@ void database::table::importFromFile(const std::string &path,
       airfoilName = line[1];
       continue;
     }
+  }
+
+  database_file.close();
+}
+
+void database::table::importLocations(const std::string &path) {
+
+  std::ifstream location_file(path);
+
+  if (!location_file.is_open()) {
+    std::cerr << "\n\033[1;31m ->VLM ERROR: Error in database file\033[0m"
+              << std::endl;
+    return;
+  }
+
+  // Declaring output
+  std::vector<std::string> line;
+  const char delimiter = ' ';
+
+  // Flags
+  bool isLocation = false;
+  int surfaceID;
+
+  // locations
+  std::vector<std::string> sections;
+  std::vector<double> spanLocs;
+
+  std::string fileLine;
+  while (std::getline(location_file, fileLine)) {
+
+    // Ignoring empty lines
+    if (!fileLine.size()) {
+      continue;
+    }
+
+    line.clear();
+
+    std::stringstream lineStream(fileLine);
+    std::string word;
+
+    // Splitting into an array
+    while (std::getline(lineStream, word, delimiter)) {
+      line.push_back(word);
+    }
+
+    // Ignoring comments
+    if (!line[0].compare("#")) {
+      continue;
+    }
 
     // Location declaration
     if (!line[0].compare("END") && !line[1].compare("SURFACE")) {
@@ -135,7 +179,7 @@ void database::table::importFromFile(const std::string &path,
     }
   }
 
-  file.close();
+  location_file.close();
 }
 
 std::tuple<double, double, double>

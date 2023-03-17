@@ -1,11 +1,25 @@
 
 #include "vlm/input.hpp"
-#include "ini/ini.h"
+#include <fstream>
+#include <iostream>
 #include <cmath>
+#include <vector>
+#include <exception>
 
 using namespace vlm;
 using namespace input;
 using namespace Eigen;
+
+void simParam::set_databaseFormat(const std::string &item) {
+  if (!item.compare("NONE")) {
+    databaseFormat = 0;
+  }
+  else if (!item.compare("FILE")) {
+    databaseFormat = 1;
+  }
+}
+
+std::string simParam::get_databaseFormat() const { return databaseFormat_options.at(databaseFormat); }
 
 Vector3d simParam::freeStream() const {
   return Vector3d(
@@ -38,90 +52,50 @@ Vector3d simParam::liftAxis(const double alpha) const {
 
 double simParam::dynamicPressure() const { return (0.5 * rho * vinf * vinf); }
 
+Vector3d simParam::origin() const { return Vector3d(x0,y0,z0); }
+
 // -------------------------------------
 
-std::tuple<ioParam, simParam, solverParam>
-input::importConfigFile(const std::string path) {
-  // Looking for config file
-  inih::INIReader file = inih::INIReader(path);
-
-  // [SIMULATION]
-  simParam sim;
-  sim.aoa = file.Get<double>("SIMULATION", "AOA", 5.0);
-  sim.sideslip = file.Get<double>("SIMULATION", "SIDESLIP", 0.0);
-  sim.vinf = file.Get<double>("SIMULATION", "V_INF", 1.0);
-  sim.rho = file.Get<double>("SIMULATION", "DENSITY", 1.0);
-  sim.cref = file.Get<double>("SIMULATION", "C_REF", 1.0);
-  sim.sref = file.Get<double>("SIMULATION", "S_REF", 1.0);
-  auto xref = file.Get<double>("SIMULATION", "X_REF", 0.0);
-  auto yref = file.Get<double>("SIMULATION", "Y_REF", 0.0);
-  auto zref = file.Get<double>("SIMULATION", "Z_REF", 0.0);
-  sim.origin = {xref, yref, zref};
-  sim.coreRadius = file.Get<double>("SIMULATION", "LAMB-OSEEN_RADIUS", 0.0);
-  sim.databaseFormat = file.Get<std::string>("SIMULATION", "DATABASE_FORMAT",
-                                             std::string("NONE"));
-
-  // [IO]
-  ioParam io;
-  io.baseName = file.Get<std::string>("IO", "BASENAME", std::string("vlm"));
-  io.outDir = file.Get<std::string>("IO", "OUTPUT_DIR", std::string("vlm_out"));
-  io.meshFile =
-      file.Get<std::string>("IO", "MESH_FILE", std::string("mesh.dat"));
-  io.databaseFile =
-      file.Get<std::string>("IO", "DATABASE_FILE", std::string("database.dat"));
-
-  // [SOLVER]
-  solverParam solvP;
-  solvP.timeDomain =
-      file.Get<std::string>("SOLVER", "TIME_DOMAIN", std::string("STEADY"));
-  solvP.type = file.Get<std::string>("SOLVER", "TYPE", std::string("LINEAR"));
-  solvP.tolerance = file.Get<double>("SOLVER", "TOLERANCE", 1e-15);
-  solvP.interpolation = file.Get<std::string>("SOLVER", "INTERPOLATION_TYPE",
-                                              std::string("LAGRANGE"));
-  solvP.linearSolver =
-      file.Get<std::string>("SOLVER", "LINEAR_SOLVER", std::string("BICGSTAB"));
-  solvP.relaxation = file.Get<double>("SOLVER", "RELAXATION", 1.0);
-  solvP.max_iter = file.Get<int>("SOLVER", "MAX_ITER", 100);
-
-  return {io, sim, solvP};
-}
-
-void input::meshCheck(const meshData &mesh) {
-  if (!mesh.nodes.empty() && mesh.nodes.find(0) == mesh.nodes.end()) {
-    std::cerr << "\n\033[1;31m ->VLM ERROR: NODE IDs must start at 0 \033[0m"
-              << std::endl;
-    exit(1);
+void solverParam::set_timeDomain(const std::string &item) {
+  if (!item.compare("STEADY")) {
+    timeDomain = 0;
   }
-  if (!mesh.vortexIDs.empty() &&
-      mesh.vortexIDs.find(0) == mesh.vortexIDs.end()) {
-    std::cerr << "\n\033[1;31m ->VLM ERROR: VORTEX IDs must start at 0 \033[0m"
-              << std::endl;
-    exit(1);
-  }
-  if (!mesh.doubletIDs.empty() &&
-      mesh.doubletIDs.find(0) == mesh.doubletIDs.end()) {
-    std::cerr << "\n\033[1;31m ->VLM ERROR: DOUBLET IDs must start at 0 \033[0m"
-              << std::endl;
-    exit(1);
-  }
-  if (!mesh.stationIDs.empty() &&
-      mesh.stationIDs.find(0) == mesh.stationIDs.end()) {
-    std::cerr
-        << "\n\033[1;31m ->VLM ERROR: WINGSTATION IDs must start at 0 \033[0m"
-        << std::endl;
-    exit(1);
-  }
-  if (!mesh.wingIDs.empty() && mesh.wingIDs.find(0) == mesh.wingIDs.end()) {
-    std::cerr << "\n\033[1;31m ->VLM ERROR: WING IDs must start at 0 \033[0m"
-              << std::endl;
-    exit(1);
-  }
-  if (!mesh.patchIDs.empty() && mesh.patchIDs.find(0) == mesh.patchIDs.end()) {
-    std::cerr << "\n\033[1;31m ->VLM ERROR: WING IDs must start at 0 \033[0m"
-              << std::endl;
-    exit(1);
+  else if (!item.compare("UNSTEADY")) {
+    timeDomain = 1;
   }
 }
+
+std::string solverParam::get_timeDomain() const {
+  return timeDomain_options.at(timeDomain);
+}
+
+void solverParam::set_type(const std::string &item) {
+  if (!item.compare("LINEAR")) {
+    type = 0;
+  }
+  else if (!item.compare("NONLINEAR")) {
+    type = 1;
+  }
+}
+
+std::string solverParam::get_type() const {
+  return type_options.at(type);
+}
+
+void solverParam::set_linearSolver(const std::string &item) {
+  if (!item.compare("BICGSTAB")) {
+    linearSolver = 0;
+  }
+  else if (!item.compare("DIRECT")) {
+    linearSolver = 1;
+  }
+}
+
+std::string solverParam::get_linearSolver() const {
+  return linearSolver_options.at(linearSolver);
+}
+
+// -------------------------------------
 
 meshData input::importMeshFile(const ioParam &names) {
   // Opening file and verifying if already exists
@@ -129,7 +103,6 @@ meshData input::importMeshFile(const ioParam &names) {
   if (!file.is_open()) {
     std::cerr << "\n\033[1;31m ->VLM ERROR: mesh file \"" << names.meshFile
               << "\" not found! \033[0m" << std::endl;
-    exit(1);
   }
 
   // Mesh object
@@ -220,6 +193,82 @@ meshData input::importMeshFile(const ioParam &names) {
   }
   file.close();
   // Looking for errors in mesh file extract
-  meshCheck(mesh);
   return (mesh);
+}
+
+// ---------------------------
+
+void Settings::import_config_file(tiny::config &config) {
+
+  // [vlm-simulation]
+  sim.aoa = config.get<double>("vlm-simulation", "aoa", 5.0);
+  sim.sideslip = config.get<double>("vlm-simulation", "sideslip", 0.0);
+  sim.vinf = config.get<double>("vlm-simulation", "v_inf", 1.0);
+  sim.rho = config.get<double>("vlm-simulation", "density", 1.0);
+  sim.cref = config.get<double>("vlm-simulation", "c_ref", 1.0);
+  sim.sref = config.get<double>("vlm-simulation", "s_ref", 1.0);
+  sim.x0 = config.get<double>("vlm-simulation", "x_ref", 0.0);
+  sim.y0 = config.get<double>("vlm-simulation", "y_ref", 0.0);
+  sim.z0 = config.get<double>("vlm-simulation", "z_ref", 0.0);
+  sim.coreRadius = config.get<double>("vlm-simulation", "lamb-oseen_radius", 0.0);
+  sim.set_databaseFormat(config.get<std::string>("vlm-simulation", "database_format"));
+
+  // [vlm-io]
+  io.baseName = config.get<std::string>("vlm-io", "basename");
+  io.outDir = config.get<std::string>("vlm-io", "output_dir");
+  io.meshFile =
+      config.get<std::string>("vlm-io", "mesh_file");
+  io.databaseFile =
+      config.get<std::string>("vlm-io", "database_file");
+  io.locationFile =
+      config.get<std::string>("vlm-io", "location_file");
+
+  // [vlm-solver]
+  solver.set_timeDomain(
+      config.get<std::string>("vlm-solver", "time_domain"));
+  solver.set_type(config.get<std::string>("vlm-solver", "type"));
+  solver.tolerance = config.get<double>("vlm-solver", "tolerance", 1e-15);
+  solver.set_linearSolver(
+      config.get<std::string>("vlm-solver", "linear_solver"));
+  solver.relaxation = config.get<double>("vlm-solver", "relaxation", 1.0);
+  solver.max_iter = config.get<int>("vlm-solver", "max_iter", 100);
+
+}
+
+void Settings::export_config_file(tiny::config &config) {
+
+  // Appending sections to config file
+  config.sections.push_back("vlm-simulation");
+  config.sections.push_back("vlm-io");
+  config.sections.push_back("vlm-solver");
+
+  // Adding to config map
+  // [vlm-simulation]
+  config.config["vlm-simulation"]["aoa"] = std::to_string(sim.aoa);
+  config.config["vlm-simulation"]["sideslip"] = std::to_string(sim.sideslip);
+  config.config["vlm-simulation"]["v_inf"] = std::to_string(sim.vinf);
+  config.config["vlm-simulation"]["density"] = std::to_string(sim.rho);
+  config.config["vlm-simulation"]["c_ref"] = std::to_string(sim.cref);
+  config.config["vlm-simulation"]["s_ref"] = std::to_string(sim.sref);
+  config.config["vlm-simulation"]["x_ref"] = std::to_string(sim.x0);
+  config.config["vlm-simulation"]["y_ref"] = std::to_string(sim.y0);
+  config.config["vlm-simulation"]["z_ref"] = std::to_string(sim.z0);
+  config.config["vlm-simulation"]["lamb-oseen_radius"] = std::to_string(sim.coreRadius);
+  config.config["vlm-simulation"]["database_format"] = sim.get_databaseFormat();
+
+  // [vlm-io]
+  config.config["vlm-io"]["basename"] = io.baseName;
+  config.config["vlm-io"]["output_dir"] = io.outDir;
+  config.config["vlm-io"]["database_file"] = io.databaseFile;
+  config.config["vlm-io"]["location_file"] = io.locationFile;
+  config.config["vlm-io"]["mesh_file"] = io.meshFile;
+
+  // [vlm-solver]
+  config.config["vlm-solver"]["time_domain"] = solver.get_timeDomain();
+  config.config["vlm-solver"]["type"] = solver.get_type();
+  config.config["vlm-solver"]["tolerance"] = std::to_string(solver.tolerance);
+  config.config["vlm-solver"]["linear_solver"] = solver.get_linearSolver();
+  config.config["vlm-solver"]["relaxation"] = std::to_string(solver.relaxation);
+  config.config["vlm-solver"]["max_iter"] = std::to_string(solver.max_iter);
+
 }
