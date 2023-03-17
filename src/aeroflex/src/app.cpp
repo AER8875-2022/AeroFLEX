@@ -107,14 +107,22 @@ struct ConsoleLayer : public FlexGUI::Layer {
 // SOLVE =================================================================================================
 
 void solve(rans::Rans &rans, vlm::VLM &vlm) {
-	// vlm.database.airfoils["naca0012_coarse"];
-	// vlm.database.airfoils["naca0012_coarse"].alpha = {0.0, 2.5, 5.0};
 
-	// for (auto& [airfoil, db] : vlm.database.airfoils) {
-	// 	rans.solve_airfoil(airfoil, db);
-	// }
+	database::table table;
+	table.airfoils["naca0012_coarse"];
+	table.airfoils["naca0012_coarse"].alpha = {0.0, 2.5, 5.0};
+
+	// Dummy database for debugging
+	// table.airfoils["naca0012_coarse"].cl = {0.0, 0.1, 0.2};
+	// table.airfoils["naca0012_coarse"].cd = {0.0, 0.0, 0.0};
+	// table.airfoils["naca0012_coarse"].cmy = {0.0, 0.0, 0.0};
+
+	for (auto& [airfoil, db] : table.airfoils) {
+		rans.solve_airfoil(airfoil, db);
+	}
 
 	vlm.input();
+	vlm.database = table;
 	vlm.database.importLocations(vlm.settings.io.locationFile);
 	vlm.solve();
 

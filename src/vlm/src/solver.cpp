@@ -13,13 +13,12 @@ using namespace vlm;
 using namespace solver;
 using namespace Eigen;
 
-linear::steady::steady(std::atomic<int> &iter, std::vector<double> &residuals,
+linear::steady::steady(input::solverParam &solvP, std::atomic<int> &iter, std::vector<double> &residuals,
                        GUIHandler &gui)
-    : iter(iter), residuals(residuals), gui(gui) {}
+    : solvP(solvP), iter(iter), residuals(residuals), gui(gui) {}
 
-void linear::steady::initialize(const input::solverParam &solvP,
+void linear::steady::initialize(
                                 const model &object, const database::table &) {
-  this->solvP = solvP;
   this->lhs =
       MatrixXd::Zero(object.vortexRings.size() + object.doubletPanels.size(),
                      object.vortexRings.size() + object.doubletPanels.size());
@@ -278,14 +277,13 @@ void linear::steady::buildRHS(const model &object) {
 
 // -------------------------------------------
 
-nonlinear::steady::steady(std::atomic<int> &iter,
+nonlinear::steady::steady(input::solverParam &solvP, std::atomic<int> &iter,
                           std::vector<double> &residuals, GUIHandler &gui)
-    : linear::steady(iter, residuals, gui) {}
+    : linear::steady(solvP, iter, residuals, gui) {}
 
-void nonlinear::steady::initialize(const input::solverParam &solvP,
+void nonlinear::steady::initialize(
                                    const model &object,
                                    const database::table &database) {
-  this->solvP = solvP;
   this->lhs =
       MatrixXd::Zero(object.vortexRings.size() + object.doubletPanels.size(),
                      object.vortexRings.size() + object.doubletPanels.size());
@@ -339,20 +337,27 @@ void nonlinear::steady::solve(model &object) {
 
   // Initializing iteration
   double residual;
-
+  gui.msg.push("1");
   // Main solving loop
   do {
+    gui.msg.push("2");
     while (gui.signal.pause)
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    gui.msg.push("3");
     // Step 1 : Solving VLM
     buildRHS(object);
+    gui.msg.push("4");
     VectorXd gamma = system.solve(rhs);
+    gui.msg.push("5");
     // Saving solution to model for further uses
     saveSolution(object, gamma);
+    gui.msg.push("6");
     // Computing 3D lift coefficient
     iterateLift(object);
+    gui.msg.push("7");
     // Step 2: One iteration of aoa correction
     residual = iterate(object);
+    gui.msg.push("8");
 
     // gui.msg.push("Iteration " + std::to_string(iter));
     // gui.msg.push("\t Residual = " + std::to_string(residual));
@@ -376,7 +381,7 @@ double nonlinear::steady::iterate(model &object) {
   double residual = 0.0;
 
   for (int wingID = 0; wingID < object.wings.size(); wingID++) {
-    auto &wing = object.wings[wingID];
+    auto &wing = object.wings.at(wingID);
 
 #pragma omp parallel for reduction(+ : residual)
     for (int i = 0; i < wing.get_stationIDs().size(); i++) {

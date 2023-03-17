@@ -75,14 +75,14 @@ int main(int argc, char **argv) {
   GUIHandler gui; // Empty GUI Handler
 
   vlm::solver::base *solver;
-  vlm::solver::linear::steady linear(iters, residuals, gui);
-  vlm::solver::nonlinear::steady nonlinear(iters, residuals, gui);
+  vlm::solver::linear::steady linear(settings.solver, iters, residuals, gui);
+  vlm::solver::nonlinear::steady nonlinear(settings.solver, iters, residuals, gui);
 
   if (!settings.solver.get_type().compare("LINEAR")) {
-    linear.initialize(settings.solver, object, database::table());
+    linear.initialize(object, database::table());
     solver = &linear;
   } else if (!settings.solver.get_type().compare("NONLINEAR")) {
-    nonlinear.initialize(settings.solver, object, database);
+    nonlinear.initialize(object, database);
     solver = &nonlinear;
   } else {
     std::cerr << "\033[1;31m==>ERROR: Unknown VLM solver \033[0m" << std::endl;
