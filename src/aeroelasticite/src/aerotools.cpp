@@ -161,9 +161,9 @@ namespace aero{
         for (auto s : mapStructni) 
         {
              auto nodeStruct = mapStruct[s.first];
-             force.point_fs[s][0]=nodeStruct[0];
-             force.point_fs[s][1]=nodeStruct[1];
-             force.point_fs[s][2]=nodeStruct[2];
+             force.point_fs[3*s]=nodeStruct[0];
+             force.point_fs[3*s+1]=nodeStruct[1];
+             force.point_fs[3*s+2]=nodeStruct[2];
         }
         
         
@@ -174,23 +174,23 @@ namespace aero{
         vector <double> v(3);
         
         vector <double> u(3); // vecteur directeur de la poutre
-        u[0]= force.point_fs[1][0] - force.point_fs[0][0];
-        u[1]= force.point_fs[1][1] - force.point_fs[0][1];
-        u[2]= force.point_fs[1][2] - force.point_fs[0][2];
+        u[0]= force.point_fs[0] - force.point_fs[3];
+        u[1]= force.point_fs[1] - force.point_fs[4];
+        u[2]= force.point_fs[2] - force.point_fs[5];
         
         for (int i=0; i<n; ++i){
             point_fp.push.back(vector<double> (3));
             double t;
-            t= (u[0](force.point_fa[i][0]-force.point_fs[0][0]) + u[1](force.point_fa[i][1]-force.point_fs[0][1]) + 
-                   u[2](force.point_fa[i][2]-force.point_fs[0][2]))/pow(norme(u),2);
+            t= (u[0](force.point_fa[3*i]-force.point_fs[0]) + u[1](force.point_fa[3*i+1]-force.point_fs[1]) + 
+                   u[2](force.point_fa[3*i+2]-force.point_fs[2]))/pow(norme(u),2);
             
-            point_fp[i][0]=force.point_fs[0][0] + t*u[0];
-            point_fp[i][1]=force.point_fs[0][1] + t*u[1];
-            point_fp[i][2]=force.point_fs[0][2] + t*u[2];
+            point_fp[i][0]=force.point_fs[0] + t*u[0];
+            point_fp[i][1]=force.point_fs[1] + t*u[1];
+            point_fp[i][2]=force.point_fs[2] + t*u[2];
             
-            v[0]= force.point_fa[i][0] - point_fp[i][0];
-            v[1]= force.point_fa[i][1] - point_fp[i][1];
-            v[2]= force.point_fa[i][2] - point_fp[i][2];
+            v[0]= force.point_fa[3*i]   -   point_fp[i][0];
+            v[1]= force.point_fa[3*i+1] -   point_fp[i][1];
+            v[2]= force.point_fa[3*i+2] -   point_fp[i][2];
             dist[i]=norme(v);
             
         }
@@ -210,34 +210,34 @@ namespace aero{
             
             
             for (int j=0; j<map.size(); ++j){
-                v[0]= force.point_fs[j][0] - point_fs[j+1][0];
-                v[1]= force.point_fs[j][1] - point_fp[j+1][1];
-                v[2]= force.point_fs[j][2] - point_fp[j+1][2];
+                v[0]= force.point_fs[3*j] - point_fs[3*(j+1)];
+                v[1]= force.point_fs[3*j+1] - point_fp[3*(j+1)+1];
+                v[2]= force.point_fs[3*j+2] - point_fp[3*(j+1)+2];
                 dist_0=norme(v);
                 
-                v[0]= force.point_fs[j][0] - point_fp[i][0];
-                v[1]= force.point_fs[j][1] - point_fp[i][1];
-                v[2]= force.point_fs[j][2] - point_fp[i][2];
+                v[0]= force.point_fs[3*j]   - point_fp[i][0];
+                v[1]= force.point_fs[3*j+1] - point_fp[i][1];
+                v[2]= force.point_fs[3*j+2] - point_fp[i][2];
                 dist_1=norme(v);
                 
-                v[0]= force.point_fs[j+1][0] - point_fp[i][0];
-                v[1]= force.point_fs[j+1][1] - point_fp[i][1];
-                v[2]= force.point_fs[j+1][2] - point_fp[i][2];
+                v[0]= force.point_fs[3*(j+1)]   - point_fp[i][0];
+                v[1]= force.point_fs[3*(j+1)+1] - point_fp[i][1];
+                v[2]= force.point_fs[3*(j+1)+2] - point_fp[i][2];
                 dist_2=norme(v);
                 
                 if (dist_1<=dist_0 && j != map.size()-1)
                 {
                     epsilon_l= dist_2/dist_0;
                     epsilon_r= dist_1/dist_0;
-                    force.poids[i][0]=j;
-                    force.poids[i][1]=epsilon_l;
-                    force.poids[i][2]=epsilon_r;
+                    force.poids[3*i]=j;
+                    force.poids[3*i+1]=epsilon_l;
+                    force.poids[3*i+2]=epsilon_r;
                     
                 }
                 else if (j==map.size()-1){
-                    force.poids[i][0]=j;
-                    force.poids[i][1]=1;
-                    force.poids[i][2]=0;
+                    force.poids[3*i]=j;
+                    force.poids[3*i+1]=1;
+                    force.poids[3*i+2]=0;
                     
                 }
             }
@@ -259,41 +259,41 @@ namespace aero{
         {
 
             auto forces = object.forces_to_inertial_frame(i);
-            j=force.poids[i][0];
+            j=force.poids[3*i];
             if (j!=m-1)
             {
             
-                forces_s[6*j]   += force.poids[i][1] * forces[i][0];
-                forces_s[6*j+1] += force.poids[i][1] * forces[i][1];
-                forces_s[6*j+2] += force.poids[i][1] * forces[i][2];
+                forces_s[6*j]   += force.poids[3*i+1] * forces[i][0];
+                forces_s[6*j+1] += force.poids[3*i+1] * forces[i][1];
+                forces_s[6*j+2] += force.poids[3*i+1] * forces[i][2];
                 
-                forces_s[6*(j+1)]   += force.poids[i][2] * forces[i][0];
-                forces_s[6*(j+1)+1] += force.poids[i][2] * forces[i][1];
-                forces_s[6*(j+1)+2] += force.poids[i][2] * forces[i][2];
+                forces_s[6*(j+1)]   += force.poids[3*i+2] * forces[i][0];
+                forces_s[6*(j+1)+1] += force.poids[3*i+2] * forces[i][1];
+                forces_s[6*(j+1)+2] += force.poids[3*i+2] * forces[i][2];
                 
                 M[0]=forces[i][3];
                 M[1]=forces[i][4];
                 M[2]=forces[i][5];
                 
-                r[0]=force.point_fa[j][0] - force.point_fs[i][0];
-                r[1]=force.point_fa[j][1] - force.point_fs[i][1];
-                r[2]=force.point_fa[j][2] - force.point_fs[i][2];
+                r[0]=force.point_fa[3*i] -   force.point_fs[3*j];
+                r[1]=force.point_fa[3*i+1] - force.point_fs[3*j+1];
+                r[2]=force.point_fa[3*i+2] - force.point_fs[3*j+2];
                 
                 M_s=crossProduct (r,M);
                 
-                forces_s[6*j+3]   += force.poids[i][1] * (M_s[0] + forces[i][3]);
-                forces_s[6*j+4]   += force.poids[i][1] * (M_s[1] + forces[i][4]);
-                forces_s[6*j+5]   += force.poids[i][1] * (M_s[2] + forces[i][5]);
+                forces_s[6*j+3]   += force.poids[3*i+1] * (M_s[0] + forces[i][3]);
+                forces_s[6*j+4]   += force.poids[3*i+1] * (M_s[1] + forces[i][4]);
+                forces_s[6*j+5]   += force.poids[3*i+1] * (M_s[2] + forces[i][5]);
                 
-                r[0]=force.point_fa[i][0] - force.point_fs[j+1][0];
-                r[1]=force.point_fa[i][1] - force.point_fs[j+1][1];
-                r[2]=force.point_fa[i][2] - force.point_fs[j+1][2];
+                r[0]=force.point_fa[3*i] -   force.point_fs[3*(j+1)];
+                r[1]=force.point_fa[3*i+1] - force.point_fs[3*(j+1)+1];
+                r[2]=force.point_fa[3*i+2] - force.point_fs[3*(j+1)+2];
                 
                 M_s=crossProduct (r,M);
                 
-                forces_s[6*(j+1)+3]   += force.poids[i][1] * (M_s[0] + forces[i][3]);
-                forces_s[6*(j+1)+4]   += force.poids[i][1] * (M_s[1] + forces[i][4]);
-                forces_s[6*(j+1)+5]   += force.poids[i][1] * (M_s[2] + forces[i][5]);
+                forces_s[6*(j+1)+3]   += force.poids[3*i+2] * (M_s[0] + forces[i][3]);
+                forces_s[6*(j+1)+4]   += force.poids[3*i+2] * (M_s[1] + forces[i][4]);
+                forces_s[6*(j+1)+5]   += force.poids[3*i+2] * (M_s[2] + forces[i][5]);
             
             }
 
@@ -307,9 +307,9 @@ namespace aero{
                 M[1]=forces[i][4];
                 M[2]=forces[i][5];
                 
-                r[0]=force.point_fa[j][0] - force.point_fs[i][0];
-                r[1]=force.point_fa[j][1] - force.point_fs[i][1];
-                r[2]=force.point_fa[j][2] - force.point_fs[i][2];
+                r[0]=force.point_fa[3*i] -   force.point_fs[3*j];
+                r[1]=force.point_fa[3*i+1] - force.point_fs[3*j+1];
+                r[2]=force.point_fa[3*i+2] - force.point_fs[3*j+2];
                 
                 M_s=crossProduct (r,M);
                 
