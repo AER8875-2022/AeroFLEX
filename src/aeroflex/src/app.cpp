@@ -128,7 +128,7 @@ void solve(rans::Rans &rans, vlm::VLM &vlm) {
 		rans.solve_airfoil(airfoil, db);
 	}
 
-	vlm.input();
+	vlm.initialize();
 	vlm.database = table;
 	vlm.database.importLocations(vlm.settings.io.locationFile);
 	vlm.solve();

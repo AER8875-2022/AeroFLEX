@@ -8,7 +8,7 @@ using namespace vlm;
 
 VLM::VLM(GUIHandler &gui) : gui(gui) {};
 
-void VLM::input() {
+void VLM::initialize() {
   if (!is_initialized) {
     auto mesh = vlm::input::importMeshFile(settings.io);
     object.initialize(mesh, settings);
