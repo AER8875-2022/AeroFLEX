@@ -552,13 +552,16 @@ inline Eigen::MatrixXd calc_convective_jacobian(
             const double update = std::max(1e-6, abs(q_L(i))*1e-6);
 
             q_L(i) += update;
+            /*
             gx(i) += update * 0.5 * flux_function.nx * flux_function.l / flux_function.a0;
             gy(i) += update * 0.5 * flux_function.ny * flux_function.l / flux_function.a0;
+            /**/
             const Eigen::VectorXd fp = flux_function(q_L, q_R, gx, gy, nu_L, nu_R);
             q_L(i) -= update;
+            /*
             gx(i) -= update * 0.5 * flux_function.nx * flux_function.l / flux_function.a0;
             gy(i) -= update * 0.5 * flux_function.ny * flux_function.l / flux_function.a0;
-
+            /**/
             J.block(0, i, 4, 1) = (fp  - f)/update;
             J.block(4, i, 4, 1) = -J.block(0, i, 4, 1);
         }
@@ -568,12 +571,16 @@ inline Eigen::MatrixXd calc_convective_jacobian(
             const double update = std::max(1e-6, abs(q_R(i))*1e-6);
 
             q_R(i) += update;
+            /*
             gx(i) += update * 0.5 * flux_function.nx * flux_function.l / flux_function.a0;
             gy(i) += update * 0.5 * flux_function.ny * flux_function.l / flux_function.a0;
+            /**/
             const Eigen::VectorXd fp = flux_function(q_L, q_R, gx, gy, nu_L, nu_R);
             q_R(i) -= update;
+            /*
             gx(i) -= update * 0.5 * flux_function.nx * flux_function.l / flux_function.a0;
             gy(i) -= update * 0.5 * flux_function.ny * flux_function.l / flux_function.a0;
+            /**/
 
             J.block(0, i+4, 4, 1) = (fp  - f)/update;
             J.block(4, i+4, 4, 1) = -J.block(0, i+4, 4, 1);
