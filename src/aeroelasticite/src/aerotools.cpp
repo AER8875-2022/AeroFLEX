@@ -18,6 +18,7 @@
 using namespace Eigen;
 using namespace vlm;
 using namespace structure;
+using namespace std;
 
 
 namespace aero{
@@ -144,7 +145,7 @@ namespace aero{
             auto wingstation = wingStations[wings[0].get_wingStationsIDs()[j]];
             
             auto vortexring= vortexRings[wstation.get_vortexIDs()[i]];
-            force.point_fa.push.back(vortexRing[i].ForcesActingPoint(nodes, vortexRings));
+            force.point_fa.push_back(vortexRing[i].ForcesActingPoint(nodes, vortexRings));
             
             i= i + m;
         }
@@ -153,7 +154,9 @@ namespace aero{
 
         for (int k=0, k<map.size(), ++k)
         {
-            force.point_fs.push.back(vector<double>(3));
+            force.point_fs.push_back(0);
+            force.point_fs.push_back(0);
+            force.point_fs.push_back(0);
 
         }
 
@@ -169,7 +172,7 @@ namespace aero{
         
         
         // Projeter le point_fa sur la droite et calcul de la distance
-        vector <vector<double>> point_fp;
+        vector <double> point_fp;
         vector <double> dist(n);
         vector <double> v(3);
         
@@ -179,18 +182,18 @@ namespace aero{
         u[2]= force.point_fs[2] - force.point_fs[5];
         
         for (int i=0; i<n; ++i){
-            point_fp.push.back(vector<double> (3));
+            
             double t;
             t= (u[0](force.point_fa[3*i]-force.point_fs[0]) + u[1](force.point_fa[3*i+1]-force.point_fs[1]) + 
                    u[2](force.point_fa[3*i+2]-force.point_fs[2]))/pow(norme(u),2);
             
-            point_fp[i][0]=force.point_fs[0] + t*u[0];
-            point_fp[i][1]=force.point_fs[1] + t*u[1];
-            point_fp[i][2]=force.point_fs[2] + t*u[2];
+            point_fp.push_back(force.point_fs[0] + t*u[0]);
+            point_fp.push_back(force.point_fs[1] + t*u[1]);
+            point_fp.push_back(force.point_fs[2] + t*u[2]);
             
-            v[0]= force.point_fa[3*i]   -   point_fp[i][0];
-            v[1]= force.point_fa[3*i+1] -   point_fp[i][1];
-            v[2]= force.point_fa[3*i+2] -   point_fp[i][2];
+            v[0]= force.point_fa[3*i]   -   point_fp[3*i];
+            v[1]= force.point_fa[3*i+1] -   point_fp[3*i+1];
+            v[2]= force.point_fa[3*i+2] -   point_fp[3*i+2];
             dist[i]=norme(v);
             
         }
@@ -200,44 +203,45 @@ namespace aero{
         double dist_0;
         double dist_1;
         double dist_2;
+        double epsilon_l;
+        double epsilon_r;
         
     
         
         for (int i=0; i<n; ++i){
             ///auto forces = model.forces_to_inertial(i);
-            force.poids.pushback(vector<double>(3));
-            force.poids[i][0]=i;
+            
             
             
             for (int j=0; j<map.size(); ++j){
-                v[0]= force.point_fs[3*j] - point_fs[3*(j+1)];
-                v[1]= force.point_fs[3*j+1] - point_fp[3*(j+1)+1];
-                v[2]= force.point_fs[3*j+2] - point_fp[3*(j+1)+2];
+                v[0]= force.point_fs[3*j]   - point_fs[3*(j+1)];
+                v[1]= force.point_fs[3*j+1] - point_fs[3*(j+1)+1];
+                v[2]= force.point_fs[3*j+2] - point_fs[3*(j+1)+2];
                 dist_0=norme(v);
                 
-                v[0]= force.point_fs[3*j]   - point_fp[i][0];
-                v[1]= force.point_fs[3*j+1] - point_fp[i][1];
-                v[2]= force.point_fs[3*j+2] - point_fp[i][2];
+                v[0]= force.point_fs[3*j]   - point_fp[3*i];
+                v[1]= force.point_fs[3*j+1] - point_fp[3*i+1];
+                v[2]= force.point_fs[3*j+2] - point_fp[3*i+2];
                 dist_1=norme(v);
                 
-                v[0]= force.point_fs[3*(j+1)]   - point_fp[i][0];
-                v[1]= force.point_fs[3*(j+1)+1] - point_fp[i][1];
-                v[2]= force.point_fs[3*(j+1)+2] - point_fp[i][2];
+                v[0]= force.point_fs[3*(j+1)]   - point_fp[3*i+1];
+                v[1]= force.point_fs[3*(j+1)+1] - point_fp[3*i+2];
+                v[2]= force.point_fs[3*(j+1)+2] - point_fp[3*i+3];
                 dist_2=norme(v);
                 
                 if (dist_1<=dist_0 && j != map.size()-1)
                 {
                     epsilon_l= dist_2/dist_0;
                     epsilon_r= dist_1/dist_0;
-                    force.poids[3*i]=j;
-                    force.poids[3*i+1]=epsilon_l;
-                    force.poids[3*i+2]=epsilon_r;
+                    force.poids.push_back(j);
+                    force.poids.push_back(epsilon_l);
+                    force.poids.push_back(epsilon_r);
                     
                 }
                 else if (j==map.size()-1){
-                    force.poids[3*i]=j;
-                    force.poids[3*i+1]=1;
-                    force.poids[3*i+2]=0;
+                    force.poids.push_back(j);
+                    force.poids.push_back(1);
+                    force.poids.push_back(0);
                     
                 }
             }
@@ -248,8 +252,8 @@ namespace aero{
    auto ComputeStructureForces(interpolation_f force,Matrix<double, 6, 1> forces_to_inertial_frame)
 
    {
-        n=force.point_fa.size();
-        m=force.point_fs.size();
+        int n=force.point_fa.size()/3;
+        int m=force.point_fs.size()/3;
         
         vector <double> forces_s(6*m,0);
         vector <double> M(3);
