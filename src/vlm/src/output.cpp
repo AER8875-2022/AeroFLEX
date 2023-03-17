@@ -112,16 +112,16 @@ void output::exportSurfacesVTU(const model &object, const int it) {
     offsets.push_back(count);
   }
   for (auto &doublet : object.doubletPanels) {
-    if (doublet.get_nodeIDs().size() == 3) {
+    if (doublet.get_nodeIDs().size() == 4) {
       types.push_back(9);
       count += 4;
       offsets.push_back(count);
-    } else if (doublet.get_nodeIDs().size() == 4) {
+    } else if (doublet.get_nodeIDs().size() == 3) {
       types.push_back(5);
       count += 3;
       offsets.push_back(count);
     } else {
-      std::cerr << "\033[1;33m==>WARNING: Elements with more than 4 nodes are "
+      std::cerr << "\033[1;33m==>WARNING: Elements with more than 4 nodes are"
                    "not yet supported\033[0m"
                 << std::endl;
       return;
@@ -135,7 +135,7 @@ void output::exportSurfacesVTU(const model &object, const int it) {
     strengths.push_back(vortex.get_gamma());
   }
   for (auto &doublet : object.doubletPanels) {
-    strengths.push_back(doublet.get_sigma());
+    strengths.push_back(doublet.get_mu());
   }
   // AREA
   std::vector<double> areas;
@@ -153,7 +153,7 @@ void output::exportSurfacesVTU(const model &object, const int it) {
     cl.push_back(vortex.get_cl());
   }
   for (auto &doublet : object.doubletPanels) {
-    areas.push_back(0.0);
+    cl.push_back(0.0);
   }
   // CD
   std::vector<double> cd;
@@ -177,19 +177,29 @@ void output::exportSurfacesVTU(const model &object, const int it) {
     cm.push_back(0.0);
     cm.push_back(0.0);
   }
+  // CP
+  std::vector<double> cp;
+  cp.reserve(nPanels);
+  for (auto &vortex : object.vortexRings) {
+    cp.push_back(0.0);
+  }
+  for (auto &doublet : object.doubletPanels) {
+    cp.push_back(doublet.get_cp()); 
+  }
   // Creating data object
   std::vector<vtu11::DataSetInfo> dataSetInfo{
       {"strength", vtu11::DataSetType::CellData, 1},
       {"area", vtu11::DataSetType::CellData, 1},
       {"cl", vtu11::DataSetType::CellData, 1},
-      {"cd", vtu11::DataSetType::CellData, 1},
+      {"cd", vtu11::DataSetType::CellData, 1}, 
+      {"cp", vtu11::DataSetType::CellData, 1},
       {"cm", vtu11::DataSetType::CellData, 3}};
   // Creating mesh object
   vtu11::Vtu11UnstructuredMesh mesh{points, connectivity, offsets, types};
   // Writing file
   vtu11::writeVtu(
       io.outDir + io.baseName + "_surface_" + itStream.str() + ".vtu", mesh,
-      dataSetInfo, {strengths, areas, cl, cd, cm}, "RawBinary");
+      dataSetInfo, {strengths, areas, cl, cd, cp, cm}, "RawBinary");
 }
 
 void output::exportWakeVTU(const model &object, const int it) {
