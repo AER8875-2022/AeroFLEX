@@ -439,7 +439,7 @@ void CpLayer::OnUIRender() {
 	{
 		ImGui::Begin("Rans-Cp");
 		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
-		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
+		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit|ImPlotAxisFlags_Invert;
 		const double xticks = 1;
 
 		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,400))) {
