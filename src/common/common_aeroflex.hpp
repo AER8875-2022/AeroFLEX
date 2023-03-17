@@ -54,6 +54,11 @@ class VectorMutex {
 			m_vec.push_back(val);
 		}
 
+		int size() {
+			std::lock_guard<std::mutex> lock(m_mutex);
+			return m_vec.size();
+		}
+
 		void resize(int size) {
 			std::lock_guard<std::mutex> lock(m_mutex);
 			m_vec.resize(size);

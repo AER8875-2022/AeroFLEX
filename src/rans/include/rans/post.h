@@ -177,6 +177,7 @@ void save(
 }
 
 class CpProfile {
+    public:
     double x_moment;
     double y_moment;
 
