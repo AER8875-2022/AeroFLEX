@@ -11,6 +11,12 @@ struct GLFWwindow;
 
 namespace FlexGUI {
 
+	enum class Theme
+	{
+		Light,
+		Dark
+	};
+
 	struct ApplicationSpecification
 	{
 		std::string Name = "Example App";
@@ -39,6 +45,7 @@ namespace FlexGUI {
 		void PushLayer(const std::shared_ptr<Layer>& layer) { m_LayerStack.emplace_back(layer); layer->OnAttach(); }
 
 		void Close();
+		void SetTheme(FlexGUI::Theme theme);
 
 		float GetTime();
 		GLFWwindow* GetWindowHandle() const { return m_WindowHandle; }

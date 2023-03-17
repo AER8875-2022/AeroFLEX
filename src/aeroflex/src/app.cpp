@@ -686,6 +686,19 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, Aero& aero)
 			}
 			ImGui::EndMenu();
 		}
+		if (ImGui::BeginMenu("Options"))
+		{
+			if (ImGui::BeginMenu("Theme")) {
+				if (ImGui::MenuItem("Dark")) {
+					app->SetTheme(FlexGUI::Theme::Dark);
+				}
+				if (ImGui::MenuItem("Light")) {
+					app->SetTheme(FlexGUI::Theme::Light);
+				}
+				ImGui::EndMenu();
+			}
+			ImGui::EndMenu();
+		}
 	});
 	return app;
 }
