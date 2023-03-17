@@ -57,7 +57,7 @@ void model::resetWake() {
 
 void model::clear() {
   for (auto &vortex : vortexRings) {
-    vortex.updateGamma(0.0);
+    vortex.updateGamma(1.0);
   }
   // TODO: Update Doublet solution
   for (auto &wingStation : wingStations) {

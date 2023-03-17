@@ -123,7 +123,7 @@ Vector3d vortexRing::streamInfluence(const Vector3d &collocationPoint) const {
 
 void vortexRing::updateGeometry() {
   panel.updateGeometry();
-  // computeCollocationPoint();
+  computeCollocationPoint();
 }
 
 void vortexRing::updateGamma(const double gamma) {

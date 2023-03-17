@@ -200,8 +200,6 @@ meshData input::importMeshFile(const ioParam &names) {
 
 void Settings::import_config_file(tiny::config &config) {
 
-  try {
-
   // [vlm-simulation]
   sim.aoa = config.get<double>("vlm-simulation", "aoa", 5.0);
   sim.sideslip = config.get<double>("vlm-simulation", "sideslip", 0.0);
@@ -235,15 +233,9 @@ void Settings::import_config_file(tiny::config &config) {
   solver.relaxation = config.get<double>("vlm-solver", "relaxation", 1.0);
   solver.max_iter = config.get<int>("vlm-solver", "max_iter", 100);
 
-  } catch (std::exception &e) {
-    std::cout << e.what() << std::endl;
-  }
-
 }
 
 void Settings::export_config_file(tiny::config &config) {
-
-  try {
 
   // Appending sections to config file
   config.sections.push_back("vlm-simulation");
@@ -269,17 +261,14 @@ void Settings::export_config_file(tiny::config &config) {
   config.config["vlm-io"]["output_dir"] = io.outDir;
   config.config["vlm-io"]["database_file"] = io.databaseFile;
   config.config["vlm-io"]["location_file"] = io.locationFile;
+  config.config["vlm-io"]["mesh_file"] = io.meshFile;
 
   // [vlm-solver]
   config.config["vlm-solver"]["time_domain"] = solver.get_timeDomain();
   config.config["vlm-solver"]["type"] = solver.get_type();
-  config.config["vlm-solver"]["tolerance"] = solver.tolerance;
+  config.config["vlm-solver"]["tolerance"] = std::to_string(solver.tolerance);
   config.config["vlm-solver"]["linear_solver"] = solver.get_linearSolver();
-  config.config["vlm-solver"]["relaxation"] = solver.relaxation;
-  config.config["vlm-solver"]["max_iter"] = solver.max_iter;
-
-  } catch (std::exception &e) {
-    std::cout << e.what() << std::endl;
-  }
+  config.config["vlm-solver"]["relaxation"] = std::to_string(solver.relaxation);
+  config.config["vlm-solver"]["max_iter"] = std::to_string(solver.max_iter);
 
 }

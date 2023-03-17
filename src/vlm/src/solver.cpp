@@ -328,6 +328,8 @@ void nonlinear::steady::solve(model &object) {
   freeStream.normalize();
   object.initializeWake(100.0 * object.sim.cref);
 
+  if (gui.signal.stop) { return; }
+
   // Initializing linear solver
   BiCGSTAB<MatrixXd> system;
 
@@ -335,32 +337,23 @@ void nonlinear::steady::solve(model &object) {
   buildLHS(object);
   system.compute(lhs);
 
+  if (gui.signal.stop) { return; }
+
   // Initializing iteration
   double residual;
-  gui.msg.push("1");
   // Main solving loop
   do {
-    gui.msg.push("2");
     while (gui.signal.pause)
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    gui.msg.push("3");
     // Step 1 : Solving VLM
     buildRHS(object);
-    gui.msg.push("4");
     VectorXd gamma = system.solve(rhs);
-    gui.msg.push("5");
     // Saving solution to model for further uses
     saveSolution(object, gamma);
-    gui.msg.push("6");
     // Computing 3D lift coefficient
     iterateLift(object);
-    gui.msg.push("7");
     // Step 2: One iteration of aoa correction
     residual = iterate(object);
-    gui.msg.push("8");
-
-    // gui.msg.push("Iteration " + std::to_string(iter));
-    // gui.msg.push("\t Residual = " + std::to_string(residual));
 
     std::cout << "Iteration " << iter << std::endl;
     std::cout << "\t Residual = " << residual << std::endl;
@@ -369,6 +362,9 @@ void nonlinear::steady::solve(model &object) {
     iter++;
   } while ((residual > solvP.tolerance) && (iter <= solvP.max_iter) &&
            (!gui.signal.stop));
+
+  if (gui.signal.stop) { return; }
+
   // Compute viscous forces
   computeForces(object);
   // Computing 3D effects on drag
@@ -405,7 +401,6 @@ double nonlinear::steady::iterate(model &object) {
       if (std::abs(cl_visc) < 1e-15) {
         std::cerr << "\033[1;31mERROR: Extrapolation detected\033[0m"
                   << std::endl;
-        exit(1);
       };
 
       // Step 5 : Applying aoa correction

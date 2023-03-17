@@ -39,7 +39,7 @@ struct simParam {
   double cref = 1.0;
 
   /** @brief Reference surface area */
-  double sref = 1.0;
+  double sref = 32.0;
 
   /** @brief X component of origin to which the x and z moment are computed */
   double x0 = 0.0;
@@ -113,13 +113,13 @@ struct ioParam {
   std::string outDir = "vlm_out/";
 
   /** @brief Path to the mesh file */
-  std::string meshFile = "vlm_mesh.dat";
+  std::string meshFile = "../../../../examples/vlm/smith_wing.dat";
 
   /** @brief Path to the database file (if required) */
-  std::string databaseFile = "database.dat";
+  std::string databaseFile = "../../../../examples/vlm/database_stall.dat";
 
   /** @brief Path to the location file for database evalutation */
-  std::string locationFile = "database_locations.dat";
+  std::string locationFile = "../../../../examples/vlm/locations.dat";
 };
 
 /** @brief Object holding solver parameters */
@@ -150,7 +150,7 @@ struct solverParam {
   std::string get_type() const;
 
   /** @brief Tolerance of the non linear iterative solver */
-  double tolerance = 1e-6;
+  double tolerance = 1e-14;
 
   /** @brief Linear solver options type */
   std::vector<std::string> linearSolver_options = {"BICGSTAB", "DIRECT"};

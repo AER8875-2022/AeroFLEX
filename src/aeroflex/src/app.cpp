@@ -116,7 +116,7 @@ void solve(rans::Rans &rans, vlm::VLM &vlm) {
 
 	database::table table;
 	table.airfoils["naca0012_coarse"];
-	table.airfoils["naca0012_coarse"].alpha = {0.0, 2.5, 5.0};
+	table.airfoils["naca0012_coarse"].alpha = {1.0, 5.0, 10.0};
 
 	for (auto& [airfoil, db] : table.airfoils) {
 		rans.solve_airfoil(airfoil, db);
@@ -228,7 +228,7 @@ bool config_save(const std::string &conf_path, Settings &settings) {
 	};
 
 	// Exporting for VLM
-	// settings.vlm.export_config_file(io);
+	settings.vlm.export_config_file(io);
 
 	return io.write(conf_path);
 }

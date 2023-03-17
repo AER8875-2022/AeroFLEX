@@ -3,3 +3,9 @@ SURFACE 0
 naca0012_coarse 0.0
 naca0012_coarse 1.0
 END SURFACE
+
+SURFACE 1
+# NAME SPANWISE_LOCATION
+naca0012_coarse 0.0
+naca0012_coarse 1.0
+END SURFACE

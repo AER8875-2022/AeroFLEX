@@ -18,14 +18,18 @@ void VLM::input() {
 
 void VLM::solve() {
 
-  gui.msg.push("[VLM] Solving VLM with solver: " + settings.solver.get_type());
+  gui.msg.push("[VLM] Solving VLM with solver " + settings.solver.get_type());
+  gui.msg.push("[VLM] with base name " + settings.io.baseName);
 
   solver::base *solver;
   solver::linear::steady linear(settings.solver, iters, residuals, gui);
   solver::nonlinear::steady nonlinear(settings.solver, iters, residuals, gui);
 
   // Clear previous solution
-  // reinitialize();
+  reinitialize();
+
+  // Allocating memory for residuals
+  residuals.reserve(settings.solver.max_iter);
 
   if (!settings.solver.get_type().compare("LINEAR")) {
     linear.initialize(object, database::table());
@@ -38,12 +42,16 @@ void VLM::solve() {
   }
 
   solver->solve(object);
+
+  gui.msg.push("[VLM] Exported results to " + settings.io.outDir);
+
 };
 
 void VLM::reinitialize() {
   // Reset model
   object.resetWake();
   object.clear();
+  object.updateGeometry(object.nodes);
   // Reset iterations
   residuals.clear();
   iters = 0;
