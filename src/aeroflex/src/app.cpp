@@ -114,8 +114,6 @@ void solve(rans::Rans &rans, vlm::VLM &vlm) {
 	// 	rans.solve_airfoil(airfoil, db);
 	// }
 
-	// vlm.gui.msg.push(vlm.settings.io.locationFile);
-
 	vlm.input();
 	vlm.database.importLocations(vlm.settings.io.locationFile);
 	vlm.solve();
@@ -384,9 +382,25 @@ void VlmLayer::OnUIRender() {
 	ImGui::SameLine(); HelpMarker("Reference chord length");
 	ImGui::InputDouble("sref", &aero.settings.vlm.sim.sref, 0.01f, 1.0f, "%.4f");
 	ImGui::SameLine(); HelpMarker("Reference surface area");
-	ImGui::InputDouble("coreRadius", &aero.settings.vlm.sim.origin[0], 0.01f, 1.0f, "%.4f");
 	ImGui::InputDouble("coreRadius", &aero.settings.vlm.sim.coreRadius, 0.01f, 1.0f, "%.4f");
 	ImGui::SameLine(); HelpMarker("Viscous relaxation value applied on the vortex filament kernel");
+	ImGui::InputDouble("X ref", &aero.settings.vlm.sim.x0, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("X component of origin to which the x and z moment are computed");
+	ImGui::InputDouble("Y ref", &aero.settings.vlm.sim.y0, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Y component of origin to which the x and z moment are computed");
+	ImGui::InputDouble("Z ref", &aero.settings.vlm.sim.z0, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Z component of origin to which the x and z moment are computed");
+	Combo(aero.settings.vlm.sim.databaseFormat_options, aero.settings.vlm.sim.databaseFormat, "Db Format");
+	
+	ImGui::Separator();
+	ImGui::Text("Solver");
+	Combo(aero.settings.vlm.solver.timeDomain_options, aero.settings.vlm.solver.timeDomain, "Time Domain");
+	Combo(aero.settings.vlm.solver.type_options, aero.settings.vlm.solver.type, "Type");
+	Combo(aero.settings.vlm.solver.linearSolver_options, aero.settings.vlm.solver.linearSolver, "Linear solver");
+	ImGui::InputDouble("Tolerance", &aero.settings.vlm.solver.tolerance, 0.01f, 1.0f, "%e");
+	ImGui::InputDouble("Relaxation", &aero.settings.vlm.solver.relaxation, 0.01f, 1.0f, "%.4f");
+	ImGui::InputInt("Max Iterations", &aero.settings.vlm.solver.max_iter);
+
 	ImGui::End();
 }
 
