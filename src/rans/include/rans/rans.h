@@ -26,8 +26,10 @@ class Rans {
     public:
     // This is a mess because of no separation of IO and computation...
     std::vector<double> residuals;
-    //wallProfile wp;
     std::atomic<int> iters = 0;
+
+    CpProfile profile;
+
     Settings settings;
 
     std::vector<mesh> ms;
@@ -56,7 +58,7 @@ void Rans::input() {
 
 template<class T>
 void Rans::run() {
-    multigrid<T> multi(ms, settings, gui, residuals, iters);
+    multigrid<T> multi(ms, settings, gui, residuals, iters, profile);
     gui.event.rans_preprocess = true;
 
     rans::solver& s = multi.run(true);
@@ -74,7 +76,8 @@ void Rans::run_airfoil(const std::string& airfoil, database::airfoil& db) {
     // TODO: check with geom for the naming convention
     // For the moment we will only load 1 mesh
     ms.push_back(mesh("../../../../examples/rans/" + airfoil + ".msh"));
-    multigrid<T> multi(ms, settings, gui, residuals, iters);
+    settings.bcs["farfield"].vars_far.angle = db.alpha[0] * 0.01745;
+    multigrid<T> multi(ms, settings, gui, residuals, iters, profile);
     multi.solvers[0].init();
 
     for (auto& alpha: db.alpha) {

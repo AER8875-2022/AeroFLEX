@@ -182,7 +182,7 @@ struct Settings {
     double start_cfl = 40.;
     double slope_cfl = 50.;
     double max_cfl = 200.;
-    double relaxation = 1.0;
+    double relaxation = 0.9;
     double tolerance = 1e-4;
     int rhs_iterations = 5;
     int max_iterations = 30000;
