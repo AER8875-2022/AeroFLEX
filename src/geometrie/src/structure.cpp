@@ -67,9 +67,7 @@ vector<tuple<int,vector<double>,vector<double>,vector<double>>> maillage_structu
         X_L.push_back(surfaces[0][3][m]);
         SU.push_back(surfaces[0][4][m]);
         SL.push_back(surfaces[0][5][m]);
-        for (int j=0; j<surfaces[0][0][m].size(); j++){
-            cout<<" "<<surfaces[0][0][m][j]<<" "<<surfaces[0][2][m][j]<<" "<<surfaces[0][4][m][j]<<" "<<surfaces[0][5][m][j]<<endl;
-        }
+
         
     }
     

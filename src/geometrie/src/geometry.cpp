@@ -192,12 +192,12 @@ double NACAAirfoil::get_thickness(double eps_val, double t_val) {
 
 double NACAAirfoil::get_camber(double eps_val, double m_val, double p_val) {
     double yc_val;
-    if (0 <= eps_val <= p_val) {
+    if (0 <= eps_val < p_val) {
         yc_val = (m_val / pow(p_val, 2)) * (2 * p_val * eps_val - pow(eps_val, 2));
-    } else if (eps_val <= 1) {
+    } else if (p_val < eps_val <= 1) {
         yc_val = (m_val / pow(1 - p_val, 2)) * ((1 - 2 * p_val) + 2 * p_val * eps_val - pow(eps_val, 2));
     } else {
-        yc_val = 0;
+        yc_val = m_val;
     };
     return yc_val;
 };
@@ -205,9 +205,9 @@ double NACAAirfoil::get_camber(double eps_val, double m_val, double p_val) {
 double NACAAirfoil::get_theta(double eps_val, double m_val, double p_val) {
     double dyc_dx;
     double theta_val;
-    if (0 <= eps_val <= p_val) {
+    if (0 <= eps_val < p_val) {
         dyc_dx = (2 * m_val / pow(p_val, 2)) * (p_val - eps_val);
-    } else if (eps_val <= 1) {
+    } else if (p_val < eps_val <= 1) {
         dyc_dx = (2 * m_val / pow(1 - p_val, 2)) * (p_val - eps_val);
     } else {
         dyc_dx = 0;
