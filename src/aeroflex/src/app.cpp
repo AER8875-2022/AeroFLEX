@@ -89,16 +89,18 @@ struct ConsoleLayer : public FlexGUI::Layer {
 // SOLVE =================================================================================================
 
 void solve(rans::Rans &rans, vlm::VLM &vlm) {
-	vlm.database.airfoils["naca0012_coarse"];
-	vlm.database.airfoils["naca0012_coarse"].alpha = {0.0, 2.5, 5.0};
+	// vlm.database.airfoils["naca0012_coarse"];
+	// vlm.database.airfoils["naca0012_coarse"].alpha = {0.0, 2.5, 5.0};
 
-	for (auto& [airfoil, db] : vlm.database.airfoils) {
-		rans.solve_airfoil(airfoil, db);
-	}
+	// for (auto& [airfoil, db] : vlm.database.airfoils) {
+	// 	rans.solve_airfoil(airfoil, db);
+	// }
 
-	// vlm.input();
-	// vlm.database.importLocations(vlm.settings.io.locationFile);
-	// vlm.solve();
+	// vlm.gui.msg.push(vlm.settings.io.locationFile);
+
+	vlm.input();
+	vlm.database.importLocations(vlm.settings.io.locationFile);
+	vlm.solve();
 
 	// rans.input();
 	// rans.solve();
@@ -149,7 +151,7 @@ std::optional<Settings> config_open(const std::string &conf_path) {
 	}
 
 	// Parsing for vlm
-	// settings.vlm.import_config_file(io);
+	settings.vlm.import_config_file(io);
 
 	return settings;
 }
