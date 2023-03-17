@@ -1,6 +1,7 @@
 
 #include "vlm/vlm.hpp"
 #include "common_aeroflex.hpp"
+#include "vlm/input.hpp"
 
 using namespace vlm;
 
@@ -8,14 +9,17 @@ VLM::VLM(GUIHandler &gui) : gui(gui) {};
 
 void VLM::input() {
   if (!is_initialized) {
-    auto mesh = vlm::input::importMeshFile(data.io);
+    auto mesh = vlm::input::importMeshFile(settings.io);
     model object;
-    object.initialize(mesh, data.sim, data.io);
+    object.initialize(mesh, settings);
     is_initialized = true;
   }
 };
 
 void VLM::solve() {
+
+  gui.msg.push("[VLM] Solving VLM with solver: " + settings.solver.get_type());
+
   solver::base *solver;
   solver::linear::steady linear(iters, residuals, gui);
   solver::nonlinear::steady nonlinear(iters, residuals, gui);
@@ -23,11 +27,11 @@ void VLM::solve() {
   // Clear previous solution
   reinitialize();
 
-  if (!data.solver.type.compare("LINEAR")) {
-    linear.initialize(data.solver, object, database::table());
+  if (!settings.solver.get_type().compare("LINEAR")) {
+    linear.initialize(settings.solver, object, database::table());
     solver = &linear;
-  } else if (!data.solver.type.compare("NONLINEAR")) {
-    nonlinear.initialize(data.solver, object, database);
+  } else if (!settings.solver.get_type().compare("NONLINEAR")) {
+    nonlinear.initialize(settings.solver, object, database);
     solver = &nonlinear;
   } else {
     return;

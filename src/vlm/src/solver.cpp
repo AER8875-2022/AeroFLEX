@@ -353,8 +353,13 @@ void nonlinear::steady::solve(model &object) {
     iterateLift(object);
     // Step 2: One iteration of aoa correction
     residual = iterate(object);
+
+    // gui.msg.push("Iteration " + std::to_string(iter));
+    // gui.msg.push("\t Residual = " + std::to_string(residual));
+
     std::cout << "Iteration " << iter << std::endl;
     std::cout << "\t Residual = " << residual << std::endl;
+
     residuals.push_back(residual);
     iter++;
   } while ((residual > solvP.tolerance) && (iter <= solvP.max_iter) &&
@@ -444,7 +449,7 @@ void nonlinear::steady::computeForces(model &object) {
       auto [cl, cd, cmy] =
           database.coefficients(aoa_eff, wing.get_globalIndex(), spanLoc);
       // Lever used to transfer to 2D moment to 3D moment at specified origin
-      double lever = object.sim.origin(0) - station.forceActingPoint()(0);
+      double lever = object.sim.origin()(0) - station.forceActingPoint()(0);
       // Updating station's force coefficients
       station.cl = cl;
       station.cd = cd;

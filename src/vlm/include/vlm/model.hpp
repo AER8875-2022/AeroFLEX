@@ -62,8 +62,7 @@ public:
    *  @param mesh Object holding information on the mesh
    *  @param sim Object holding simulation parameters
    *  @param io Object holding input/output parameters */
-  void initialize(const input::meshData &mesh, const input::simParam &sim,
-                  const input::ioParam &io);
+  void initialize(const input::meshData &mesh, const Settings &settings);
 
   /** @brief Wrapper method initializing wake elements for each lifting surface
    *  @param wakeLength Length of the generated wake in the x direction
@@ -88,10 +87,6 @@ public:
 
   /** @brief Getter method for the moment coefficients vector */
   Vector3d get_cm() const;
-
-  /** @brief Method to project forces and moments in the inertial frame of
-   * reference  */
-  Matrix<double, 6, 1> forces_to_inertial_frame(const int stationID) const;
 
 private:
   /** @brief Method building the objects from data acquired from the mesh

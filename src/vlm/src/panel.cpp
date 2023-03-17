@@ -145,6 +145,8 @@ int vortexRing::get_globalIndex() const { return globalIndex; }
 
 double vortexRing::get_gamma() const { return gamma; }
 
+Matrix<double, 6, 1> vortexRing::get_forces() const { return forces; }
+
 double vortexRing::get_cl() const { return cl; }
 
 double vortexRing::get_cd() const { return cd; }
