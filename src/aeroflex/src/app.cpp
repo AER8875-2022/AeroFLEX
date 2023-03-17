@@ -92,10 +92,16 @@ struct ButtonLayer : public FlexGUI::Layer {
 	ButtonLayer(Aero &aero) : aero(aero) {};
 };
 
-struct GraphLayer : public FlexGUI::Layer {
+struct RansGraphLayer : public FlexGUI::Layer {
 	virtual void OnUIRender() override;
 	Aero &aero;
-	GraphLayer(Aero &aero) : aero(aero) {};
+	RansGraphLayer(Aero &aero) : aero(aero) {};
+};
+
+struct VlmGraphLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	Aero &aero;
+	VlmGraphLayer(Aero &aero) : aero(aero) {};
 };
 
 struct ConsoleLayer : public FlexGUI::Layer {
@@ -476,9 +482,9 @@ void ButtonLayer::OnUIRender() {
 	};
 };
 
-void GraphLayer::OnUIRender() {
+void RansGraphLayer::OnUIRender() {
 	{
-		ImGui::Begin("Graphs");
+		ImGui::Begin("Rans-Convergence");
 		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
 		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
 		const double xticks = 1;
@@ -493,6 +499,30 @@ void GraphLayer::OnUIRender() {
 				ImPlot::SetupAxisLimits(ImAxis_X1, 0, aero.rans.iters, ImPlotCond_Always);
 			}
 			ImPlot::PlotLine("L2 residual", aero.rans.residuals.data(), aero.rans.iters);
+			ImPlot::EndPlot();
+		}
+
+		ImGui::End();
+	}
+};
+
+void VlmGraphLayer::OnUIRender() {
+	{
+		ImGui::Begin("Vlm-Convergence");
+		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
+		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
+		const double xticks = 1;
+
+		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,400))) {
+			ImPlot::SetupAxes("Iterations","Residual",xflags,yflags);
+			ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, 0, aero.vlm.iters);
+			ImPlot::SetupAxisZoomConstraints(ImAxis_X1, 11.0, aero.vlm.iters);
+			ImPlot::SetupAxisScale(ImAxis_Y1, ImPlotScale_Log10);
+
+			if (!aero.signal_status_ready) {
+				ImPlot::SetupAxisLimits(ImAxis_X1, 0, aero.vlm.iters, ImPlotCond_Always);
+			}
+			ImPlot::PlotLine("L2 residual", aero.vlm.residuals.data(), aero.vlm.iters);
 			ImPlot::EndPlot();
 		}
 
@@ -615,7 +645,8 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, Aero& aero)
 
 	FlexGUI::Application* app = new FlexGUI::Application(spec);
 	app->PushLayer(std::make_shared<ButtonLayer>(aero));
-	app->PushLayer(std::make_shared<GraphLayer>(aero));
+	app->PushLayer(std::make_shared<RansGraphLayer>(aero));
+	app->PushLayer(std::make_shared<VlmGraphLayer>(aero));
 	app->PushLayer(std::make_shared<RansLayer>(aero));
 	app->PushLayer(std::make_shared<VlmLayer>(aero));
 	app->PushLayer(std::make_shared<ConsoleLayer>(aero));
