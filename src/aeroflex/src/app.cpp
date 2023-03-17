@@ -393,7 +393,9 @@ void VlmLayer::OnUIRender() {
 
 	ImGui::Separator();
 	ImGui::Text("Case Parameters");
-	ImGui::InputDouble("Sideslip", &aero.settings.vlm.sim.sideslip, 0.01f, 1.0f, "%.4f"); 
+	ImGui::InputDouble("AoA", &aero.settings.vlm.sim.aoa, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Geometric angle of attack in degrees");
+	ImGui::InputDouble("Sideslip", &aero.settings.vlm.sim.sideslip, 0.01f, 1.0f, "%.4f");
 	ImGui::SameLine(); HelpMarker("Geometric angle of side slip in degrees");
 	ImGui::InputDouble("V inf", &aero.settings.vlm.sim.vinf, 0.01f, 1.0f, "%.4f");
 	ImGui::SameLine(); HelpMarker("Free stream magnitude velocity");
