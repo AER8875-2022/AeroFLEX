@@ -1,5 +1,6 @@
 
 #include "vlm/surface.hpp"
+#include "vlm/input.hpp"
 
 using namespace vlm;
 using namespace surface;
@@ -88,8 +89,6 @@ double wingStation::get_spanLoc() const { return spanLoc; }
 
 std::vector<int> wingStation::get_vortexIDs() const { return vortexIDs; }
 
-Matrix<double, 6, 1> wingStation::get_forces() const { return forces; }
-
 double wingStation::get_cl() const { return cl; }
 
 double wingStation::get_cd() const { return cd; }
@@ -115,41 +114,86 @@ void wingStation::computeChordLength() {
   chord = 0.5 * (d1 + d2);
 }
 
+void wingStation::to_local(Vector3d &vector) {
+
+  // Computing local referential
+  Vector3d leadingEdge = vortices[vortexIDs.front()].leadingEdgeDl();
+  Vector3d x_local = Vector3d::UnitX();
+  Vector3d z_local = x_local.cross(leadingEdge).normalized();
+  Vector3d y_local = z_local.cross(x_local).normalized();
+
+  // Rotating freeStream
+  Matrix3d rotationMatrix {{x_local(0), x_local(1), x_local(2)},
+                           {y_local(0), y_local(1), y_local(2)},
+                           {z_local(0), z_local(1), z_local(2)}};
+
+  vector = rotationMatrix * vector;
+}
+
+void wingStation::to_global(Vector3d &vector) {
+
+  // Computing local referential
+  Vector3d leadingEdge = vortices[vortexIDs.front()].leadingEdgeDl();
+  Vector3d x_local = Vector3d::UnitX();
+  Vector3d z_local = x_local.cross(leadingEdge).normalized();
+  Vector3d y_local = z_local.cross(x_local).normalized();
+
+  // Rotating freeStream
+  Matrix3d rotationMatrix {{x_local(0), x_local(1), x_local(2)},
+                           {y_local(0), y_local(1), y_local(2)},
+                           {z_local(0), z_local(1), z_local(2)}};
+
+  vector = rotationMatrix.inverse() * vector;
+
+}
+
+Vector3d wingStation::liftAxis(const input::simParam &sim) {
+  Vector3d leadingEdge = vortices[vortexIDs.front()].leadingEdgeDl();
+  return (sim.freeStream(local_aoa).cross(leadingEdge).normalized());
+}
+
 void wingStation::computeForces(const input::simParam &sim) {
 
-  Vector3d Qinf = sim.freeStream(local_aoa);
-  double previousGamma = 0.0;
+  Vector3d stream = sim.freeStream(local_aoa);
 
-  forces = Matrix<double, 6, 1>::Zero();
-  cl = 0.0;
-  cm = Vector3d::Zero();
+  to_local(stream);
+
+  double previousGamma = 0.0;
+  force = Vector3d::Zero();
+  moment = Vector3d::Zero();
 
   for (auto &vortexID : vortexIDs) {
     auto &vortex = vortices[vortexID];
 
     // Computing distances
-    Vector3d dl = vortex.leadingEdgeDl();
+    Vector3d dl = vortex.leadingEdgeDl(); to_local(dl);
     Vector3d lever = sim.origin() - vortex.forceActingPoint();
 
-    // local vectorial forces
-    vortex.forces({0,1,2}) = Qinf.cross(dl);
-    vortex.forces({0,1,2}) *= sim.rho * (vortex.get_gamma() - previousGamma);
-    vortex.forces({3,4,5}) = forces({0,1,2}).cross(lever);
+    // Local forces
+    Vector3d local_force = stream.cross(dl);
+    local_force *= sim.rho * (vortex.get_gamma() - previousGamma);
+    to_global(local_force);
 
-    // Local coefficients
-    vortex.cl = vortex.forces({0,1,2}).dot(sim.liftAxis()) / (sim.dynamicPressure() * sim.sref);
-    vortex.cm = vortex.forces({3,4,5}) / (sim.dynamicPressure() * sim.sref * sim.cref);
+    Vector3d local_moment = local_force.cross(lever);
 
-    // Incrementing wing station forces
-    forces += vortex.forces;
+    // Incrementing total force
+    force += local_force;
+    moment += local_moment;
 
-    // Incrementing wing station coefficients
-    cl += vortex.cl * sim.sref/area;
-    cm += vortex.cm * sim.sref/area * sim.cref/chord;
+    // Panel coefficient
+    vortex.cf = local_force / (sim.dynamicPressure() * sim.sref);
+    vortex.cm = local_moment / (sim.dynamicPressure() * sim.sref * sim.cref);
 
     // Setting gamma reference for next panel
     previousGamma = vortex.get_gamma();
   }
+
+  // Oriented in section referential
+  cl_local = force.dot(liftAxis(sim)) / (sim.dynamicPressure() * area);
+  // Oriented in inertial referential
+  cl = force.dot(sim.liftAxis()) / (sim.dynamicPressure() * area);
+  cm = moment / (sim.dynamicPressure() * area * sim.cref);
+
 }
 
 // ----------------------------

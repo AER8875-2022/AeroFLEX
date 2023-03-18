@@ -44,17 +44,23 @@ class wingStation {
   /** @brief Local chord of the current wing station */
   double chord;
 
-  /** @brief Local force vector */
-  Matrix<double, 6, 1> forces = Matrix<double, 6, 1>::Zero();
+  /** @brief Force vector */
+  Vector3d force;
 
-  /** @brief Local lift coefficient */
+  /** @rief Moment vector */
+  Vector3d moment;
+
+  /** @brief Lift coefficient */
   double cl = 0.0;
 
-  /** @brief Local drag coefficient */
+  /** @brief Drag coefficient */
   double cd = 0.0;
 
-  /** @brief Local moment coefficients */
+  /** @brief Moment coefficients */
   Vector3d cm = Vector3d::Zero();
+
+  /** @brief Local lift coefficient */
+  double cl_local = 0.0;
 
   /** @brief local angle of attack correction */
   double local_aoa = 0.0;
@@ -98,6 +104,9 @@ public:
    *  @param sim Simulation parameters */
   void resetLocalAoa(const input::simParam &sim);
 
+  /** @brief Function that returns the local lift axis of the section */
+  Vector3d liftAxis(const input::simParam &sim);
+
   /** @brief Method computing the inviscid local forces on the current element
    */
   void computeForces(const input::simParam &sim);
@@ -117,9 +126,6 @@ public:
   /** @brief Getter method for vortexIDS */
   std::vector<int> get_vortexIDs() const;
 
-  /** @brief Getter method for forces */
-  Matrix<double, 6, 1> get_forces() const;
-
   /** @brief Getter method for cl */
   double get_cl() const;
 
@@ -135,6 +141,12 @@ private:
 
   /** @brief Method computing the local chord of the current element */
   void computeChordLength();
+
+  /** @brief Method to obtain a vector in the local referential of the section */
+  inline void to_local(Vector3d &vector);
+
+  /** @brief Method to obtain a vector in the global referential from local section referential */
+  inline void to_global(Vector3d &vector);
 
   friend class solver::nonlinear::steady;
   friend class solver::nonlinear::unsteady;

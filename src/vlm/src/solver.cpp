@@ -6,8 +6,11 @@
 #include <chrono>
 #include <iomanip>
 #include <iostream>
-#include <omp.h>
 #include <thread>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 using namespace vlm;
 using namespace solver;
@@ -390,7 +393,7 @@ double nonlinear::steady::iterate(model &object) {
       double spanLoc = (station.spanLoc - root) / wing.get_span();
 
       // Step 3 : Effective angle of attack
-      double cl_inv = station.cl;
+      double cl_inv = station.cl_local;
       double aoa_eff =
           cl_inv / VLM_CL_ALPHA_DEG - station.local_aoa + object.sim.aoa;
 
@@ -419,7 +422,6 @@ void nonlinear::steady::iterateLift(model &object) {
 #pragma omp parallel for
   for (int stationID = 0; stationID < object.wingStations.size(); stationID++) {
     auto &station = object.wingStations[stationID];
-
     station.computeForces(object.sim);
   }
 }
@@ -443,7 +445,7 @@ void nonlinear::steady::computeForces(model &object) {
       double spanLoc = (station.spanLoc - root) / wing.get_span();
       // Computing effective aoa to interpolate
       double aoa_eff =
-          station.cl / VLM_CL_ALPHA_DEG - station.local_aoa + object.sim.aoa;
+          station.cl_local / VLM_CL_ALPHA_DEG - station.local_aoa + object.sim.aoa;
 
       // Interpolating all coefficients at each station
       auto [cl, cd, cmy] =

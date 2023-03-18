@@ -76,7 +76,7 @@ void panel::computeArea() {
 
 vortexRing::vortexRing(const int globalIndex, const std::vector<int> &nodeIDs,
                        std::vector<Vector3d> &nodes, const double gamma)
-    : globalIndex(globalIndex), gamma(gamma), cl(0.0), cm(Vector3d::Zero()),
+    : globalIndex(globalIndex), gamma(gamma),
       panel(nodeIDs, nodes) {
   vortices.reserve(4);
 }
@@ -101,7 +101,12 @@ Vector3d vortexRing::leadingEdgeDl() {
 
 void vortexRing::computeCollocationPoint() {
   // High aoa correction term according to x axis
-  double k = local_aoa * M_PI / (180.0 * std::sin(local_aoa * M_PI / 180.0));
+  double k;
+  if (local_aoa < 1e-6)
+    k = 1.0;
+  else
+    k = local_aoa * M_PI / (180.0 * std::sin(local_aoa * M_PI / 180.0));
+
   collocationPoint = k * panel.center + (1 - k) * forceActingPoint();
 }
 
@@ -145,11 +150,7 @@ int vortexRing::get_globalIndex() const { return globalIndex; }
 
 double vortexRing::get_gamma() const { return gamma; }
 
-Matrix<double, 6, 1> vortexRing::get_forces() const { return forces; }
-
-double vortexRing::get_cl() const { return cl; }
-
-double vortexRing::get_cd() const { return cd; }
+Vector3d vortexRing::get_cf() const { return cf; }
 
 Vector3d vortexRing::get_cm() const { return cm; }
 

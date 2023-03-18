@@ -1,7 +1,6 @@
 
 #include "vlm/model.hpp"
 #include <iostream>
-#include <omp.h>
 #include <unordered_set>
 
 using namespace vlm;

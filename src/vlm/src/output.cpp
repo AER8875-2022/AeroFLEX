@@ -146,23 +146,16 @@ void output::exportSurfacesVTU(const model &object, const int it) {
   for (auto &doublet : object.doubletPanels) {
     areas.push_back(doublet.get_area());
   }
-  // CL
-  std::vector<double> cl;
-  cl.reserve(nPanels);
+  // CF
+  std::vector<double> cf;
+  cf.reserve(3 * nPanels);
   for (auto &vortex : object.vortexRings) {
-    cl.push_back(vortex.get_cl());
+    cf.push_back(vortex.get_cf()(0));
+    cf.push_back(vortex.get_cf()(1));
+    cf.push_back(vortex.get_cf()(2));
   }
   for (auto &doublet : object.doubletPanels) {
-    areas.push_back(0.0);
-  }
-  // CD
-  std::vector<double> cd;
-  cd.reserve(nPanels);
-  for (auto &vortex : object.vortexRings) {
-    cd.push_back(0.0);
-  }
-  for (auto &doublet : object.doubletPanels) {
-    cd.push_back(0.0);
+    cf.push_back(0.0);
   }
   // CM
   std::vector<double> cm;
@@ -181,15 +174,14 @@ void output::exportSurfacesVTU(const model &object, const int it) {
   std::vector<vtu11::DataSetInfo> dataSetInfo{
       {"strength", vtu11::DataSetType::CellData, 1},
       {"area", vtu11::DataSetType::CellData, 1},
-      {"cl", vtu11::DataSetType::CellData, 1},
-      {"cd", vtu11::DataSetType::CellData, 1},
+      {"cf", vtu11::DataSetType::CellData, 3},
       {"cm", vtu11::DataSetType::CellData, 3}};
   // Creating mesh object
   vtu11::Vtu11UnstructuredMesh mesh{points, connectivity, offsets, types};
   // Writing file
   vtu11::writeVtu(
       io.outDir + io.baseName + "_surface_" + itStream.str() + ".vtu", mesh,
-      dataSetInfo, {strengths, areas, cl, cd, cm}, "RawBinary");
+      dataSetInfo, {strengths, areas, cf, cm}, "RawBinary");
 }
 
 void output::exportWakeVTU(const model &object, const int it) {
