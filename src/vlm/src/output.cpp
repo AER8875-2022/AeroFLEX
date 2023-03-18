@@ -179,9 +179,9 @@ void output::exportSurfacesVTU(const model &object, const int it) {
   // Creating mesh object
   vtu11::Vtu11UnstructuredMesh mesh{points, connectivity, offsets, types};
   // Writing file
-  vtu11::writeVtu(
-      io.outDir + io.baseName + "_surface_" + itStream.str() + ".vtu", mesh,
-      dataSetInfo, {strengths, areas, cf, cm}, "RawBinary");
+  vtu11::writeVtu(io.outDir + io.baseName + "_surface_" + itStream.str() +
+                      ".vtu",
+                  mesh, dataSetInfo, {strengths, areas, cf, cm}, "RawBinary");
 }
 
 void output::exportWakeVTU(const model &object, const int it) {

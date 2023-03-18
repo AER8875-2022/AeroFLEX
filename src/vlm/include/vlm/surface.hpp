@@ -22,6 +22,15 @@ class unsteady;
 } // namespace vlm::solver::nonlinear
 #endif
 
+#ifndef VLM_SURFACE_CLASS
+#define VLM_SURFACE_CLASS
+namespace vlm::surface {
+class wingStation;
+class wing;
+class patch;
+} // namespace vlm::surface
+#endif
+
 namespace vlm {
 
 namespace surface {
@@ -142,12 +151,15 @@ private:
   /** @brief Method computing the local chord of the current element */
   void computeChordLength();
 
-  /** @brief Method to obtain a vector in the local referential of the section */
+  /** @brief Method to obtain a vector in the local referential of the section
+   */
   inline void to_local(Vector3d &vector);
 
-  /** @brief Method to obtain a vector in the global referential from local section referential */
+  /** @brief Method to obtain a vector in the global referential from local
+   * section referential */
   inline void to_global(Vector3d &vector);
 
+  friend class wing;
   friend class solver::nonlinear::steady;
   friend class solver::nonlinear::unsteady;
 };
@@ -219,7 +231,11 @@ public:
   Vector3d get_cm() const;
 
 private:
+  /** @brief Method that computes the area of the wing surface */
   void computeArea();
+
+  /** @brief Method that computes the wing's span as well as the span location of every of its wing stations */
+  void computeSpan();
 };
 
 class patch {

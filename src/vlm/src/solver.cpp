@@ -390,7 +390,7 @@ double nonlinear::steady::iterate(model &object) {
           object.wingStations[wing.get_stationIDs().front()].get_spanLoc();
 
       auto &station = object.wingStations[stationID];
-      double spanLoc = (station.spanLoc - root) / wing.get_span();
+      double spanLoc = (station.get_spanLoc() - root) / wing.get_span();
 
       // Step 3 : Effective angle of attack
       double cl_inv = station.cl_local;

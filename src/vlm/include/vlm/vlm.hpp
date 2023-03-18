@@ -3,10 +3,10 @@
 #define __VLM__
 
 #include "common_aeroflex.hpp"
+#include "vlm/info.hpp"
 #include "vlm/input.hpp"
 #include "vlm/model.hpp"
 #include "vlm/solver.hpp"
-#include "vlm/info.hpp"
 
 namespace vlm {
 

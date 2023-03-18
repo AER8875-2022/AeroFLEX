@@ -42,8 +42,7 @@ public:
   /** @brief Method to initialize the solver object
    *  @param solvP Struct holding the solver parameters
    *  @param object Model holding the VLM elements */
-  virtual void initialize(const model &object,
-                          const database::table &) = 0;
+  virtual void initialize(const model &object, const database::table &) = 0;
 
   /** @brief Main method to solve non linear VLM
    *  @param object Model holding the VLM elements */
@@ -97,8 +96,8 @@ public:
 public:
   /** @param iter Iteration counter
    *  @param residuals Iteration residuals vector */
-  steady(input::solverParam &solvP, std::atomic<int> &iter, std::vector<double> &residuals,
-         GUIHandler &gui);
+  steady(input::solverParam &solvP, std::atomic<int> &iter,
+         std::vector<double> &residuals, GUIHandler &gui);
 
   /** @brief Method to initialize the solver object
    *  @param solvP Struct holding the solver parameters
@@ -154,8 +153,8 @@ class steady : public linear::steady {
 public:
   /** @param iter Iteration counter
    *  @param residuals Iteration residuals vector */
-  steady(input::solverParam &solvp, std::atomic<int> &iter, std::vector<double> &residuals,
-         GUIHandler &gui);
+  steady(input::solverParam &solvp, std::atomic<int> &iter,
+         std::vector<double> &residuals, GUIHandler &gui);
 
   /** @brief Method to initialize the solver object
    *  @param solvP Struct holding the solver parameters

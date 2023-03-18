@@ -76,8 +76,7 @@ void panel::computeArea() {
 
 vortexRing::vortexRing(const int globalIndex, const std::vector<int> &nodeIDs,
                        std::vector<Vector3d> &nodes, const double gamma)
-    : globalIndex(globalIndex), gamma(gamma),
-      panel(nodeIDs, nodes) {
+    : globalIndex(globalIndex), gamma(gamma), panel(nodeIDs, nodes) {
   vortices.reserve(4);
 }
 

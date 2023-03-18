@@ -6,7 +6,7 @@
 
 using namespace vlm;
 
-VLM::VLM(GUIHandler &gui) : gui(gui) {};
+VLM::VLM(GUIHandler &gui) : gui(gui){};
 
 void VLM::input() {
   if (!is_initialized) {
@@ -44,7 +44,6 @@ void VLM::solve() {
   solver->solve(object);
 
   gui.msg.push("[VLM] Exported results to " + settings.io.outDir);
-
 };
 
 void VLM::reinitialize() {
