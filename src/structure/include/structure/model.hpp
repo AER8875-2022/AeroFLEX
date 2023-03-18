@@ -38,6 +38,7 @@ public:
     Eigen::VectorXd                          Forces;
     Eigen::SparseMatrix<double>     K_Global_sparse;
     Eigen::SparseMatrix<double>      K_Final_sparse;
+    Eigen::VectorXd                    Displacement;
 
     // GUI Handlers
     GUIHandler &gui;
@@ -51,7 +52,6 @@ public:
         : gui(gui), iters(iters), residuals(residuals) {
         
         read_data_file(namefile);
-
         set_K_global();
         set_Load_Vector_From_Load_Objects();    
         set_K_Final_sparse();
@@ -241,7 +241,7 @@ public:
         Eigen::VectorXd Forces_int(6 * Nbr_Noeud);
         Eigen::VectorXd Forces_diff(6 * Nbr_Noeud );
 
-        Dep.setZero();
+        //Dep.setZero();
         Forces_int.setZero();
         Forces_int.setZero();
 
@@ -277,10 +277,12 @@ public:
                 while (gui.signal.pause) std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 
                 //Delta déplacements
-                Dep += Delta_dep_amor;                
-                set_Quaternion_Map(Delta_dep_amor); 
+                Dep += Delta_dep_amor; 
+                std::cout<<"==============="<<std::endl;
+                std::cout<<Dep.tail(3).transpose()<<std::endl;
+                set_Quaternion_Map(Dep); 
 
-                #pragma omp parallel for
+                //#pragma omp parallel for
                 for (int i = 0; i < CBAR_keys.size(); ++i)
                 {   
                     int key     = CBAR_keys[i];
@@ -291,15 +293,15 @@ public:
                     n2 = value.N2_ID;
                     
                     Eigen::VectorXd delta_dep1 = Delta_dep_amor.segment(n1*6,6);
-                    Eigen::VectorXd delta_dep2 = Delta_dep_amor.segment(n2*6,6);   
+                    Eigen::VectorXd delta_dep2 = Delta_dep_amor.segment(n2*6,6);  
+                     
                                    
                     value.set_u_i(delta_dep1,delta_dep2);                                      //Set u_1 and u_2
                     value.set_q1_And_q2(QUATERNION_MAP[n1],QUATERNION_MAP[n2]);                //Set q_1 and q_2                    
                     value.set_qmid_From_Interpolation();                                       //Set q_mid                                         
-                    value.set_Quaternion_Local_Rotations();                                    //Set q_1_rot_prime and q_2_rot_prime
+                    value.set_Quaternion_Local_Rotations();                                    //Set q_1_rot_prime and q_2_rot_prime 
                     
-                    Eigen::VectorXd d_prime           = value.get_Deformation_Local_Ref();     //Déplacements dans le repère local de l'élément
-                    Eigen::VectorXd F_elem_global_ref = value.get_Force_In_GlobalRef(d_prime);
+                    Eigen::VectorXd F_elem_global_ref = value.get_Force_In_GlobalRef();
                     
                     #pragma omp critical
                     Forces_int.segment(6*n1,6)       += F_elem_global_ref.segment(0,6);      
@@ -317,10 +319,10 @@ public:
                 Residu = std::sqrt(Delta_dep_full.transpose()*Delta_dep_full);
                 Forces_int.setZero();
                 
-                if (Residu < 10.*tol) Delta_dep_amor = amor*Delta_dep_full;
+                if (Residu < 100.*tol) Delta_dep_amor = amor*Delta_dep_full;
                 else Delta_dep_amor = Delta_dep_full;
 
-                if (iters%1 == 500 || Residu < tol){
+                if (iters%100 == 0 || Residu < tol){
                 std::cout << "Iteration " << iters << std::endl;
                 std::cout << "\t Residual = " << Residu << std::endl;
                 };
@@ -335,19 +337,31 @@ public:
 
     void set_Quaternion_Map(Eigen::VectorXd delta_dep){
 
-        #pragma omp parallel for
+        //#pragma omp parallel for
         for (int i = 0; i < Nbr_Noeud; i++)
-        {
+        {   
             double rx = delta_dep(i*6 +3);
             double ry = delta_dep(i*6 +4);
             double rz = delta_dep(i*6 +5);
+            
+            double vx = cos(0.5*rz) * cos(0.5*ry) * sin(0.5*rx) - sin(0.5*rz) * sin(0.5*ry) * cos(0.5*rx);
+            //if(abs(vx)<1E-12) vx=0.0;
+
+            double vy = cos(0.5*rz) * sin(0.5*ry) * cos(0.5*rx) + sin(0.5*rz) * cos(0.5*ry) * sin(0.5*rx);
+            //if(abs(vy)<1E-12) vy=0.0;
+
+            double vz = sin(0.5*rz) * cos(0.5*ry) * cos(0.5*rx) - cos(0.5*rz) * sin(0.5*ry) * sin(0.5*rx);
+            //if(abs(vz)<1E-12) vz=0.0;
 
             double s  = cos(0.5*rz) * cos(0.5*ry) * cos(0.5*rx) + sin(0.5*rz) * sin(0.5*ry) * sin(0.5*rx);
-            double vx = cos(0.5*rz) * cos(0.5*ry) * sin(0.5*rx) - sin(0.5*rz) * sin(0.5*ry) * cos(0.5*rx);
-            double vy = cos(0.5*rz) * sin(0.5*ry) * cos(0.5*rx) + sin(0.5*rz) * cos(0.5*ry) * sin(0.5*rx);
-            double vz = sin(0.5*rz) * cos(0.5*ry) * cos(0.5*rx) - cos(0.5*rz) * sin(0.5*ry) * sin(0.5*rx);
+            //if(abs(s)<1E-12) s=0.0;
+
             Eigen::Quaterniond delta_q(s,vx,vy,vz);
-    
+
+            if(i== (Nbr_Noeud-1))
+            {   
+                std::cout<<delta_q<<std::endl;
+            }
             QUATERNION_MAP[i] = delta_q ;
         }
     }
@@ -403,7 +417,6 @@ public:
             
             if( line[0]=="GRID")
             {   
-                
                 int data_id = std::stoi(line[1]);
                 double             x = std::stod(line[3]);
                 double             y = std::stod(line[4]);
@@ -457,9 +470,9 @@ public:
                 int n1_user_id = std::stoi(line[3]);
                 int n2_user_id = std::stoi(line[4]);
                 
-                double x             = std::stod(line[5]);
-                double y             = std::stod(line[6]);
-                double z             = std::stod(line[7]);
+                double x       = std::stod(line[5]);
+                double y       = std::stod(line[6]);
+                double z       = std::stod(line[7]);
                 Eigen::Vector3d  V(x,y,z);
 
                 CBAR_param c = {data_id, PBAR_id, n1_user_id,n2_user_id,V};
@@ -480,9 +493,7 @@ public:
                         int node_id = std::stoi(line[i]);   //Node utilisateur imposé à zéro
                         SPC1_param spc1 = { node_id , CODE};
                         SPC1_stock.push_back(spc1);
-                    
                     }
-
                 }             
             }
             if(line[0]=="FORCE")

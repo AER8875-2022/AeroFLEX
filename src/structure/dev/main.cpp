@@ -55,16 +55,29 @@ int main(int argc, char **argv){
 
 
     double L_elem = 300./M1.Nbr_Element;
-    std::cout<<L_elem<<std::endl;
     std::ofstream out;
     out.open(File_name);
     out << "x y z rx ry rz\n";
     
     for (int i=0; i< (dep.size()/6); ++i) 
-    {
-        double x     =  L_elem*i+ dep(i*6);
-        double y     =  dep(i*6 + 1);
-        double z     =  dep(i*6 + 2);
+    {   
+        double x_ini = 0.; 
+        double y_ini = 0.; 
+        double z_ini = 0.;
+
+        for (auto const& [id_user, id_code] : M1.indexation_switch) {
+            if (id_code == i) {
+                Eigen::Vector3d Coord = M1.Grid_MAP[id_user];
+                x_ini = Coord(0);
+                y_ini = Coord(1);
+                z_ini = Coord(2);
+                break;
+            }
+        }
+        
+        double x     =  x_ini + dep(i*6);
+        double y     =  y_ini + dep(i*6 + 1);
+        double z     =  z_ini + dep(i*6 + 2);
         double rx    =  dep(i*6 + 3);
         double ry    =  dep(i*6 + 4);
         double rz    =  dep(i*6 + 5);

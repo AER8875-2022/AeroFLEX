@@ -156,8 +156,8 @@ public:
 
     void set_u_i(Eigen::VectorXd Delta_dep1 , Eigen::VectorXd Delta_dep2 )  //
     {
-        u_1   += Delta_dep1;  //Déplacement du noeud 1 dans le repère global
-        u_2   += Delta_dep2;  //Déplacement du noeud 2 dans le repère global
+        u_1   += Delta_dep1;         //Déplacement du noeud 1 dans le repère global
+        u_2   += Delta_dep2;         //Déplacement du noeud 2 dans le repère global
         u_mid  = 0.5 * (u_1 + u_2);  //Déplacement du noeud milieu dans le repère global
     };
 
@@ -182,7 +182,7 @@ public:
             if (mat(0,0) > mat(1,1) && mat(0,0) > mat(2,2))
             {
                 cst = 2.0 * sqrt(1.0 + mat(0,0) - mat(1,1) - mat(2,2));
-                s   = ( mat(2,1) - mat(1,2) ) / cst;
+                s   = ( mat(1,2) - mat(2,1) ) / cst;
 
                 v_x = 0.25 * cst ;
                 v_y = ( mat(0,1) + mat(1,0) ) / cst;
@@ -191,7 +191,7 @@ public:
             else if(mat(1,1) > mat(2,2))
             {
                 cst = 2.0 * sqrt( 1.0 + mat(1,1) - mat(0,0) - mat(2,2) );
-                s   = ( mat(0,2) - mat(2,0) ) / cst;
+                s   = ( mat(2,0) - mat(0,2) ) / cst;
                 v_x = ( mat(0,1) + mat(1,0) ) / cst;
                 v_y = 0.25 * cst;
                 v_z = ( mat(1,2) + mat(2,1) ) / cst;
@@ -199,7 +199,7 @@ public:
             else
             {
                 cst = 2.0 * sqrt(1.0 + mat(2,2) - mat(0,0)- mat(1,1));
-                s   = ( mat(1,0) - mat(0,1) ) / cst;
+                s   = ( mat(0,1) - mat(1,0) ) / cst;
                 v_x = ( mat(0,2) + mat(2,0) ) / cst;
                 v_y = ( mat(1,2) + mat(2,1) ) / cst;
                 v_z = 0.25 * cst;
@@ -212,14 +212,12 @@ public:
         q_2 = q_e;
         q_mid = q_e;
 
-        
-        
     }
 
     void set_q1_And_q2(Eigen::Quaterniond delta_q_1 ,Eigen::Quaterniond delta_q_2 )
     {
-        q_1 = delta_q_1 * q_1;
-        q_2 = delta_q_2 * q_2;
+        q_1 = delta_q_1 ;
+        q_2 = delta_q_2 ;
     }
    
 
@@ -242,7 +240,7 @@ public:
 
    void set_qmid_From_Interpolation()  //Trouver q_mid à partir de q_1 et q_2
     {
-        if ( abs(q_1.w()-q_2.w()) <1e-14 && abs(q_1.x()-q_2.x()) < 1e-14 && abs(q_1.y()-q_2.y()) < 1e-14 && abs(q_1.z()-q_2.z()) < 1e-14)
+        if ( abs(q_1.w()-q_2.w()) <1e-12 && abs(q_1.x()-q_2.x()) < 1e-12 && abs(q_1.y()-q_2.y()) < 1e-12 && abs(q_1.z()-q_2.z()) < 1e-12)
         {
             q_mid = q_1;
         }
@@ -296,27 +294,16 @@ public:
     {    
         const Eigen::Vector3d theta_1_local = get_Euler_Angles_From_Local_Rotation(q_1_rot_prime);
         const Eigen::Vector3d theta_2_local = get_Euler_Angles_From_Local_Rotation(q_2_rot_prime);
-
         
-
-        const Eigen::Matrix3d R_ec          = get_Rotation_Matrix_From_Quaternion(q_mid * q_e.inverse());              //R(q_mid)
+        const Eigen::Matrix3d R_ec          = get_Rotation_Matrix_From_Quaternion(q_e.inverse()*q_mid);              //R(q_mid)
         
         const Eigen::Vector3d dr_1          = R_ec*r1 - r1;                                                           //Déplacement induit par la rotation
         const Eigen::Vector3d dr_2          = R_ec*r2 - r2;                                                           //Déplacement induit par la rotation 
-    
+   
         const Eigen::Matrix3d R_gc          = get_Rotation_Matrix_From_Quaternion(q_mid);
-
         
-
         const Eigen::Vector3d d_1_prime     =  R_gc.transpose() * (u_1.segment(0,3) - u_mid.segment(0,3) - dr_1);     //Déplacement du noeud causé pas les déformations dans le repère de l'élément
         const Eigen::Vector3d d_2_prime     =  R_gc.transpose() * (u_2.segment(0,3) - u_mid.segment(0,3) - dr_2);     //Déplacement du noeud causé pas les déformations dans le repère de l'élément
-
-
-        // std::cout<<"============\n"<<std::endl;
-        // std::cout<<dr_1.transpose()<<std::endl;
-        // std::cout<<dr_2.transpose()<<std::endl;
-        // std::cout<<d_1_prime.transpose()<<std::endl;
-        // std::cout<<d_2_prime.transpose()<<std::endl;
 
         Eigen::VectorXd D_local(12);
         
@@ -328,19 +315,40 @@ public:
         return D_local;
     };
 
-    Eigen::VectorXd get_Force_In_GlobalRef(Eigen::VectorXd D_local)
+    Eigen::VectorXd get_Force_In_GlobalRef()
     {   
+        const Eigen::Vector3d theta_1_local = get_Euler_Angles_From_Local_Rotation(q_1_rot_prime);
+        const Eigen::Vector3d theta_2_local = get_Euler_Angles_From_Local_Rotation(q_2_rot_prime);
+        
+        const Eigen::Matrix3d R_ec          = get_Rotation_Matrix_From_Quaternion(q_e.inverse()*q_mid);              //R(q_mid)
+        
+        const Eigen::Vector3d dr_1          = R_ec*r1 - r1;                                                           //Déplacement induit par la rotation
+        const Eigen::Vector3d dr_2          = R_ec*r2 - r2;                                                           //Déplacement induit par la rotation 
+   
+        const Eigen::Matrix3d R_gc          = get_Rotation_Matrix_From_Quaternion(q_mid);
+        
+        const Eigen::Vector3d d_1_prime     =  R_gc.transpose() * (u_1.segment(0,3) - u_mid.segment(0,3) - dr_1);     //Déplacement du noeud causé pas les déformations dans le repère de l'élément
+        const Eigen::Vector3d d_2_prime     =  R_gc.transpose() * (u_2.segment(0,3) - u_mid.segment(0,3) - dr_2);     //Déplacement du noeud causé pas les déformations dans le repère de l'élément
+
+        if(N2_ID==12){
+        //std::cout<<"============\n"<<std::endl;
+        //std::cout<<q_mid<<std::endl;
+        }
+        Eigen::VectorXd D_local(12);
+        
+        D_local.segment(0,3) = d_1_prime;
+        D_local.segment(3,3) = theta_1_local;
+        D_local.segment(6,3) = d_2_prime;
+        D_local.segment(9,3) = theta_2_local;
         
         Eigen::VectorXd F_int_elem_local = K_elem_local * D_local;
                     
         Eigen::MatrixXd Rot  = Eigen::MatrixXd::Zero(12,12);
-        Eigen::Matrix3d Diag = get_Rotation_Matrix_From_Quaternion(q_mid);
-        
 
-        Rot.block(0, 0, 3, 3) = Diag;
-        Rot.block(3, 3, 3, 3) = Diag;
-        Rot.block(6, 6, 3, 3) = Diag;
-        Rot.block(9, 9, 3, 3) = Diag;
+        Rot.block(0, 0, 3, 3) = R_gc;
+        Rot.block(3, 3, 3, 3) = R_gc;
+        Rot.block(6, 6, 3, 3) = R_gc;
+        Rot.block(9, 9, 3, 3) = R_gc;
 
         return Rot*F_int_elem_local;  
     }
