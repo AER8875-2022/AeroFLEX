@@ -280,7 +280,7 @@ public:
                 Dep += Delta_dep_amor; 
                 std::cout<<"==============="<<std::endl;
                 std::cout<<Dep.tail(3).transpose()<<std::endl;
-                set_Quaternion_Map(Dep); 
+                set_Quaternion_Map(Delta_dep_amor); 
 
                 //#pragma omp parallel for
                 for (int i = 0; i < CBAR_keys.size(); ++i)
