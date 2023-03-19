@@ -85,7 +85,6 @@ void vortexRing::initialize(const input::simParam &sim) {
   for (size_t i = 0; i != panel.nodeIDs.size(); i++) {
     vortices.push_back(fil::vortexLine(1.0, sim.coreRadius));
   }
-  local_aoa = sim.aoa;
   computeCollocationPoint();
 }
 
@@ -94,9 +93,21 @@ Vector3d vortexRing::forceActingPoint() const {
           (panel.nodes[panel.nodeIDs[0]] + panel.nodes[panel.nodeIDs[1]]));
 }
 
-Vector3d vortexRing::leadingEdgeDl() {
+Vector3d vortexRing::leadingEdgeDl() const {
   return (panel.nodes[panel.nodeIDs[1]] - panel.nodes[panel.nodeIDs[0]]);
 }
+
+Vector3d vortexRing::inertial_stream() const {
+  Vector3d x_local = Vector3d::UnitX();
+  Vector3d z_local = x_local.cross(leadingEdgeDl()).normalized();
+  Vector3d y_local = z_local.cross(x_local).normalized();
+
+  Matrix3d rotationMatrix{{x_local(0), x_local(1), x_local(2)},
+                          {y_local(0), y_local(1), y_local(2)},
+                          {z_local(0), z_local(1), z_local(2)}};
+  return (rotationMatrix.inverse() * local_stream);
+}
+
 
 void vortexRing::computeCollocationPoint() {
   // High aoa correction term according to x axis

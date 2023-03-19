@@ -19,7 +19,7 @@ void wingStation::initialize(const input::simParam &sim) {
   computeArea();
   computeChordLength();
   // Setting the local aoa to the geometric aoa
-  local_aoa = sim.aoa;
+  resetLocalStream(sim);
 }
 
 void wingStation::updateGeometry() {
@@ -61,18 +61,22 @@ Vector3d wingStation::forceActingPoint() const {
   return (vortices[vortexIDs.front()].forceActingPoint());
 }
 
-void wingStation::updateLocalAoa(const double dalpha) {
+void wingStation::updateLocalStream(const double dalpha, const input::simParam &sim) {
   local_aoa += dalpha;
+  local_stream = sim.freeStream(local_aoa); to_local(local_stream);
   for (auto &vortexID : vortexIDs) {
     vortices[vortexID].local_aoa += dalpha;
+    vortices[vortexID].local_stream = local_stream;
     vortices[vortexID].computeCollocationPoint();
   }
 }
 
-void wingStation::resetLocalAoa(const input::simParam &sim) {
+void wingStation::resetLocalStream(const input::simParam &sim) {
   local_aoa = sim.aoa;
+  local_stream = sim.freeStream(); to_local(local_stream);
   for (auto &vortexID : vortexIDs) {
     vortices[vortexID].local_aoa = sim.aoa;
+    vortices[vortexID].local_stream = local_stream;
     vortices[vortexID].computeCollocationPoint();
   }
 }
@@ -152,7 +156,6 @@ Vector3d wingStation::liftAxis(const input::simParam &sim) {
 void wingStation::computeForces(const input::simParam &sim) {
 
   Vector3d stream = sim.freeStream(local_aoa);
-
   to_local(stream);
 
   double previousGamma = 0.0;

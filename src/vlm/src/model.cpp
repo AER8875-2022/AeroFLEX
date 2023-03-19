@@ -60,7 +60,7 @@ void model::clear() {
   }
   // TODO: Update Doublet solution
   for (auto &wingStation : wingStations) {
-    wingStation.resetLocalAoa(sim);
+    wingStation.resetLocalStream(sim);
   }
 }
 

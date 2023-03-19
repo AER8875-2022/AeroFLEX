@@ -307,7 +307,7 @@ void nonlinear::steady::buildRHS(const model &object) {
       auto &vortex = object.vortexRings[vortexID];
 
       rhs_VLM(vortex.get_globalIndex()) =
-          -object.sim.freeStream(vortex.local_aoa).dot(vortex.get_normal());
+          -vortex.inertial_stream().dot(vortex.get_normal());
     }
     // Building sources vector
 #pragma omp for
@@ -402,13 +402,14 @@ double nonlinear::steady::iterate(model &object) {
 
       // Print error if extrapolation is detected
       if (std::abs(cl_visc) < 1e-15) {
-        std::cerr << "\033[1;31mERROR: Extrapolation detected\033[0m"
+        std::cerr << "\033[1;31mERROR: Extrapolation detected - Aborting \033[0m"
                   << std::endl;
+        return 0.0;
       };
 
       // Step 5 : Applying aoa correction
       double dalpha = solvP.relaxation * (cl_visc - cl_inv) / VLM_CL_ALPHA_DEG;
-      station.updateLocalAoa(dalpha);
+      station.updateLocalStream(dalpha, object.sim);
 
       residual += (cl_visc - cl_inv) / cl_visc * (cl_visc - cl_inv) / cl_visc;
     }

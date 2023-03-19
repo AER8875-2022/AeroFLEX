@@ -74,6 +74,9 @@ class wingStation {
   /** @brief local angle of attack correction */
   double local_aoa = 0.0;
 
+  /** @brief local flow stream */
+  Vector3d local_stream;
+
   /** @brief Spanwise location of the current wing station */
   double spanLoc;
 
@@ -107,11 +110,11 @@ public:
   /** @brief Method updating the local angle of attack for the current wing
    * station
    *  @param dalpha Variation of the local angle of attack */
-  void updateLocalAoa(const double dalpha);
+  void updateLocalStream(const double dalpha, const input::simParam &sim);
 
   /** @brief Method to reset the local angle of attack to the geometric one
    *  @param sim Simulation parameters */
-  void resetLocalAoa(const input::simParam &sim);
+  void resetLocalStream(const input::simParam &sim);
 
   /** @brief Function that returns the local lift axis of the section */
   Vector3d liftAxis(const input::simParam &sim);
