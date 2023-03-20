@@ -302,6 +302,8 @@ public:
                     value.set_Quaternion_Local_Rotations();                                    //Set q_1_rot_prime and q_2_rot_prime 
                     
                     Eigen::VectorXd F_elem_global_ref = value.get_Force_In_GlobalRef();
+
+                    if (value.N2_ID==12)std::cout<<value.q_2<<std::endl;
                     
                     #pragma omp critical
                     Forces_int.segment(6*n1,6)       += F_elem_global_ref.segment(0,6);      
@@ -345,23 +347,15 @@ public:
             double rz = delta_dep(i*6 +5);
             
             double vx = cos(0.5*rz) * cos(0.5*ry) * sin(0.5*rx) - sin(0.5*rz) * sin(0.5*ry) * cos(0.5*rx);
-            //if(abs(vx)<1E-12) vx=0.0;
 
             double vy = cos(0.5*rz) * sin(0.5*ry) * cos(0.5*rx) + sin(0.5*rz) * cos(0.5*ry) * sin(0.5*rx);
-            //if(abs(vy)<1E-12) vy=0.0;
 
             double vz = sin(0.5*rz) * cos(0.5*ry) * cos(0.5*rx) - cos(0.5*rz) * sin(0.5*ry) * sin(0.5*rx);
-            //if(abs(vz)<1E-12) vz=0.0;
 
             double s  = cos(0.5*rz) * cos(0.5*ry) * cos(0.5*rx) + sin(0.5*rz) * sin(0.5*ry) * sin(0.5*rx);
-            //if(abs(s)<1E-12) s=0.0;
-
+    
             Eigen::Quaterniond delta_q(s,vx,vy,vz);
 
-            if(i== (Nbr_Noeud-1))
-            {   
-                std::cout<<delta_q<<std::endl;
-            }
             QUATERNION_MAP[i] = delta_q ;
         }
     }

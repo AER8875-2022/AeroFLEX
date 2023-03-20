@@ -172,9 +172,9 @@ public:
             cst = 0.5  / sqrt(trace + 1.0);
             s   = 0.25 / cst;
 
-            v_x = (mat(2,1) - mat(1,2)) * cst;
-            v_y = (mat(0,2) - mat(2,0)) * cst;
-            v_z = (mat(1,0) - mat(0,1)) * cst;
+            v_x = (mat(1,2) - mat(2,1)) * cst;
+            v_y = (mat(2,0) - mat(0,2)) * cst;
+            v_z = (mat(0,1) - mat(1,0)) * cst;
         
         }
         else
@@ -183,25 +183,24 @@ public:
             {
                 cst = 2.0 * sqrt(1.0 + mat(0,0) - mat(1,1) - mat(2,2));
                 s   = ( mat(1,2) - mat(2,1) ) / cst;
-
                 v_x = 0.25 * cst ;
-                v_y = ( mat(0,1) + mat(1,0) ) / cst;
-                v_z = ( mat(0,2) + mat(2,0) ) / cst;
+                v_y = ( mat(1,0) + mat(0,1) ) / cst;
+                v_z = ( mat(2,2) + mat(0,2) ) / cst;
             }
             else if(mat(1,1) > mat(2,2))
             {
                 cst = 2.0 * sqrt( 1.0 + mat(1,1) - mat(0,0) - mat(2,2) );
-                s   = ( mat(0,2) - mat(2,0) ) / cst;
-                v_x = ( mat(0,1) + mat(1,0) ) / cst;
+                s   = ( mat(2,0) - mat(0,2) ) / cst;
+                v_x = ( mat(1,0) + mat(0,1) ) / cst;
                 v_y = 0.25 * cst;
-                v_z = ( mat(1,2) + mat(2,1) ) / cst;
+                v_z = ( mat(2,1) + mat(1,2) ) / cst;
             }
             else
             {
                 cst = 2.0 * sqrt(1.0 + mat(2,2) - mat(0,0)- mat(1,1));
-                s   = ( mat(1,0) - mat(0,1) ) / cst;
-                v_x = ( mat(0,2) + mat(2,0) ) / cst;
-                v_y = ( mat(1,2) + mat(2,1) ) / cst;
+                s   = ( mat(0,1) - mat(1,0) ) / cst;
+                v_x = ( mat(2,0) + mat(0,2) ) / cst;
+                v_y = ( mat(2,1) + mat(1,2) ) / cst;
                 v_z = 0.25 * cst;
             }
         }
@@ -216,8 +215,8 @@ public:
 
     void set_q1_And_q2(Eigen::Quaterniond delta_q_1 ,Eigen::Quaterniond delta_q_2 )
     {
-        q_1 = delta_q_1*q_1;
-        q_2 = delta_q_2*q_2;
+        q_1 =  q_1 * delta_q_1.conjugate() ;
+        q_2 =  q_2 * delta_q_2.conjugate() ;
     }
    
 
