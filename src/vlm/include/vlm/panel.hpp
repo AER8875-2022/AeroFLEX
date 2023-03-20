@@ -163,7 +163,8 @@ public:
    *  @return Vector defining the trailing edge of the ring */
   Vector3d leadingEdgeDl() const;
 
-  /** @brief Method to transform stream to global inertial referential from panel's local referential */
+  /** @brief Method to transform stream to global inertial referential from
+   * panel's local referential */
   Vector3d inertial_stream() const;
 
   /** @brief Method computing the influence of the current vortex ring on a

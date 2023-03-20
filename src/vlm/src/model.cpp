@@ -95,4 +95,6 @@ double model::get_cl() const { return cl; }
 
 double model::get_cd() const { return cd; }
 
+double model::get_cy() const { return cy; }
+
 Vector3d model::get_cm() const { return cm; }

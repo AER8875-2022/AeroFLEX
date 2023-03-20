@@ -108,11 +108,10 @@ Vector3d vortexRing::inertial_stream() const {
   return (rotationMatrix.inverse() * local_stream);
 }
 
-
 void vortexRing::computeCollocationPoint() {
   // High aoa correction term according to x axis
   double k;
-  if (local_aoa < 1e-6)
+  if (local_aoa < 1e-6 && local_aoa > -1e6)
     k = 1.0;
   else
     k = local_aoa * M_PI / (180.0 * std::sin(local_aoa * M_PI / 180.0));

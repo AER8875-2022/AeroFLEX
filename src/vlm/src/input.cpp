@@ -25,14 +25,14 @@ std::string simParam::get_databaseFormat() const {
 Vector3d simParam::freeStream() const {
   return Vector3d(
       {vinf * std::cos(aoa * M_PI / 180.0) * std::cos(sideslip * M_PI / 180.0),
-       vinf * std::cos(aoa * M_PI / 180.0) * std::sin(sideslip * M_PI / 180.0),
+       -vinf * std::cos(aoa * M_PI / 180.0) * std::sin(sideslip * M_PI / 180.0),
        vinf * std::sin(aoa * M_PI / 180.0)});
 }
 
 Vector3d simParam::freeStream(const double alpha) const {
   return Vector3d({vinf * std::cos(alpha * M_PI / 180.0) *
                        std::cos(sideslip * M_PI / 180.0),
-                   vinf * std::cos(alpha * M_PI / 180.0) *
+                   -vinf * std::cos(alpha * M_PI / 180.0) *
                        std::sin(sideslip * M_PI / 180.0),
                    vinf * std::sin(alpha * M_PI / 180.0)});
 }

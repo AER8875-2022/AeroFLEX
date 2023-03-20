@@ -16,12 +16,11 @@ using namespace vlm;
 using namespace solver;
 using namespace Eigen;
 
-linear::steady::steady(input::solverParam &solvP, std::atomic<int> &iter, std::vector<double> &residuals,
-                       GUIHandler &gui)
+linear::steady::steady(input::solverParam &solvP, std::atomic<int> &iter,
+                       std::vector<double> &residuals, GUIHandler &gui)
     : solvP(solvP), iter(iter), residuals(residuals), gui(gui) {}
 
-void linear::steady::initialize(
-                                const model &object, const database::table &) {
+void linear::steady::initialize(const model &object, const database::table &) {
   this->lhs =
       MatrixXd::Zero(object.vortexRings.size() + object.doubletPanels.size(),
                      object.vortexRings.size() + object.doubletPanels.size());
@@ -121,6 +120,7 @@ void linear::steady::computeForces(model &object) {
 
     wing.computeForces(object.sim);
     object.cl += wing.get_cl() * wing.get_area() / object.sim.sref;
+    object.cy += wing.get_cy() * wing.get_area() / object.sim.sref;
     object.cm += wing.get_cm() * wing.get_area() / object.sim.sref;
   }
 }
@@ -284,8 +284,7 @@ nonlinear::steady::steady(input::solverParam &solvP, std::atomic<int> &iter,
                           std::vector<double> &residuals, GUIHandler &gui)
     : linear::steady(solvP, iter, residuals, gui) {}
 
-void nonlinear::steady::initialize(
-                                   const model &object,
+void nonlinear::steady::initialize(const model &object,
                                    const database::table &database) {
   this->lhs =
       MatrixXd::Zero(object.vortexRings.size() + object.doubletPanels.size(),
@@ -331,7 +330,9 @@ void nonlinear::steady::solve(model &object) {
   freeStream.normalize();
   object.initializeWake(100.0 * object.sim.cref);
 
-  if (gui.signal.stop) { return; }
+  if (gui.signal.stop) {
+    return;
+  }
 
   // Initializing linear solver
   BiCGSTAB<MatrixXd> system;
@@ -340,7 +341,9 @@ void nonlinear::steady::solve(model &object) {
   buildLHS(object);
   system.compute(lhs);
 
-  if (gui.signal.stop) { return; }
+  if (gui.signal.stop) {
+    return;
+  }
 
   // Initializing iteration
   double residual;
@@ -366,7 +369,9 @@ void nonlinear::steady::solve(model &object) {
   } while ((residual > solvP.tolerance) && (iter <= solvP.max_iter) &&
            (!gui.signal.stop));
 
-  if (gui.signal.stop) { return; }
+  if (gui.signal.stop) {
+    return;
+  }
 
   // Compute viscous forces
   computeForces(object);
@@ -402,9 +407,9 @@ double nonlinear::steady::iterate(model &object) {
 
       // Print error if extrapolation is detected
       if (std::abs(cl_visc) < 1e-15) {
-        std::cerr << "\033[1;31mERROR: Extrapolation detected - Aborting \033[0m"
-                  << std::endl;
-        return 0.0;
+        std::cerr
+            << "\033[1;31mERROR: Extrapolation detected - Aborting \033[0m"
+            << std::endl;
       };
 
       // Step 5 : Applying aoa correction
@@ -445,8 +450,8 @@ void nonlinear::steady::computeForces(model &object) {
 
       double spanLoc = (station.spanLoc - root) / wing.get_span();
       // Computing effective aoa to interpolate
-      double aoa_eff =
-          station.cl_local / VLM_CL_ALPHA_DEG - station.local_aoa + object.sim.aoa;
+      double aoa_eff = station.cl_local / VLM_CL_ALPHA_DEG - station.local_aoa +
+                       object.sim.aoa;
 
       // Interpolating all coefficients at each station
       auto [cl, cd, cmy] =
@@ -454,13 +459,21 @@ void nonlinear::steady::computeForces(model &object) {
       // Lever used to transfer to 2D moment to 3D moment at specified origin
       double lever = object.sim.origin()(0) - station.forceActingPoint()(0);
       // Updating station's force coefficients
-      station.cl = cl;
+
+      std::cout << "cl_local " << station.cl_local << "\n\n";
+      std::cout << "station LA \n" << station.liftAxis() << "\n\n";
+      std::cout << "dot " << station.liftAxis().dot(Vector3d::UnitY())
+                << "\n\n";
+
+      station.cl = cl * std::abs(station.liftAxis().dot(object.sim.liftAxis()));
+      station.cy = cl * std::abs(station.liftAxis().dot(Vector3d::UnitY()));
       station.cd = cd;
-      station.cm(1) = cmy + lever / station.chord * cl;
+      // station.cm(1) = cmy + lever / station.chord * cl;
     }
     // Updating global forces
     wing.computeForces(object.sim);
     object.cl += wing.get_cl() * wing.get_area() / object.sim.sref;
+    object.cy += wing.get_cy() * wing.get_area() / object.sim.sref;
     object.cd += wing.get_cd() * wing.get_area() / object.sim.sref;
     object.cm += wing.get_cm() * wing.get_area() / object.sim.sref;
   }

@@ -65,6 +65,9 @@ class wingStation {
   /** @brief Drag coefficient */
   double cd = 0.0;
 
+  /** @brief Side force coefficient */
+  double cy = 0.0;
+
   /** @brief Moment coefficients */
   Vector3d cm = Vector3d::Zero();
 
@@ -117,7 +120,7 @@ public:
   void resetLocalStream(const input::simParam &sim);
 
   /** @brief Function that returns the local lift axis of the section */
-  Vector3d liftAxis(const input::simParam &sim);
+  Vector3d liftAxis();
 
   /** @brief Method computing the inviscid local forces on the current element
    */
@@ -144,6 +147,9 @@ public:
   /** @brief Getter method for cd */
   double get_cd() const;
 
+  /** @brief Getter method for cy */
+  double get_cy() const;
+
   /** @brief Getter method for cm */
   Vector3d get_cm() const;
 
@@ -157,10 +163,6 @@ private:
   /** @brief Method to obtain a vector in the local referential of the section
    */
   inline void to_local(Vector3d &vector);
-
-  /** @brief Method to obtain a vector in the global referential from local
-   * section referential */
-  inline void to_global(Vector3d &vector);
 
   friend class wing;
   friend class solver::nonlinear::steady;
@@ -190,6 +192,9 @@ class wing {
 
   /** @brief Drag coefficient of the current surface */
   double cd = 0.0;
+
+  /** @brief Side force coefficient of the current surface */
+  double cy = 0.0;
 
   /** @brief Moment coefficients of the current surface */
   Vector3d cm = Vector3d::Zero();
@@ -230,6 +235,9 @@ public:
   /** @brief Getter method for cd */
   double get_cd() const;
 
+  /** @brief Getter method for cy */
+  double get_cy() const;
+
   /** @brief Getter method for cm */
   Vector3d get_cm() const;
 
@@ -237,7 +245,8 @@ private:
   /** @brief Method that computes the area of the wing surface */
   void computeArea();
 
-  /** @brief Method that computes the wing's span as well as the span location of every of its wing stations */
+  /** @brief Method that computes the wing's span as well as the span location
+   * of every of its wing stations */
   void computeSpan();
 };
 

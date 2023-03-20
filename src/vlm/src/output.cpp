@@ -23,12 +23,12 @@ void output::exportForces(const model &object, const int it) {
   output += "######################################\n";
   output += "# " + io.baseName + "_forces_" + itStream.str() + ".dat" + "\n\n";
   output += "# NOTE: GLOBAL coefficients are based on S_REF and C_REF while \n";
-  output += "#       SURFACE coefficients are based on C_REF and their \n";
-  output += "#       surface area. \n";
+  output += "#       SURFACE coefficients are based on C_REF and their      \n";
+  output += "#       surface area.                                          \n";
   output += "######################################\n";
   output += "\n";
 
-  std::ostringstream CL, CD, CMx, CMy, CMz;
+  std::ostringstream CL, CD, CY, CMx, CMy, CMz;
 
   // Global coefficients
   output += "GLOBAL:\n";
@@ -36,6 +36,8 @@ void output::exportForces(const model &object, const int it) {
   output += "CL = " + CL.str() + "\n";
   CD << std::setprecision(12) << object.get_cd();
   output += "CD = " + CD.str() + "\n";
+  CY << std::setprecision(12) << object.get_cy();
+  output += "CY = " + CY.str() + "\n";
   CMx << std::setprecision(12) << object.get_cm()(0);
   output += "CMx = " + CMx.str() + "\n";
   CMy << std::setprecision(12) << object.get_cm()(1);
@@ -47,12 +49,14 @@ void output::exportForces(const model &object, const int it) {
   // Surfaces coefficients
   int i = 0;
   for (auto &wing : object.wings) {
-    std::ostringstream CL, CD, CMx, CMy, CMz;
+    std::ostringstream CL, CD, CY, CMx, CMy, CMz;
     output += "SURFACE " + std::to_string(i) + ":\n";
     CL << std::setprecision(12) << wing.get_cl();
     output += "CL = " + CL.str() + "\n";
     CD << std::setprecision(12) << wing.get_cd();
     output += "CD = " + CD.str() + "\n";
+    CY << std::setprecision(12) << wing.get_cy();
+    output += "CY = " + CY.str() + "\n";
     CMx << std::setprecision(12) << wing.get_cm()(0);
     output += "CMx = " + CMx.str() + "\n";
     CMy << std::setprecision(12) << wing.get_cm()(1);
