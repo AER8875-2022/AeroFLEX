@@ -12,6 +12,10 @@
 
 
 int main() {
-    aero::DispInterpol();
+    aero::Aero elast;
+    elast.Aero(GUIHandler &gui, vlm::VLM &vlm, structure::Structure &structure);
+    elast.input();
+    elast.solve();
+
     return 0;
 }

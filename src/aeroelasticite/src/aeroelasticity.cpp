@@ -4,6 +4,7 @@
 
 using namespace structure;
 using namespace aero;
+using namespace vlm;
 
 
 Aero::Aero(GUIHandler &gui, vlm::VLM &vlm, structure::Structure &structure)
