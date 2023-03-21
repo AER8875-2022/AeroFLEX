@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <sstream>
 
 database::airfoil::airfoil(std::vector<double> &alpha, std::vector<double> &cl,
                            std::vector<double> &cd, std::vector<double> &cmy)
