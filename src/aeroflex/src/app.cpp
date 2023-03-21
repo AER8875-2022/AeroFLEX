@@ -3,6 +3,7 @@
 #include "imgui.h"
 #include "implot.h"
 #include "tinyconfig.hpp"
+#include "parser.hpp"
 
 #include "Application.h"
 #include "FileDialog.hpp"
@@ -667,8 +668,24 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, App& app)
 	return application;
 }
 
+void cmdl_parser_configure(cmd_line_parser::parser& parser) {
+    parser.add("config",                 // name
+               "Configuration file",  // description
+               "-i",                   // shorthand
+               false,                   // required argument
+               false                   // is boolean option
+    );
+}
+
 namespace FlexGUI {
 	int Main(int argc, char** argv) {
+		cmd_line_parser::parser parser(argc, argv);
+		cmdl_parser_configure(parser);
+
+		bool success = parser.parse();
+		if (!success) return 1;
+		std::string config_file = parser.get<std::string>("config");
+
 		GUIHandler gui;
 
 		// Initialize modules with signal routing
@@ -678,11 +695,39 @@ namespace FlexGUI {
 		// Initialize main application with the modules
 		App app(rans, vlm, gui);
 
-		while (g_ApplicationRunning) {
-			FlexGUI::Application* application = CreateApplication(argc, argv, app);
-			application->Run();
-			delete application;
+		if (config_file == "") {
+			while (g_ApplicationRunning) {
+				FlexGUI::Application* application = CreateApplication(argc, argv, app);
+				application->Run();
+				delete application;
+			}
+		} else {
+			std::cout << "CLI mode" << std::endl;
+			std::optional<Settings> settings_opt;
+			try {
+				settings_opt = config_open(parser.get<std::string>("config"));
+			} catch (std::exception &e) {
+				std::cout << e.what() << std::endl;
+				return 1;
+			}
+			if (!settings_opt.has_value()) return 1;
+			app.settings = settings_opt.value();
+			app.solve_async();
+			while (g_ApplicationRunning) {
+				if (is_future_done(app.future_solve)) {
+					app.solve_await();
+					g_ApplicationRunning = false;
+				};
+				auto txt = app.gui.msg.pop();
+				while (txt.has_value()) {
+					std::cout << txt.value() << std::endl;
+					txt = app.gui.msg.pop();
+				}
+
+				std::this_thread::sleep_for(std::chrono::milliseconds(200));
+			}
 		}
+
 		return 0;
 	}
 }
