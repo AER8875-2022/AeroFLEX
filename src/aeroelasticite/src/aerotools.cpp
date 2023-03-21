@@ -183,7 +183,11 @@ namespace aero{
         u[2]= force.point_fs[2] - force.point_fs[5];
         
         for (int i=0; i<n; ++i){
+<<<<<<< Updated upstream
             
+=======
+
+>>>>>>> Stashed changes
             double t;
             t= (u[0](force.point_fa[3*i]-force.point_fs[0]) + u[1](force.point_fa[3*i+1]-force.point_fs[1]) + 
                    u[2](force.point_fa[3*i+2]-force.point_fs[2]))/pow(norme(u),2);
@@ -211,7 +215,10 @@ namespace aero{
         
         for (int i=0; i<n; ++i){
             ///auto forces = model.forces_to_inertial(i);
+<<<<<<< Updated upstream
             
+=======
+>>>>>>> Stashed changes
             
             
             for (int j=0; j<map.size(); ++j){
@@ -225,9 +232,15 @@ namespace aero{
                 v[2]= force.point_fs[3*j+2] - point_fp[3*i+2];
                 dist_1=norme(v);
                 
+<<<<<<< Updated upstream
                 v[0]= force.point_fs[3*(j+1)]   - point_fp[3*i+1];
                 v[1]= force.point_fs[3*(j+1)+1] - point_fp[3*i+2];
                 v[2]= force.point_fs[3*(j+1)+2] - point_fp[3*i+3];
+=======
+                v[0]= force.point_fs[3*(j+1)]   - point_fp[3*i];
+                v[1]= force.point_fs[3*(j+1)+1] - point_fp[3*i+1];
+                v[2]= force.point_fs[3*(j+1)+2] - point_fp[3*i+2];
+>>>>>>> Stashed changes
                 dist_2=norme(v);
                 
                 if (dist_1<=dist_0 && j != map.size()-1)
@@ -250,7 +263,7 @@ namespace aero{
         }
     }
 
-   auto ComputeStructureForces(interpolation_f force,Matrix<double, 6, 1> forces_to_inertial_frame)
+   std::vector<double> ComputeStructureForces(interpolation_f force,Matrix<double, 6, 1> forces_to_inertial_frame)
 
    {
         int n=force.point_fa.size()/3;
