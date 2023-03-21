@@ -182,6 +182,19 @@ void database::table::importLocations(const std::string &path) {
   location_file.close();
 }
 
+bool database::table::check() {
+  bool pass = true;
+  if (airfoils.empty() || sectionAirfoils.empty())
+    pass = false;
+  else
+    for (auto& [_, surface] : sectionAirfoils) {
+      for (auto &section_airfoil : surface)
+        if (airfoils.find(section_airfoil) == airfoils.end())
+          pass = false;
+    }
+  return pass;
+}
+
 std::tuple<double, double, double>
 database::table::coefficients(const double alpha, const int surfaceID,
                               const double spanLoc) {

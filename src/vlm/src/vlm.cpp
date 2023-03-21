@@ -18,18 +18,23 @@ void VLM::initialize() {
 
 void VLM::solve() {
 
-  gui.msg.push("[VLM] Solving VLM with solver " + settings.solver.get_type());
-  gui.msg.push("[VLM] with base name " + settings.io.baseName);
+  gui.msg.push("[VLM] Solving VLM case " + settings.io.baseName + " with solver " + settings.solver.get_type());
 
-  solver::base *solver;
-  solver::linear::steady linear(settings.solver, iters, residuals, gui);
-  solver::nonlinear::steady nonlinear(settings.solver, iters, residuals, gui);
+  // Check for validity of database
+  if (!settings.solver.get_type().compare("NONLINEAR") && !database.check()) {
+    gui.msg.push("[VLM] ERROR: One or more airfoils have not been found - Aborting");
+    return;
+  }
 
   // Clear previous solution
   reinitialize();
 
   // Allocating memory for residuals
   residuals.reserve(settings.solver.max_iter);
+
+  solver::base *solver;
+  solver::linear::steady linear(settings.solver, iters, residuals, gui);
+  solver::nonlinear::steady nonlinear(settings.solver, iters, residuals, gui);
 
   if (!settings.solver.get_type().compare("LINEAR")) {
     linear.initialize(object, database::table());
@@ -43,8 +48,8 @@ void VLM::solve() {
 
   solver->solve(object);
 
+  gui.msg.push("[VLM] Simulation completed in " + std::to_string(iters) + " iterations");
   gui.msg.push("[VLM] Exported results to " + settings.io.outDir);
-
 };
 
 void VLM::reinitialize() {
