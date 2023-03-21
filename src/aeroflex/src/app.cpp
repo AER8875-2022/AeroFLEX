@@ -26,14 +26,10 @@ bool is_future_done(std::future<T> const& f) {
     return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
 }
 
-const std::string bool_to_string(const bool b) {
-    return b ? "true" : "false";
-}
-
 static void HelpMarker(const char* desc)
 {
     ImGui::TextDisabled("(?)");
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {	
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
 		ImGui::BeginTooltip();
         ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
         ImGui::TextUnformatted(desc);
@@ -170,42 +166,8 @@ std::optional<Settings> config_open(const std::string &conf_path) {
 	bool success = io.read(conf_path);
 	if (!success) return std::nullopt;
 
-	if (io.how_many("rans-bc") != 2) throw std::runtime_error("[RANS] Invalid number of boundary conditions");
-
-	settings.rans.g.gamma = io.get<double>("rans-gas", "gamma");
-	settings.rans.g.R = io.get<double>("rans-gas", "R");
-
-	for (int i = 0; i < io.how_many("rans-bc"); i++) {
-		std::string type = io.get_i<std::string>("rans-bc", "type", i);
-		std::string name = io.get_i<std::string>("rans-bc", "name", i);
-		settings.rans.bcs[name];
-		settings.rans.bcs[name].bc_type = type;
-		if (type == "farfield") {
-			settings.rans.bcs[name].vars_far.T = io.get_i<double>("rans-bc", "T", i);
-			settings.rans.bcs[name].vars_far.mach = io.get_i<double>("rans-bc", "mach", i);
-			settings.rans.bcs[name].vars_far.angle = io.get_i<double>("rans-bc", "angle", i);
-			settings.rans.bcs[name].vars_far.p = io.get_i<double>("rans-bc", "p", i);
-		}
-	}
-
-	settings.rans.set_solver_type(io.get<std::string>("rans-solver", "solver"));
-	settings.rans.set_gradient_scheme(io.get<std::string>("rans-solver", "gradient"));
-	settings.rans.set_viscosity_model(io.get<std::string>("rans-solver", "viscosity"));
-	settings.rans.second_order = io.get<bool>("rans-solver", "second_order");
-	settings.rans.relaxation = io.get<double>("rans-solver", "relaxation");
-	settings.rans.start_cfl = io.get<double>("rans-solver", "start_cfl");
-	settings.rans.slope_cfl = io.get<double>("rans-solver", "slope_cfl");
-	settings.rans.max_cfl = io.get<double>("rans-solver", "max_cfl");
-	settings.rans.tolerance = io.get<double>("rans-solver", "tolerance");
-	settings.rans.rhs_iterations = io.get<int>("rans-solver", "rhs_iterations");
-	settings.rans.max_iterations = io.get<int>("rans-solver", "max_iterations");
-	settings.rans.limiter_k = io.get<double>("rans-solver", "limiter_k");
- 
-	for (int i = 0; i < io.how_many("rans-mesh"); i++) {
-		settings.rans.meshes.push_back(io.get_i<std::string>("rans-mesh", "file", i));
-	}
-
 	// Parsing for vlm
+	settings.rans.import_config_file(io);
 	settings.vlm.import_config_file(io);
 
 	return settings;
@@ -220,43 +182,7 @@ bool config_save(const std::string &conf_path, Settings &settings) {
 		"rans-mesh",
 	};
 
-	io.config["rans-gas"]["gamma"] = std::to_string(settings.rans.g.gamma);
-	io.config["rans-gas"]["R"] = std::to_string(settings.rans.g.R);
-
-	io.config_vec["rans-bc"] = {};
-	for (auto &[name, bc] : settings.rans.bcs) {
-		std::cout << name << " | " << bc.bc_type << std::endl;
-		io.config_vec["rans-bc"].push_back({
-			{"type", bc.bc_type},
-			{"name", name},
-			{"T", std::to_string(bc.vars_far.T)},
-			{"mach", std::to_string(bc.vars_far.mach)},
-			{"angle", std::to_string(bc.vars_far.angle)},
-			{"p", std::to_string(bc.vars_far.p)},
-		});
-	};
-
-	io.config["rans-solver"]["solver"] = settings.rans.solver_type();
-	io.config["rans-solver"]["gradient"] = settings.rans.gradient_scheme();
-	io.config["rans-solver"]["viscosity"] = settings.rans.viscosity_model();
-
-	io.config["rans-solver"]["second_order"] = bool_to_string(settings.rans.second_order);
-	io.config["rans-solver"]["relaxation"] = bool_to_string(settings.rans.relaxation);
-	io.config["rans-solver"]["start_cfl"] = std::to_string(settings.rans.start_cfl);
-	io.config["rans-solver"]["slope_cfl"] = std::to_string(settings.rans.slope_cfl);
-	io.config["rans-solver"]["max_cfl"] = std::to_string(settings.rans.max_cfl);
-	io.config["rans-solver"]["tolerance"] = std::to_string(settings.rans.tolerance);
-	io.config["rans-solver"]["rhs_iterations"] = std::to_string(settings.rans.rhs_iterations);
-	io.config["rans-solver"]["max_iterations"] = std::to_string(settings.rans.max_iterations);
-	io.config["rans-solver"]["limiter_k"] = std::to_string(settings.rans.limiter_k);
-
-	io.config_vec["rans-mesh"] = {};
-	for (auto &mesh : settings.rans.meshes) {
-		io.config_vec["rans-mesh"].push_back({
-			{"file", mesh},
-		});
-	};
-
+	settings.rans.export_config_file(io);
 	// Exporting for VLM
 	settings.vlm.export_config_file(io);
 
@@ -281,7 +207,7 @@ void App::solve_async() {
 	gui.msg.push("-- Starting simulation --");
 	rans.settings = settings.rans;
 	vlm.settings = settings.vlm;
-	future_solve = std::async(std::launch::async, 
+	future_solve = std::async(std::launch::async,
 	[&](){
 		try {
 			solve(rans, vlm);
@@ -442,7 +368,7 @@ void VlmLayer::OnUIRender() {
 			app.dialog_action = AppDialogAction::DatabaseOpen;
 		}
 	}
-	
+
 	ImGui::Separator();
 	ImGui::Text("Solver");
 	Combo(app.settings.vlm.solver.timeDomain_options, app.settings.vlm.solver.timeDomain, "Time Domain");

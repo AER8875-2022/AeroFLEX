@@ -2,7 +2,6 @@
 #ifndef VISCOUS_DATABASE_HPP
 #define VISCOUS_DATABASE_HPP
 
-#include "vlm/input.hpp"
 #include <array>
 #include <string>
 #include <tuple>
