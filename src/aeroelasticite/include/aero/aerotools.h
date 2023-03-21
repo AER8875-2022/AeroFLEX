@@ -1,23 +1,6 @@
 //
 // Created by bocan on 2023-02-16.
-#ifndef aerotools.hpp
-#define aerotools.hpp
 
-#include <iostream>
-#include <algorithm>
-#include <array>
-#include <vector>
-#include "vlm/model.hpp"
-#include "structure/structure.hpp"
-#include <Eigen/Dense>
-#include <Eigen/Geometry>
-#include "vlm/vlm.hpp"
-#include <cmath>
-
-using namespace Eigen;
-using namespace vlm;
-using namespace structure;
-using namespace std;
 
 
 
