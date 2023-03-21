@@ -17,6 +17,7 @@
 #include <map>
 #include <vector>
 #include <Eigen/Core>
+#include "tinyconfig.hpp"
 
 using uint = unsigned int;
 
@@ -221,6 +222,90 @@ struct Settings {
             viscosity = 2;
         }
     };
+
+    void import_config_file(tiny::config &config);
+
+    void export_config_file(tiny::config &config);
 };
+
+const std::string bool_to_string(const bool b) {
+    return b ? "true" : "false";
+}
+
+void Settings::import_config_file(tiny::config &io) {
+    if (io.how_many("rans-bc") != 2) throw std::runtime_error("[RANS] Invalid number of boundary conditions");
+
+	g.gamma = io.get<double>("rans-gas", "gamma");
+	g.R = io.get<double>("rans-gas", "R");
+
+	for (int i = 0; i < io.how_many("rans-bc"); i++) {
+		std::string type = io.get_i<std::string>("rans-bc", "type", i);
+		std::string name = io.get_i<std::string>("rans-bc", "name", i);
+		bcs[name];
+		bcs[name].bc_type = type;
+		if (type == "farfield") {
+			bcs[name].vars_far.T = io.get_i<double>("rans-bc", "T", i);
+			bcs[name].vars_far.mach = io.get_i<double>("rans-bc", "mach", i);
+			bcs[name].vars_far.angle = io.get_i<double>("rans-bc", "angle", i);
+			bcs[name].vars_far.p = io.get_i<double>("rans-bc", "p", i);
+		}
+	}
+
+	set_solver_type(io.get<std::string>("rans-solver", "solver"));
+	set_gradient_scheme(io.get<std::string>("rans-solver", "gradient"));
+	set_viscosity_model(io.get<std::string>("rans-solver", "viscosity"));
+	second_order = io.get<bool>("rans-solver", "second_order");
+	relaxation = io.get<double>("rans-solver", "relaxation");
+	start_cfl = io.get<double>("rans-solver", "start_cfl");
+	slope_cfl = io.get<double>("rans-solver", "slope_cfl");
+	max_cfl = io.get<double>("rans-solver", "max_cfl");
+	tolerance = io.get<double>("rans-solver", "tolerance");
+	rhs_iterations = io.get<int>("rans-solver", "rhs_iterations");
+	max_iterations = io.get<int>("rans-solver", "max_iterations");
+	limiter_k = io.get<double>("rans-solver", "limiter_k");
+
+	for (int i = 0; i < io.how_many("rans-mesh"); i++) {
+		meshes.push_back(io.get_i<std::string>("rans-mesh", "file", i));
+	}
+}
+
+void Settings::export_config_file(tiny::config &io) {
+    io.config["rans-gas"]["gamma"] = std::to_string(g.gamma);
+	io.config["rans-gas"]["R"] = std::to_string(g.R);
+
+	io.config_vec["rans-bc"] = {};
+	for (auto &[name, bc] : bcs) {
+		std::cout << name << " | " << bc.bc_type << std::endl;
+		io.config_vec["rans-bc"].push_back({
+			{"type", bc.bc_type},
+			{"name", name},
+			{"T", std::to_string(bc.vars_far.T)},
+			{"mach", std::to_string(bc.vars_far.mach)},
+			{"angle", std::to_string(bc.vars_far.angle)},
+			{"p", std::to_string(bc.vars_far.p)},
+		});
+	};
+
+	io.config["rans-solver"]["solver"] = solver_type();
+	io.config["rans-solver"]["gradient"] = gradient_scheme();
+	io.config["rans-solver"]["viscosity"] = viscosity_model();
+
+	io.config["rans-solver"]["second_order"] = bool_to_string(second_order);
+	io.config["rans-solver"]["relaxation"] = bool_to_string(relaxation);
+	io.config["rans-solver"]["start_cfl"] = std::to_string(start_cfl);
+	io.config["rans-solver"]["slope_cfl"] = std::to_string(slope_cfl);
+	io.config["rans-solver"]["max_cfl"] = std::to_string(max_cfl);
+	io.config["rans-solver"]["tolerance"] = std::to_string(tolerance);
+	io.config["rans-solver"]["rhs_iterations"] = std::to_string(rhs_iterations);
+	io.config["rans-solver"]["max_iterations"] = std::to_string(max_iterations);
+	io.config["rans-solver"]["limiter_k"] = std::to_string(limiter_k);
+
+	io.config_vec["rans-mesh"] = {};
+	for (auto &mesh : meshes) {
+		io.config_vec["rans-mesh"].push_back({
+			{"file", mesh},
+		});
+	};
+}
 
 }
