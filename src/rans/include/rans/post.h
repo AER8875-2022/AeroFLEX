@@ -15,11 +15,12 @@
 
 #include <iomanip>
 #include <sstream>
+#include <limits>
+
 #include <Eigen/Dense>
 #include <fstream>
-
+#include "common_aeroflex.hpp"
 #include <rans/solver.h>
-
 
 
 namespace rans {
@@ -175,8 +176,73 @@ void save(
 
 }
 
+class CpProfile {
+    public:
+    double x_moment;
+    double y_moment;
 
+    VectorMutex<double> x;
+    VectorMutex<double> cp;
 
+    void calc_chord_coords(solver &s, std::string& af) {
+        mesh& m = s.get_mesh();
+        x.clear();
+        cp.clear();
+        double xmin = std::numeric_limits<double>::max();
+        double xmax = std::numeric_limits<double>::min();
+        y_moment = 0.;
+        uint n_added = 0;
+
+        for (uint b=0; b<m.boundaryEdges.size(); ++b) {
+            if (m.boundaryEdgesPhysicals[b] == af) {
+                const uint e = m.boundaryEdges[b];
+                xmin = std::min(xmin, m.edgesCentersX[e]);
+                xmax = std::max(xmax, m.edgesCentersX[e]);
+                y_moment += m.edgesCentersY[e];
+                cp.push_back(0.0);
+                x.push_back(m.edgesCentersX[e]);
+                n_added += 1;
+            }
+        }
+        // y_moment is wrong as it should be derived from the projection 
+        // of 0.25x the vector going from left to the right extremity
+        // Will work for neutral airfoils tho.
+        y_moment /= (double) n_added;
+        x_moment = (xmax - xmin)*0.25 + xmin;
+    }
+
+    void calc_cp(solver &s, std::string& af) {
+        mesh& m = s.get_mesh();
+        boundary_variables vars_far = s.get_boundary_variables();
+        const double p_inf = vars_far.p;
+        const double mach_inf = vars_far.mach;
+        solution sol = s.get_solution();
+
+        int idx = 0;
+        for (uint b=0; b<m.boundaryEdges.size(); ++b) {
+            if (m.boundaryEdgesPhysicals[b] == af) {
+                const uint e = m.boundaryEdges[b];
+                const uint n0 = m.edgesNodes(e, 0);
+                const uint n1 = m.edgesNodes(e, 1);
+
+                const uint cell = m.edgesCells(e, 0);
+
+                // Also calculate cp
+                const double rho = sol.rho(cell);
+                const double u = sol.u(cell);
+                const double v = sol.v(cell);
+                const double p = sol.p(cell);
+                const double umag = sqrt(u*u + v*v);
+                const double cs = sol.c(cell);
+                const double mach = umag / cs;
+                const double cp_ = 2./(sol.gamma()*mach_inf*mach_inf)*(p/p_inf - 1.);
+
+                cp[idx] = cp_;
+                idx++;
+            }
+        }
+    }
+};
 
 wallProfile get_wall_profile(solver& solv, std::string patch_name) {
 
