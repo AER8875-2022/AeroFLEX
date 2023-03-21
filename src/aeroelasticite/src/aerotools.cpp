@@ -214,11 +214,6 @@ namespace aero{
     
         
         for (int i=0; i<n; ++i){
-            ///auto forces = model.forces_to_inertial(i);
-<<<<<<< Updated upstream
-            
-=======
->>>>>>> Stashed changes
             
             
             for (int j=0; j<map.size(); ++j){
@@ -232,15 +227,12 @@ namespace aero{
                 v[2]= force.point_fs[3*j+2] - point_fp[3*i+2];
                 dist_1=norme(v);
                 
-<<<<<<< Updated upstream
-                v[0]= force.point_fs[3*(j+1)]   - point_fp[3*i+1];
-                v[1]= force.point_fs[3*(j+1)+1] - point_fp[3*i+2];
-                v[2]= force.point_fs[3*(j+1)+2] - point_fp[3*i+3];
-=======
+
+
                 v[0]= force.point_fs[3*(j+1)]   - point_fp[3*i];
                 v[1]= force.point_fs[3*(j+1)+1] - point_fp[3*i+1];
                 v[2]= force.point_fs[3*(j+1)+2] - point_fp[3*i+2];
->>>>>>> Stashed changes
+
                 dist_2=norme(v);
                 
                 if (dist_1<=dist_0 && j != map.size()-1)
