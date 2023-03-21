@@ -66,6 +66,15 @@ void model::clear() {
 }
 
 void model::build(const input::meshData &mesh) {
+
+  // Clearing previous mesh
+  nodes.clear();
+  vortexRings.clear();
+  doubletPanels.clear();
+  wingStations.clear();
+  wings.clear();
+  patches.clear();
+
   // Building nodes
   for (auto &[key, node] : mesh.nodes) {
     nodes.push_back(node);

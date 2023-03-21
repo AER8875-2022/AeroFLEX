@@ -1,4 +1,4 @@
-AIRFOIL AIRFOIL_NAME
+AIRFOIL airfoil_demo_fine
 # alpha CL CD CMy
 0 0 0 0
 5 0.548311355617539 0 0

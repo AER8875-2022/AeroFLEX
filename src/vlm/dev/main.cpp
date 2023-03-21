@@ -60,6 +60,9 @@ int main(int argc, char **argv) {
     std::cout << "==>Initializing viscous database...";
     database.importAirfoils(settings.io.databaseFile);
     database.importLocations(settings.io.locationFile);
+    if (!database.check()) {
+      std::cout << "\033[1;31m==>ERROR: One or more airfoils were not found! - Aborting \033[0m" << std::endl;
+    }
     std::cout << "\033[1;36mDone\033[0m" << std::endl;
   }
 
