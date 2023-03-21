@@ -81,7 +81,7 @@ void Rans::run_airfoil(const std::string& airfoil, database::airfoil& db) {
     multi.solvers[0].init();
 
     for (auto& alpha: db.alpha) {
-        gui.msg.push("[RANS] Solving for alpha = " + std::to_string(alpha) + "°");
+        gui.msg.push("[RANS] Solving for alpha = " + std::to_string(alpha) + " deg.");
         settings.bcs["farfield"].vars_far.angle = alpha * 0.01745; // deg to rad
         for (auto& s: multi.solvers) {
             s.set_bcs(settings.bcs);
