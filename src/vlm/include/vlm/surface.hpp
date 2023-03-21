@@ -126,6 +126,14 @@ public:
    */
   void computeForces(const input::simParam &sim);
 
+  /** @brief Method to obtain a vector in the local referential of the section
+   */
+  void to_local(Vector3d &vector);
+
+  /** @brief Method to obtain a vector in the global referential of the section
+   */
+  void to_global(Vector3d &vector);
+
   /** @brief Getter method for globalIndex */
   double get_globalIndex() const;
 
@@ -159,10 +167,6 @@ private:
 
   /** @brief Method computing the local chord of the current element */
   void computeChordLength();
-
-  /** @brief Method to obtain a vector in the local referential of the section
-   */
-  inline void to_local(Vector3d &vector);
 
   friend class wing;
   friend class solver::nonlinear::steady;

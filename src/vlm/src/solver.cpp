@@ -456,19 +456,18 @@ void nonlinear::steady::computeForces(model &object) {
       // Interpolating all coefficients at each station
       auto [cl, cd, cmy] =
           database.coefficients(aoa_eff, wing.get_globalIndex(), spanLoc);
+
       // Lever used to transfer to 2D moment to 3D moment at specified origin
       double lever = object.sim.origin()(0) - station.forceActingPoint()(0);
+
       // Updating station's force coefficients
-
-      std::cout << "cl_local " << station.cl_local << "\n\n";
-      std::cout << "station LA \n" << station.liftAxis() << "\n\n";
-      std::cout << "dot " << station.liftAxis().dot(Vector3d::UnitY())
-                << "\n\n";
-
       station.cl = cl * std::abs(station.liftAxis().dot(object.sim.liftAxis()));
       station.cy = cl * std::abs(station.liftAxis().dot(Vector3d::UnitY()));
       station.cd = cd;
-      // station.cm(1) = cmy + lever / station.chord * cl;
+
+      station.to_local(station.cm);
+      station.cm(1) = cmy + lever / station.chord * station.cl_local;
+      station.to_global(station.cm);
     }
     // Updating global forces
     wing.computeForces(object.sim);

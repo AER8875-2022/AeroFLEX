@@ -136,6 +136,22 @@ void wingStation::to_local(Vector3d &vector) {
 
   vector = rotationMatrix * vector;
 }
+void wingStation::to_global(Vector3d &vector) {
+
+  // Computing local referential
+  Vector3d leadingEdge = vortices[vortexIDs.front()].leadingEdgeDl();
+  Vector3d x_local = Vector3d::UnitX();
+  Vector3d z_local = x_local.cross(leadingEdge).normalized();
+  Vector3d y_local = z_local.cross(x_local).normalized();
+
+  // Rotating freeStream
+  Matrix3d rotationMatrix{{x_local(0), x_local(1), x_local(2)},
+                          {y_local(0), y_local(1), y_local(2)},
+                          {z_local(0), z_local(1), z_local(2)}};
+
+  vector = rotationMatrix.inverse() * vector;
+}
+
 
 Vector3d wingStation::liftAxis() {
   auto &leadingPanel = vortices[vortexIDs.front()];
