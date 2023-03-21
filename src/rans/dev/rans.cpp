@@ -34,9 +34,9 @@ int main(int argc, char **argv) {
         ms.push_back(mesh(mesh_name));
     }
 
-    if (data.solver_type == "implicit") {
+    if (data.solver_type() == "implicit") {
         multigrid_run_and_save<implicitSolver>(ms, data);
-    } else if (data.solver_type == "explicit") {
+    } else if (data.solver_type() == "explicit") {
         multigrid_run_and_save<explicitSolver>(ms, data);
     }
 

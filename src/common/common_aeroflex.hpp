@@ -3,6 +3,10 @@
 #include <atomic>
 #include <memory>
 #include <string>
+#include <mutex>
+#include <vector>
+
+#include "spsc_queue.hpp"
 
 struct SignalHandler {
 	std::atomic<bool> stop = false;
@@ -24,42 +28,50 @@ struct EventHandler {
 };
 
 template<typename T>
-class LockFreeQueue
-{
-private:
-    struct node
-    {
-        std::shared_ptr<T> data;
-        std::atomic<node*> next;
-        node(T const& data_):
-            data(std::make_shared<T>(data_))
-        {}
-    };
-    std::atomic<node*> head;
-    std::atomic<node*> tail;
-public:
-    void push(T const& data)
-    {
-        std::atomic<node*> const new_node=new node(data);
-        node* old_tail = tail.load();
-        while(!old_tail->next.compare_exchange_weak(nullptr, new_node)){
-          node* old_tail = tail.load();
-        }
-        tail.compare_exchange_weak(old_tail, new_node);
-    }
-    std::shared_ptr<T> pop()
-    {
-        node* old_head=head.load();
-        while(old_head &&
-            !head.compare_exchange_weak(old_head,old_head->next)){
-            old_head=head.load();
-        }
-        return old_head ? old_head->data : std::shared_ptr<T>();
-    }
+class VectorMutex {
+	public:
+		std::vector<T> m_vec;
+		std::mutex m_mutex;
+
+		VectorMutex() = default;
+		VectorMutex(int size) : m_vec(size) {}
+
+		T* data() {
+			std::lock_guard<std::mutex> lock(m_mutex);
+			if (m_vec.empty()) {
+				return nullptr;
+			}
+			return &m_vec[0];
+		}
+
+		T& operator[](int i) {
+			std::lock_guard<std::mutex> lock(m_mutex);
+			return m_vec[i];
+		}
+
+		void push_back(const T& val) {
+			std::lock_guard<std::mutex> lock(m_mutex);
+			m_vec.push_back(val);
+		}
+
+		int size() {
+			std::lock_guard<std::mutex> lock(m_mutex);
+			return m_vec.size();
+		}
+
+		void resize(int size) {
+			std::lock_guard<std::mutex> lock(m_mutex);
+			m_vec.resize(size);
+		}
+
+		void clear() {
+			std::lock_guard<std::mutex> lock(m_mutex);
+			m_vec.clear();
+		}
 };
 
 struct GUIHandler {
 	SignalHandler signal;
 	EventHandler event;
-	LockFreeQueue<std::string> message;
+	spsc_queue<std::string> msg{8};
 };

@@ -3,7 +3,6 @@
 #define VISCOUS_DATABASE_HPP
 
 #include "vlm/input.hpp"
-#include "vlm/model.hpp"
 #include <array>
 #include <string>
 #include <tuple>
@@ -35,6 +34,7 @@ struct airfoil {
    *  @param interpolationMethod Interpolation method based on the values of
    * interpolationType
    * */
+  airfoil() = default;
   airfoil(std::vector<double> &alpha, std::vector<double> &cl,
           std::vector<double> &cd, std::vector<double> &cmy);
 
@@ -71,10 +71,16 @@ struct table {
   std::unordered_map<int, std::vector<double>> sectionSpanLocs;
 
   /** @brief Import database from a file
-   *  @param path Path to the file containing the database
-   *  @param solvP Struct holding parameters for the solver */
-  void importFromFile(const std::string &path,
-                      const vlm::input::solverParam &solvP);
+   *  @param path Path to the file*/
+  void importAirfoils(const std::string &path);
+
+  /** @brief Import evaluation wing sections from a file
+   *  @param path Path to the file */
+  void importLocations(const std::string &path);
+
+  /** @brief Check database to report any missing airfoils
+   *  @return true -> no airfoil missing | false -> at least one airfoil missing */
+  bool check();
 
   /** @brief Interpolates the 3 viscous coefficients at specified angle of
    * attack, surface and spanwise location

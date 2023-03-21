@@ -170,7 +170,7 @@ public:
 
     virtual void fill() {}
     virtual int compute() {return -1;}
-    virtual double solve(const double relaxation=1, const double tol=0, const uint rhs_iterations=5) {return -1;}
+    virtual double solve(const double relaxation=1, const double tol=0, const int rhs_iterations=5) {return -1;}
 
 };
 
@@ -750,7 +750,7 @@ public:
 
     void fill() {}
     int compute() {return 0;}
-    double solve(const double relaxation=1, const double tol=0, const uint rhs_iterations=5);
+    double solve(const double relaxation=1, const double tol=0, const int rhs_iterations=5);
 
 };
 
@@ -812,7 +812,7 @@ void explicitSolver::calc_residual(const Eigen::VectorXd& q_) {
 }
 
 
-double explicitSolver::solve(const double relaxation, const double tol, const uint rhs_iterations) {
+double explicitSolver::solve(const double relaxation, const double tol, const int rhs_iterations) {
     calc_dt();
 
     #pragma omp parallel for
@@ -978,7 +978,7 @@ public:
 
     void fill();
     int compute();
-    double solve(const double relaxation=1, const double tol=0, const uint rhs_iterations=5);
+    double solve(const double relaxation=1, const double tol=0, const int rhs_iterations=5);
 
 };
 
@@ -1183,7 +1183,7 @@ int implicitSolver::compute() {
 double implicitSolver::solve(
     const double relaxation,
     const double tol, 
-    const uint rhs_iterations
+    const int rhs_iterations
 ) {
     // Solve rho, rho_u, rho_v, rho_e
     fillRhoRHS();
@@ -1200,7 +1200,7 @@ double implicitSolver::solve(
         q += qW*relaxation;
     }
 
-    for (uint i=0; i<rhs_iterations; ++i) {
+    for (int i=0; i<rhs_iterations; ++i) {
         fillRhoRHS();
 
         err = RhoVector.norm();

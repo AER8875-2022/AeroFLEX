@@ -11,6 +11,7 @@ lc1=1.0; lc2=0.075; // 4 000
 // Radius of farfield. For element numbers listed above,
 //  keep wc equal to 5.
 wc = 5;
+aoa = 0.;
 
 Point(1)={0+0.5, 0, 0, lc1};
 Point(2)={wc+0.5, 0, 0, lc1};
@@ -226,7 +227,7 @@ Curve Loop (2)={5};
 
 Plane Surface(1)={1, 2};
 
-Rotate{{0,0,1}, {0,1,0}, 0*Pi/180}{ Surface{1}; }
+Rotate{{0,0,1}, {0,1,0}, -aoa*Pi/180}{ Surface{1}; }
 
 
 Physical Curve("farfield") = {1, 2, 3, 4};

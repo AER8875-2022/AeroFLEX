@@ -1,13 +1,13 @@
 
-#include "vlm/utils.hpp"
+#include "vlm/info.hpp"
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 
 using namespace vlm;
-using namespace utils;
+using namespace info;
 
-void utils::printArtwork() {
+void info::printArtwork() {
   std::cout << "\n";
   std::cout << "██╗   ██╗██╗     ███╗   ███╗"
             << "\n";
@@ -24,25 +24,24 @@ void utils::printArtwork() {
   std::cout << std::endl;
 }
 
-void utils::printCaseInfo(const input::simParam &sim, const input::ioParam &io,
-                          const input::solverParam &solvP) {
+void info::printCaseInfo(const Settings &settings) {
   std::ostringstream aoa, sideslip, vinf, rho, cref, sref, coreRadius;
-  aoa << std::setprecision(4) << sim.aoa;
-  sideslip << std::setprecision(4) << sim.sideslip;
-  vinf << std::setprecision(4) << sim.vinf;
-  rho << std::setprecision(4) << sim.rho;
-  cref << std::setprecision(4) << sim.cref;
-  sref << std::setprecision(4) << sim.sref;
-  coreRadius << std::setprecision(4) << sim.coreRadius;
+  aoa << std::setprecision(4) << settings.sim.aoa;
+  sideslip << std::setprecision(4) << settings.sim.sideslip;
+  vinf << std::setprecision(4) << settings.sim.vinf;
+  rho << std::setprecision(4) << settings.sim.rho;
+  cref << std::setprecision(4) << settings.sim.cref;
+  sref << std::setprecision(4) << settings.sim.sref;
+  coreRadius << std::setprecision(4) << settings.sim.coreRadius;
 
   std::cout << std::endl;
-  std::cout << "     \033[1;20mVLM CASE:\033[0m " << io.baseName << "\n";
-  std::cout << "      \033[1;20mOUT DIR:\033[0m " << io.outDir << "\n";
-  std::cout << "    \033[1;20mMESH FILE:\033[0m " << io.meshFile << "\n\n";
+  std::cout << "     \033[1;20mVLM CASE:\033[0m " << settings.io.baseName << "\n";
+  std::cout << "      \033[1;20mOUT DIR:\033[0m " << settings.io.outDir << "\n";
+  std::cout << "    \033[1;20mMESH FILE:\033[0m " << settings.io.meshFile << "\n\n";
 
-  std::cout << "  \033[1;20mSOLVER TYPE:\033[0m " << solvP.type << "\n";
-  std::cout << "  \033[1;20mTIME DOMAIN:\033[0m " << solvP.timeDomain << "\n";
-  std::cout << "    \033[1;20mTOLERANCE:\033[0m " << solvP.tolerance << "\n\n";
+  std::cout << "  \033[1;20mSOLVER TYPE:\033[0m " << settings.solver.type << "\n";
+  std::cout << "  \033[1;20mTIME DOMAIN:\033[0m " << settings.solver.timeDomain << "\n";
+  std::cout << "    \033[1;20mTOLERANCE:\033[0m " << settings.solver.tolerance << "\n\n";
 
   std::cout << "          \033[1;20mAOA:\033[0m " << aoa.str() << "\n";
   std::cout << "     \033[1;20mSIDESLIP:\033[0m " << sideslip.str() << "\n";
@@ -54,7 +53,7 @@ void utils::printCaseInfo(const input::simParam &sim, const input::ioParam &io,
   std::cout << std::endl;
 }
 
-void utils::printMeshInfo(const input::meshData &mesh) {
+void info::printMeshInfo(const input::meshData &mesh) {
   std::cout << std::endl;
   std::cout << "             \033[1;20mNUMBER OF NODES:\033[0m "
             << mesh.nodes.size() << "\n";

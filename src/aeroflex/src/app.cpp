@@ -1,40 +1,24 @@
-#include "Application.h"
 #include "EntryPoint.h"
+
 #include "imgui.h"
 #include "implot.h"
+#include "tinyconfig.hpp"
+
+#include "Application.h"
+#include "FileDialog.hpp"
+
+#include <string>
+#include <cstring>
+#include <future>
+#include <thread>
+#include <ctime>
 
 #include "common_aeroflex.hpp"
+#include "database/database.hpp"
+#include "vlm/input.hpp"
 
 #include <rans/rans.h>
 #include <vlm/vlm.hpp>
-
-// Temporary
-#include <rans/parser.h>
-
-#include <future>
-#include <thread>
-
-using namespace rans;
-
-class Aero {
-	public:
-		void solve();
-		void solve_async();
-
-		// Modules
-		Rans &rans;
-		vlm::VLM &vlm;
-
-		double x = 0.0;
-
-		std::future<void> future_solve;
-
-		// Signal routing
-		bool signal_status_busy = false;
-		bool signal_status_ready = true;
-		GUIHandler &gui;
-		Aero(Rans &rans, vlm::VLM &vlm, GUIHandler &gui) : rans(rans), vlm(vlm), gui(gui) {};
-};
 
 template <class T>
 bool is_future_done(std::future<T> const& f) {
@@ -42,56 +26,498 @@ bool is_future_done(std::future<T> const& f) {
     return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
 }
 
-void Aero::solve_async() {
-	signal_status_ready = false;
-	signal_status_busy = true;
-	future_solve = std::async(std::launch::async, [this](){solve();});
+const std::string bool_to_string(const bool b) {
+    return b ? "true" : "false";
 }
 
-void Aero::solve() {
-	rans.input();
-	rans.solve();
+static void HelpMarker(const char* desc)
+{
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {	
+		ImGui::BeginTooltip();
+        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+        ImGui::TextUnformatted(desc);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
 }
+
+struct Settings {
+	rans::Settings rans;
+	vlm::Settings vlm;
+};
+
+enum class AppDialogAction {
+	None,
+	ConfigOpen,
+	ConfigSave,
+	DatabaseOpen,
+};
+
+class App {
+	public:
+		void solve_async();
+		void solve_await();
+		void config_open_async(const std::string &conf_path);
+		void config_open_await();
+		void config_save_async(const std::string &conf_path);
+		void config_save_await();
+
+		// Modules
+		rans::Rans &rans;
+		vlm::VLM &vlm;
+
+		Settings settings;
+
+		std::future<void> future_solve;
+		std::future<std::optional<Settings>> future_config_open;
+		std::future<bool> future_config_save;
+		std::string outfile;
+
+		// Signal routing
+		bool signal_status_busy = false;
+		bool signal_status_ready = true;
+		GUIHandler &gui;
+
+		// Dialogs
+		AppDialogAction dialog_action = AppDialogAction::None;
+		FlexGUI::FileDialog dialog;
+		char path_buf[256];
+		App(rans::Rans &rans, vlm::VLM &vlm, GUIHandler &gui);
+};
+
+struct RansLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	App &app;
+	RansLayer(App &app) : app(app) {};
+};
+
+struct VlmLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	App &app;
+	VlmLayer(App &app) : app(app) {};
+};
 
 struct ButtonLayer : public FlexGUI::Layer {
 	virtual void OnUIRender() override;
-	Aero &aero;
-	ButtonLayer(Aero &aero) : aero(aero) {};
+	App &app;
+	ButtonLayer(App &app) : app(app) {};
 };
 
-struct GraphLayer : public FlexGUI::Layer {
+struct RansGraphLayer : public FlexGUI::Layer {
 	virtual void OnUIRender() override;
-	Aero &aero;
-	GraphLayer(Aero &aero) : aero(aero) {};
+	App &app;
+	RansGraphLayer(App &app) : app(app) {};
 };
+
+struct VlmGraphLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	App &app;
+	VlmGraphLayer(App &app) : app(app) {};
+};
+
+struct CpLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	App &app;
+	CpLayer(App &app) : app(app) {};
+};
+
+struct ConsoleLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	App &app;
+	ConsoleLayer(App &app) : app(app) {};
+};
+
+struct DialogLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	App &app;
+	DialogLayer(App &app) : app(app) {};
+};
+
+// SOLVE =================================================================================================
+
+void solve(rans::Rans &rans, vlm::VLM &vlm) {
+
+	database::table table;
+
+	if (!vlm.settings.sim.get_databaseFormat().compare("NONE")) {
+		table.airfoils["airfoil_demo_fine"];
+		table.airfoils["airfoil_demo_fine"].alpha = {1.0, 5.0, 10.0};
+
+		for (auto& [airfoil, db] : table.airfoils) {
+			rans.solve_airfoil(airfoil, db);
+		}
+	}
+	else if (!vlm.settings.sim.get_databaseFormat().compare("FILE")) {
+		table.importAirfoils(vlm.settings.io.databaseFile);
+	}
+
+	vlm.initialize();
+	vlm.database = table;
+	vlm.database.importLocations(vlm.settings.io.locationFile); // Temporary
+	vlm.solve();
+
+	// rans.input();
+	// rans.solve();
+}
+
+// =================================================================================================
+
+std::optional<Settings> config_open(const std::string &conf_path) {
+	Settings settings;
+
+	tiny::config io;
+	bool success = io.read(conf_path);
+	if (!success) return std::nullopt;
+
+	if (io.how_many("rans-bc") != 2) throw std::runtime_error("[RANS] Invalid number of boundary conditions");
+
+	settings.rans.g.gamma = io.get<double>("rans-gas", "gamma");
+	settings.rans.g.R = io.get<double>("rans-gas", "R");
+
+	for (int i = 0; i < io.how_many("rans-bc"); i++) {
+		std::string type = io.get_i<std::string>("rans-bc", "type", i);
+		std::string name = io.get_i<std::string>("rans-bc", "name", i);
+		settings.rans.bcs[name];
+		settings.rans.bcs[name].bc_type = type;
+		if (type == "farfield") {
+			settings.rans.bcs[name].vars_far.T = io.get_i<double>("rans-bc", "T", i);
+			settings.rans.bcs[name].vars_far.mach = io.get_i<double>("rans-bc", "mach", i);
+			settings.rans.bcs[name].vars_far.angle = io.get_i<double>("rans-bc", "angle", i);
+			settings.rans.bcs[name].vars_far.p = io.get_i<double>("rans-bc", "p", i);
+		}
+	}
+
+	settings.rans.set_solver_type(io.get<std::string>("rans-solver", "solver"));
+	settings.rans.set_gradient_scheme(io.get<std::string>("rans-solver", "gradient"));
+	settings.rans.set_viscosity_model(io.get<std::string>("rans-solver", "viscosity"));
+	settings.rans.second_order = io.get<bool>("rans-solver", "second_order");
+	settings.rans.relaxation = io.get<double>("rans-solver", "relaxation");
+	settings.rans.start_cfl = io.get<double>("rans-solver", "start_cfl");
+	settings.rans.slope_cfl = io.get<double>("rans-solver", "slope_cfl");
+	settings.rans.max_cfl = io.get<double>("rans-solver", "max_cfl");
+	settings.rans.tolerance = io.get<double>("rans-solver", "tolerance");
+	settings.rans.rhs_iterations = io.get<int>("rans-solver", "rhs_iterations");
+	settings.rans.max_iterations = io.get<int>("rans-solver", "max_iterations");
+	settings.rans.limiter_k = io.get<double>("rans-solver", "limiter_k");
+ 
+	for (int i = 0; i < io.how_many("rans-mesh"); i++) {
+		settings.rans.meshes.push_back(io.get_i<std::string>("rans-mesh", "file", i));
+	}
+
+	// Parsing for vlm
+	settings.vlm.import_config_file(io);
+
+	return settings;
+}
+
+bool config_save(const std::string &conf_path, Settings &settings) {
+	tiny::config io;
+	io.sections = {
+		"rans-gas",
+		"rans-bc",
+		"rans-solver",
+		"rans-mesh",
+	};
+
+	io.config["rans-gas"]["gamma"] = std::to_string(settings.rans.g.gamma);
+	io.config["rans-gas"]["R"] = std::to_string(settings.rans.g.R);
+
+	io.config_vec["rans-bc"] = {};
+	for (auto &[name, bc] : settings.rans.bcs) {
+		std::cout << name << " | " << bc.bc_type << std::endl;
+		io.config_vec["rans-bc"].push_back({
+			{"type", bc.bc_type},
+			{"name", name},
+			{"T", std::to_string(bc.vars_far.T)},
+			{"mach", std::to_string(bc.vars_far.mach)},
+			{"angle", std::to_string(bc.vars_far.angle)},
+			{"p", std::to_string(bc.vars_far.p)},
+		});
+	};
+
+	io.config["rans-solver"]["solver"] = settings.rans.solver_type();
+	io.config["rans-solver"]["gradient"] = settings.rans.gradient_scheme();
+	io.config["rans-solver"]["viscosity"] = settings.rans.viscosity_model();
+
+	io.config["rans-solver"]["second_order"] = bool_to_string(settings.rans.second_order);
+	io.config["rans-solver"]["relaxation"] = bool_to_string(settings.rans.relaxation);
+	io.config["rans-solver"]["start_cfl"] = std::to_string(settings.rans.start_cfl);
+	io.config["rans-solver"]["slope_cfl"] = std::to_string(settings.rans.slope_cfl);
+	io.config["rans-solver"]["max_cfl"] = std::to_string(settings.rans.max_cfl);
+	io.config["rans-solver"]["tolerance"] = std::to_string(settings.rans.tolerance);
+	io.config["rans-solver"]["rhs_iterations"] = std::to_string(settings.rans.rhs_iterations);
+	io.config["rans-solver"]["max_iterations"] = std::to_string(settings.rans.max_iterations);
+	io.config["rans-solver"]["limiter_k"] = std::to_string(settings.rans.limiter_k);
+
+	io.config_vec["rans-mesh"] = {};
+	for (auto &mesh : settings.rans.meshes) {
+		io.config_vec["rans-mesh"].push_back({
+			{"file", mesh},
+		});
+	};
+
+	// Exporting for VLM
+	settings.vlm.export_config_file(io);
+
+	return io.write(conf_path);
+}
+
+App::App(rans::Rans &rans, vlm::VLM &vlm, GUIHandler &gui) : rans(rans), vlm(vlm), gui(gui) {
+	settings.rans.bcs["farfield"];
+	settings.rans.bcs["farfield"].bc_type = "farfield";
+	settings.rans.bcs["wall"];
+	settings.rans.bcs["wall"].bc_type = "slip-wall";
+
+	// TEMPORARY !!!!
+	settings.rans.meshes.push_back("../../../../examples/rans/airfoil_API2_coarse.msh");
+	settings.rans.meshes.push_back("../../../../examples/rans/airfoil_API2_mid.msh");
+	settings.rans.meshes.push_back("../../../../examples/rans/airfoil_API2_fine.msh");
+}
+
+void App::solve_async() {
+	signal_status_ready = false;
+	signal_status_busy = true;
+	gui.msg.push("-- Starting simulation --");
+	rans.settings = settings.rans;
+	vlm.settings = settings.vlm;
+	future_solve = std::async(std::launch::async, 
+	[&](){
+		try {
+			solve(rans, vlm);
+		} catch (std::exception &e) {
+			gui.msg.push(e.what());
+		}
+	});
+}
+
+void App::solve_await() {
+	future_solve.get();
+	if (gui.signal.stop) {
+		gui.msg.push("-- Simulation stopped --");
+	} else {
+		gui.msg.push("-- Simulation done --");
+	}
+	signal_status_ready = true;
+	signal_status_busy = false;
+	gui.signal.stop = false;
+}
+
+void App::config_open_async(const std::string &conf_path) {
+	signal_status_ready = false;
+	signal_status_busy = true;
+	outfile = conf_path;
+	gui.msg.push("Starting parsing: " + conf_path);
+	future_config_open = std::async(std::launch::async,
+	[this](const std::string &path){
+		std::optional<Settings> new_settings_op{};
+		try {
+			new_settings_op = config_open(path);
+		} catch (std::exception &e) {
+			gui.msg.push(e.what());
+		}
+		return new_settings_op;
+	}, conf_path);
+}
+
+void App::config_open_await() {
+	auto settings_op = future_config_open.get();
+	if (settings_op.has_value()) {
+		gui.msg.push("Config loaded.");
+		settings = settings_op.value();
+	} else {
+		gui.msg.push("Config load failed.");
+	}
+	signal_status_ready = true;
+	signal_status_busy = false;
+}
+
+void App::config_save_async(const std::string &conf_path) {
+	signal_status_ready = false;
+	signal_status_busy = true;
+	gui.msg.push("Starting save: " + conf_path);
+	future_config_save = std::async(std::launch::async,
+	[this](const std::string &path){
+		bool success = false;
+		try {
+			success = config_save(path, this->settings);
+		} catch (std::exception &e) {
+			gui.msg.push(e.what());
+		}
+		return success;
+	}, conf_path);
+}
+
+void App::config_save_await() {
+	bool success = future_config_save.get();
+	if (success) {
+		gui.msg.push("Config saved.");
+	} else {
+		gui.msg.push("Config save failed.");
+	}
+	signal_status_ready = true;
+	signal_status_busy = false;
+}
+
+inline void Combo(std::vector<std::string> &vec, int &index, const char* label) {
+	if (ImGui::BeginCombo(label, vec[index].c_str())) {
+		for (int i = 0; i < vec.size(); i++) {
+			bool is_selected = (index == i);
+			if (ImGui::Selectable(vec[i].c_str(), is_selected)) index = i;
+			if (is_selected) ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+	}
+}
+
+void RansLayer::OnUIRender() {
+	ImGui::Begin("RANS");
+
+	ImGui::Separator();
+	ImGui::Text("Gas");
+	ImGui::InputDouble("gamma", &app.settings.rans.g.gamma, 0.01f, 1.0f, "%.4f");
+	ImGui::InputDouble("R", &app.settings.rans.g.R, 0.01f, 1.0f, "%.4f");
+
+	ImGui::Separator();
+	ImGui::Text("Farfield");
+	ImGui::InputDouble("Mach", &app.settings.rans.bcs["farfield"].vars_far.mach, 0.01f, 1.0f, "%.4f");
+	ImGui::InputDouble("AoA", &app.settings.rans.bcs["farfield"].vars_far.angle, 0.01f, 1.0f, "%.4f");
+	ImGui::InputDouble("Temperature", &app.settings.rans.bcs["farfield"].vars_far.T, 0.01f, 1.0f, "%.4f");
+	ImGui::InputDouble("Pressure", &app.settings.rans.bcs["farfield"].vars_far.p, 0.01f, 1.0f, "%.4f");
+
+	ImGui::Separator();
+	ImGui::Text("Solver");
+
+	ImGui::Checkbox("Second Order", &app.settings.rans.second_order);
+
+	Combo(app.settings.rans.solver_options, app.settings.rans.solver, "Type");
+	Combo(app.settings.rans.gradient_options, app.settings.rans.gradient, "Gradient");
+	Combo(app.settings.rans.viscosity_options, app.settings.rans.viscosity, "Viscosity");
+
+	ImGui::InputDouble("Relaxation", &app.settings.rans.relaxation, 0.1f, 1.0f, "%.2f");
+	ImGui::InputDouble("Tolerance", &app.settings.rans.tolerance, 0.0f, 0.0f, "%e");
+	ImGui::InputDouble("Start CFL", &app.settings.rans.start_cfl, 0.1f, 1.0f, "%.1f");
+	ImGui::InputDouble("Slope CFL", &app.settings.rans.slope_cfl, 0.1f, 1.0f, "%.1f");
+	ImGui::InputDouble("Limiter K", &app.settings.rans.limiter_k, 0.1f, 1.0f, "%.1f");
+	ImGui::InputDouble("Max CFL", &app.settings.rans.max_cfl, 0.1f, 1.0f, "%.1f");
+	ImGui::SliderInt("RHS Iterations", &app.settings.rans.rhs_iterations, 1, 10);
+	ImGui::InputInt("Max Iterations", &app.settings.rans.max_iterations);
+
+	ImGui::End();
+}
+
+void VlmLayer::OnUIRender() {
+	ImGui::Begin("VLM");
+
+	ImGui::Separator();
+	ImGui::Text("Case Parameters");
+	ImGui::InputDouble("AoA", &app.settings.vlm.sim.aoa, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Geometric angle of attack in degrees");
+	ImGui::InputDouble("Sideslip", &app.settings.vlm.sim.sideslip, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Geometric angle of side slip in degrees");
+	ImGui::InputDouble("V inf", &app.settings.vlm.sim.vinf, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Free stream magnitude velocity");
+	ImGui::InputDouble("rho", &app.settings.vlm.sim.rho, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Density of the fluid");
+	ImGui::InputDouble("cref", &app.settings.vlm.sim.cref, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Reference chord length");
+	ImGui::InputDouble("sref", &app.settings.vlm.sim.sref, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Reference surface area");
+	ImGui::InputDouble("coreRadius", &app.settings.vlm.sim.coreRadius, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Viscous relaxation value applied on the vortex filament kernel");
+	ImGui::InputDouble("X ref", &app.settings.vlm.sim.x0, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("X component of origin to which the x and z moment are computed");
+	ImGui::InputDouble("Y ref", &app.settings.vlm.sim.y0, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Y component of origin to which the x and z moment are computed");
+	ImGui::InputDouble("Z ref", &app.settings.vlm.sim.z0, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Z component of origin to which the x and z moment are computed");
+	Combo(app.settings.vlm.sim.databaseFormat_options, app.settings.vlm.sim.databaseFormat, "Db Format");
+
+	if (app.settings.vlm.sim.get_databaseFormat() == "FILE") {
+		ImGui::InputText("", app.settings.vlm.io.databaseFile.data(), app.settings.vlm.io.databaseFile.size(), ImGuiInputTextFlags_ReadOnly);
+		ImGui::SameLine();
+		if (ImGui::Button("...")) {
+			app.dialog.file_dialog_open = true;
+			app.dialog.type = FlexGUI::FileDialogType::OpenFile;
+			app.dialog_action = AppDialogAction::DatabaseOpen;
+		}
+	}
+	
+	ImGui::Separator();
+	ImGui::Text("Solver");
+	Combo(app.settings.vlm.solver.timeDomain_options, app.settings.vlm.solver.timeDomain, "Time Domain");
+	Combo(app.settings.vlm.solver.type_options, app.settings.vlm.solver.type, "Type");
+	Combo(app.settings.vlm.solver.linearSolver_options, app.settings.vlm.solver.linearSolver, "Linear solver");
+	ImGui::InputDouble("Tolerance", &app.settings.vlm.solver.tolerance, 0.01f, 1.0f, "%e");
+	ImGui::InputDouble("Relaxation", &app.settings.vlm.solver.relaxation, 0.01f, 1.0f, "%.4f");
+	ImGui::InputInt("Max Iterations", &app.settings.vlm.solver.max_iter);
+
+	ImGui::End();
+}
+
+void DialogLayer::OnUIRender() {
+	app.dialog.Show(app.path_buf);
+	if (app.dialog.ready) {
+		std::string path(app.path_buf);
+		app.dialog.ready = false;
+		if (app.dialog_action == AppDialogAction::ConfigOpen) {
+			app.config_open_async(path);
+		} else if (app.dialog_action == AppDialogAction::ConfigSave) {
+			app.config_save_async(path);
+		} else if (app.dialog_action == AppDialogAction::DatabaseOpen) {
+			app.settings.vlm.io.databaseFile = path;
+		}
+		strcpy(app.path_buf, "");
+	}
+}
 
 void ButtonLayer::OnUIRender() {
 	{
-
 		ImGui::Begin("Buttons");
-		if (ImGui::Button("Start Simulation", ImVec2(-1.0f, 0.0f)) && !aero.signal_status_busy && aero.signal_status_ready) {
-			aero.solve_async();
+		ImGui::Text("Simulation");
+		if (ImGui::Button("Start Simulation", ImVec2(-1.0f, 0.0f)) && !app.signal_status_busy && app.signal_status_ready) {
+			app.solve_async();
 		};
 
-		if (ImGui::Button("Stop Simulation", ImVec2(-1.0f, 0.0f)) && aero.signal_status_busy) {
-			aero.gui.signal.stop = true;
+		if (ImGui::Button("Stop Simulation", ImVec2(-1.0f, 0.0f)) && app.signal_status_busy) {
+			app.gui.signal.stop = true;
+			app.gui.msg.push("Stopping simulation");
 		};
 
-		if (ImGui::Button("Pause", ImVec2(-1.0f, 0.0f)) && aero.signal_status_busy) {
-			aero.gui.signal.pause = true;
+		if (ImGui::Button("Pause", ImVec2(-1.0f, 0.0f)) && app.signal_status_busy) {
+			app.gui.signal.pause = true;
+			app.gui.msg.push("Pausing simulation");
 		};
 
-		if (ImGui::Button("Resume", ImVec2(-1.0f, 0.0f)) && aero.signal_status_busy) {
-			aero.gui.signal.pause = false;
+		if (ImGui::Button("Resume", ImVec2(-1.0f, 0.0f)) && app.signal_status_busy) {
+			app.gui.signal.pause = false;
 		};
 
-		if (!aero.signal_status_ready && is_future_done(aero.future_solve)) {
-			aero.future_solve.get();
-			aero.signal_status_ready = true;
-			aero.signal_status_busy = false;
-			aero.gui.signal.stop = false;
+		ImGui::Separator();
+		ImGui::Text("Config");
+		if (ImGui::Button("Open", ImVec2(-1.0f, 0.0f)) && !app.signal_status_busy && app.signal_status_ready) {
+			app.dialog.file_dialog_open = true;
+			app.dialog.type = FlexGUI::FileDialogType::OpenFile;
+			app.dialog_action = AppDialogAction::ConfigOpen;
+		};
+
+		if (ImGui::Button("Save", ImVec2(-1.0f, 0.0f))) {
+			app.dialog.file_dialog_open = true;
+			app.dialog.type = FlexGUI::FileDialogType::SaveFile;
+			app.dialog_action = AppDialogAction::ConfigSave;
 		}
 
+		if (!app.signal_status_ready && is_future_done(app.future_solve)) {
+			app.solve_await();
+		};
+
+		if (!app.signal_status_ready && is_future_done(app.future_config_open)) {
+			app.config_open_await();
+		};
+
+		if (!app.signal_status_ready && is_future_done(app.future_config_save)) {
+			app.config_save_await();
+		};
 		ImGui::End();
 
 		// ImGui::ShowDemoWindow();
@@ -99,23 +525,23 @@ void ButtonLayer::OnUIRender() {
 	};
 };
 
-void GraphLayer::OnUIRender() {
+void RansGraphLayer::OnUIRender() {
 	{
-		ImGui::Begin("Graphs");
+		ImGui::Begin("Rans-Convergence");
 		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
 		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
 		const double xticks = 1;
 
 		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,400))) {
 			ImPlot::SetupAxes("Iterations","Residual",xflags,yflags);
-			ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, 0, aero.rans.iters);
-			ImPlot::SetupAxisZoomConstraints(ImAxis_X1, 11.0, aero.rans.iters);
+			ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, 0, app.rans.iters);
+			ImPlot::SetupAxisZoomConstraints(ImAxis_X1, 11.0, app.rans.iters);
 			ImPlot::SetupAxisScale(ImAxis_Y1, ImPlotScale_Log10);
 
-			if (!aero.signal_status_ready) {
-				ImPlot::SetupAxisLimits(ImAxis_X1, 0, aero.rans.iters, ImPlotCond_Always);
+			if (!app.signal_status_ready) {
+				ImPlot::SetupAxisLimits(ImAxis_X1, 0, app.rans.iters, ImPlotCond_Always);
 			}
-			ImPlot::PlotLine("L2 residual", aero.rans.residuals.data(), aero.rans.iters);
+			ImPlot::PlotLine("L2 residual", app.rans.residuals.data(), app.rans.iters);
 			ImPlot::EndPlot();
 		}
 
@@ -123,67 +549,214 @@ void GraphLayer::OnUIRender() {
 	}
 };
 
-FlexGUI::Application* CreateApplication(int argc, char** argv, Aero& aero)
+void VlmGraphLayer::OnUIRender() {
+	{
+		ImGui::Begin("Vlm-Convergence");
+		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
+		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
+		const double xticks = 1;
+
+		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,400))) {
+			ImPlot::SetupAxes("Iterations","Residual",xflags,yflags);
+			ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, 0, app.vlm.iters);
+			ImPlot::SetupAxisZoomConstraints(ImAxis_X1, 11.0, app.vlm.iters);
+			ImPlot::SetupAxisScale(ImAxis_Y1, ImPlotScale_Log10);
+
+			if (!app.signal_status_ready) {
+				ImPlot::SetupAxisLimits(ImAxis_X1, 0, app.vlm.iters, ImPlotCond_Always);
+			}
+			ImPlot::PlotLine("L2 residual", app.vlm.residuals.data(), app.vlm.iters);
+			ImPlot::EndPlot();
+		}
+
+		ImGui::End();
+	}
+};
+
+void CpLayer::OnUIRender() {
+	{
+		ImGui::Begin("Rans-Cp");
+		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
+		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit|ImPlotAxisFlags_Invert;
+		const double xticks = 1;
+
+		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,400))) {
+			ImPlot::SetupAxisLimits(ImAxis_X1, -0.1, 1.1, ImPlotCond_Always);
+			ImPlot::SetupAxes("x","Cp",xflags,yflags);
+			ImPlot::PlotLine("Cp", app.rans.profile.x.data(), app.rans.profile.cp.data(), app.rans.profile.x.size());
+			ImPlot::EndPlot();
+		}
+
+		ImGui::End();
+	}
+};
+
+class ConsoleLog
+{
+	public:
+		void log(const char* msg) {
+			time_t ttime = time(0);
+			tm *t = localtime(&ttime);
+			add_entry("[%02d:%02d:%02d] : %s\n", t->tm_hour, t->tm_min, t->tm_sec, msg);
+		}
+
+		void draw(const char* title, bool* p_open = NULL) {
+			if (!ImGui::Begin(title, p_open)) {
+				ImGui::End();
+				return;
+			}
+
+			// Main window
+			bool clear = ImGui::Button("Clear");
+			ImGui::SameLine();
+			bool copy = ImGui::Button("Copy");
+			ImGui::SameLine();
+			Filter.Draw("Filter", -100.0f);
+
+			ImGui::Separator();
+
+			if (ImGui::BeginChild("scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar))
+			{
+				if (clear)
+					clear_console();
+				if (copy)
+					ImGui::LogToClipboard();
+
+				ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+				const char* buf = Buf.begin();
+				const char* buf_end = Buf.end();
+				if (Filter.IsActive()) {
+					for (int line_no = 0; line_no < LineOffsets.Size; line_no++)
+					{
+						const char* line_start = buf + LineOffsets[line_no];
+						const char* line_end = (line_no + 1 < LineOffsets.Size) ? (buf + LineOffsets[line_no + 1] - 1) : buf_end;
+						if (Filter.PassFilter(line_start, line_end))
+							ImGui::TextUnformatted(line_start, line_end);
+					}
+				} else {
+					ImGuiListClipper clipper;
+					clipper.Begin(LineOffsets.Size);
+					while (clipper.Step()) {
+						for (int line_no = clipper.DisplayStart; line_no < clipper.DisplayEnd; line_no++) {
+							const char* line_start = buf + LineOffsets[line_no];
+							const char* line_end = (line_no + 1 < LineOffsets.Size) ? (buf + LineOffsets[line_no + 1] - 1) : buf_end;
+							ImGui::TextUnformatted(line_start, line_end);
+						}
+					}
+					clipper.End();
+				}
+				ImGui::PopStyleVar();
+
+				if (AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+					ImGui::SetScrollHereY(1.0f);
+			}
+			ImGui::EndChild();
+			ImGui::End();
+		}
+
+		void add_entry(const char* fmt, ...) IM_FMTARGS(2)
+		{
+			int old_size = Buf.size();
+			va_list args;
+			va_start(args, fmt);
+			Buf.appendfv(fmt, args);
+			va_end(args);
+			for (int new_size = Buf.size(); old_size < new_size; old_size++)
+				if (Buf[old_size] == '\n')
+					LineOffsets.push_back(old_size + 1);
+		};
+
+		ConsoleLog() {
+			log(""); // Hack
+			log("AeroFLEX v0.1");
+		}
+
+	private:
+		ImGuiTextBuffer Buf;
+		ImGuiTextFilter Filter;
+		ImVector<int> LineOffsets; // Index to lines offset. We maintain this with AddLog() calls.
+    	const bool AutoScroll = true;  // Keep scrolling if already at the bottom.
+
+		void clear_console() {
+			Buf.clear();
+			LineOffsets.clear();
+			LineOffsets.push_back(0);
+		};
+};
+
+void ConsoleLayer::OnUIRender() {
+    static ConsoleLog log;
+
+    ImGui::Begin("Console", NULL);
+    std::optional<std::string> txt = app.gui.msg.pop();
+
+    if (txt.has_value()) {
+        log.log(txt.value().c_str());
+    }
+    ImGui::End();
+    log.draw("Console", NULL);
+}
+
+FlexGUI::Application* CreateApplication(int argc, char** argv, App& app)
 {
 	FlexGUI::ApplicationSpecification spec;
-	spec.Name = "GUI Example";
+	spec.Name = "AEROFLEX";
 	spec.Width = 1600;
 	spec.Height = 900;
 
-	FlexGUI::Application* app = new FlexGUI::Application(spec);
-	app->PushLayer(std::make_shared<ButtonLayer>(aero));
-	app->PushLayer(std::make_shared<GraphLayer>(aero));
+	FlexGUI::Application* application = new FlexGUI::Application(spec);
+	application->PushLayer(std::make_shared<ButtonLayer>(app));
+	application->PushLayer(std::make_shared<RansGraphLayer>(app));
+	application->PushLayer(std::make_shared<VlmGraphLayer>(app));
+	application->PushLayer(std::make_shared<CpLayer>(app));
+	application->PushLayer(std::make_shared<RansLayer>(app));
+	application->PushLayer(std::make_shared<VlmLayer>(app));
+	application->PushLayer(std::make_shared<ConsoleLayer>(app));
+	application->PushLayer(std::make_shared<DialogLayer>(app));
 
-	app->SetMenubarCallback([app]()
+	application->SetMenubarCallback([application]()
 	{
 		if (ImGui::BeginMenu("File"))
 		{
 			if (ImGui::MenuItem("Exit"))
 			{
-				app->Close();
+				application->Close();
+			}
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("Options"))
+		{
+			if (ImGui::BeginMenu("Theme")) {
+				if (ImGui::MenuItem("Dark")) {
+					application->SetTheme(FlexGUI::Theme::Dark);
+				}
+				if (ImGui::MenuItem("Light")) {
+					application->SetTheme(FlexGUI::Theme::Light);
+				}
+				ImGui::EndMenu();
 			}
 			ImGui::EndMenu();
 		}
 	});
-	return app;
+	return application;
 }
 
 namespace FlexGUI {
-	int Main(int argc, char** argv)
-	{
+	int Main(int argc, char** argv) {
 		GUIHandler gui;
 
-		// Temporary
-		Settings data = parse(argc, argv, __FILE__);
-		if (data.read_failure == 1) {
-			std::cout << "\033[0;31m";
-			std::cout << "Error, unspecified error reading input file.";
-			std::cout << "\033[0m\n" << std::endl;
-			return 1;
-		} else if (data.read_failure == 2) {
-			std::cout << std::endl;
-			return 1;
-		}
-
 		// Initialize modules with signal routing
-		Rans rans(gui);
-		rans.data = data;
-
+		rans::Rans rans(gui);
 		vlm::VLM vlm(gui);
 
 		// Initialize main application with the modules
-		Aero aero(rans, vlm, gui);
+		App app(rans, vlm, gui);
 
-		while (g_ApplicationRunning)
-		{
-			FlexGUI::Application* app = CreateApplication(argc, argv, aero);
-			app->Run();
-			delete app;
+		while (g_ApplicationRunning) {
+			FlexGUI::Application* application = CreateApplication(argc, argv, app);
+			application->Run();
+			delete application;
 		}
-
-		// rans.input();
-		// rans.solve();
-
 		return 0;
 	}
 }
