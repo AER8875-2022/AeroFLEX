@@ -181,14 +181,10 @@ namespace aero{
         u[0]= force.point_fs[0] - force.point_fs[3];
         u[1]= force.point_fs[1] - force.point_fs[4];
         u[2]= force.point_fs[2] - force.point_fs[5];
-        
-        for (int i=0; i<n; ++i){
-<<<<<<< Updated upstream
-            
-=======
+        double t;
 
->>>>>>> Stashed changes
-            double t;
+        for (int i=0; i<n; ++i){
+
             t= (u[0](force.point_fa[3*i]-force.point_fs[0]) + u[1](force.point_fa[3*i+1]-force.point_fs[1]) + 
                    u[2](force.point_fa[3*i+2]-force.point_fs[2]))/pow(norme(u),2);
             
