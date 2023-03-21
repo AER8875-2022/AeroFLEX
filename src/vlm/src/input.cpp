@@ -235,19 +235,34 @@ void Settings::export_config_file(tiny::config &config) {
   config.sections.push_back("vlm-io");
   config.sections.push_back("vlm-solver");
 
+  // Streams allowing scientific notation of doubles
+  std::stringstream aoa, sideslip, vinf, rho, cref, sref, x0, y0, z0,
+      coreRadius, tolerance, relaxation;
+  aoa << std::scientific << sim.aoa;
+  sideslip << std::scientific << sim.sideslip;
+  vinf << std::scientific << sim.vinf;
+  rho << std::scientific << sim.rho;
+  cref << std::scientific << sim.cref;
+  sref << std::scientific << sim.sref;
+  x0 << std::scientific << sim.x0;
+  y0 << std::scientific << sim.y0;
+  z0 << std::scientific << sim.z0;
+  coreRadius << std::scientific << sim.coreRadius;
+  tolerance << std::scientific << solver.tolerance;
+  relaxation << std::scientific << solver.relaxation;
+
   // Adding to config map
   // [vlm-simulation]
-  config.config["vlm-simulation"]["aoa"] = std::to_string(sim.aoa);
-  config.config["vlm-simulation"]["sideslip"] = std::to_string(sim.sideslip);
-  config.config["vlm-simulation"]["v_inf"] = std::to_string(sim.vinf);
-  config.config["vlm-simulation"]["density"] = std::to_string(sim.rho);
-  config.config["vlm-simulation"]["c_ref"] = std::to_string(sim.cref);
-  config.config["vlm-simulation"]["s_ref"] = std::to_string(sim.sref);
-  config.config["vlm-simulation"]["x_ref"] = std::to_string(sim.x0);
-  config.config["vlm-simulation"]["y_ref"] = std::to_string(sim.y0);
-  config.config["vlm-simulation"]["z_ref"] = std::to_string(sim.z0);
-  config.config["vlm-simulation"]["lamb-oseen_radius"] =
-      std::to_string(sim.coreRadius);
+  config.config["vlm-simulation"]["aoa"] = aoa.str();
+  config.config["vlm-simulation"]["sideslip"] = sideslip.str();
+  config.config["vlm-simulation"]["v_inf"] = vinf.str();
+  config.config["vlm-simulation"]["density"] = rho.str();
+  config.config["vlm-simulation"]["c_ref"] = cref.str();
+  config.config["vlm-simulation"]["s_ref"] = sref.str();
+  config.config["vlm-simulation"]["x_ref"] = x0.str();
+  config.config["vlm-simulation"]["y_ref"] = y0.str();
+  config.config["vlm-simulation"]["z_ref"] = z0.str();
+  config.config["vlm-simulation"]["lamb-oseen_radius"] = coreRadius.str();
   config.config["vlm-simulation"]["database_format"] = sim.get_databaseFormat();
 
   // [vlm-io]
@@ -260,8 +275,8 @@ void Settings::export_config_file(tiny::config &config) {
   // [vlm-solver]
   config.config["vlm-solver"]["time_domain"] = solver.get_timeDomain();
   config.config["vlm-solver"]["type"] = solver.get_type();
-  config.config["vlm-solver"]["tolerance"] = std::to_string(solver.tolerance);
+  config.config["vlm-solver"]["tolerance"] = tolerance.str();
   config.config["vlm-solver"]["linear_solver"] = solver.get_linearSolver();
-  config.config["vlm-solver"]["relaxation"] = std::to_string(solver.relaxation);
+  config.config["vlm-solver"]["relaxation"] = relaxation.str();
   config.config["vlm-solver"]["max_iter"] = std::to_string(solver.max_iter);
 }

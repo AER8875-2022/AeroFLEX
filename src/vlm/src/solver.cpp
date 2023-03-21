@@ -5,6 +5,8 @@
 #include <any>
 #include <chrono>
 #include <iomanip>
+#include <ios>
+#include <sstream>
 #include <thread>
 
 #ifdef _OPENMP
@@ -59,7 +61,9 @@ void linear::steady::solve(model &object) {
   // Exporting solution
   exportSolution(object);
 
-  gui.msg.push("[VLM] Residual " + std::to_string(system.error()));
+  std::stringstream res;
+  res << std::scientific << system.error();
+  gui.msg.push("[VLM] Residual " + res.str());
 
   residuals.push_back(system.error());
   iter++;
@@ -343,7 +347,8 @@ void nonlinear::steady::solve(model &object) {
   buildLHS(object);
   system.compute(lhs);
 
-  if (gui.signal.stop) return;
+  if (gui.signal.stop)
+    return;
 
   // Initializing iteration
   double residual;
@@ -364,14 +369,17 @@ void nonlinear::steady::solve(model &object) {
     // Step 2: One iteration of aoa correction
     residual = iterate(object);
 
-    gui.msg.push("[VLM] Residual " + std::to_string(system.error()));
+    std::stringstream res;
+    res << std::scientific << residual;
+    gui.msg.push("[VLM] Residual " + res.str());
 
     residuals.push_back(residual);
     iter++;
   } while ((residual > solvP.tolerance) && (iter <= solvP.max_iter) &&
            (!gui.signal.stop));
 
-  if (gui.signal.stop) return;
+  if (gui.signal.stop)
+    return;
 
   // Compute viscous forces
   computeForces(object);

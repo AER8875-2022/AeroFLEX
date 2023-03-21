@@ -26,7 +26,7 @@ private:
 
 public:
   VLM(GUIHandler &gui);
-  void input();
+  void initialize();
   void solve();
 
 private:

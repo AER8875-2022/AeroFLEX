@@ -152,7 +152,6 @@ void wingStation::to_global(Vector3d &vector) {
   vector = rotationMatrix.inverse() * vector;
 }
 
-
 Vector3d wingStation::liftAxis() {
   auto &leadingPanel = vortices[vortexIDs.front()];
   return (leadingPanel.inertial_stream()

@@ -2,7 +2,6 @@
 #ifndef VISCOUS_DATABASE_HPP
 #define VISCOUS_DATABASE_HPP
 
-#include "vlm/input.hpp"
 #include <array>
 #include <string>
 #include <tuple>
@@ -77,6 +76,10 @@ struct table {
   /** @brief Import evaluation wing sections from a file
    *  @param path Path to the file */
   void importLocations(const std::string &path);
+
+  /** @brief Check database to report any missing airfoils
+   *  @return true -> no airfoil missing | false -> at least one airfoil missing */
+  bool check();
 
   /** @brief Interpolates the 3 viscous coefficients at specified angle of
    * attack, surface and spanwise location

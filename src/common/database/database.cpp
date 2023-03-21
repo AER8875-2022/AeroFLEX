@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <sstream>
 
 database::airfoil::airfoil(std::vector<double> &alpha, std::vector<double> &cl,
                            std::vector<double> &cd, std::vector<double> &cmy)
@@ -172,6 +173,19 @@ void database::table::importLocations(const std::string &path) {
   }
 
   location_file.close();
+}
+
+bool database::table::check() {
+  bool pass = true;
+  if (airfoils.empty() || sectionAirfoils.empty())
+    pass = false;
+  else
+    for (auto& [_, surface] : sectionAirfoils) {
+      for (auto &section_airfoil : surface)
+        if (airfoils.find(section_airfoil) == airfoils.end())
+          pass = false;
+    }
+  return pass;
 }
 
 std::tuple<double, double, double>
