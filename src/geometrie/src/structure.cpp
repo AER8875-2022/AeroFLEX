@@ -6,12 +6,11 @@
 #include "geometrie/structure.hpp"
 #include "geometrie/geometry.hpp"
 
-using namespace std;
 
 //Calcul du point centre
 //Centre placé au quart de corde
-vector<vector<double>> get_center_point(vector<vector<double>> X, vector<vector<double>> Y, vector<vector<double>> Su, vector<vector<double>> Sl){
-    vector<vector<double>> center(X.size(), vector<double>(3,0));
+std::vector<std::vector<double>> get_center_point(std::vector<std::vector<double>> X, std::vector<std::vector<double>> Y, std::vector<std::vector<double>> Su, std::vector<std::vector<double>> Sl){
+    std::vector<std::vector<double>> center(X.size(), std::vector<double>(3,0));
     
     double dim = X[0].size()-1;
     
@@ -25,10 +24,10 @@ vector<vector<double>> get_center_point(vector<vector<double>> X, vector<vector<
     
 }
 
-vector<double> vecteur_normal(vector<double> p1, vector<double> p2){
-    vector<double> p3 = p1;
+std::vector<double> vecteur_normal(std::vector<double> p1, std::vector<double> p2){
+    std::vector<double> p3 = p1;
     p3[0]= p3[0]+1;
-    vector<double> normal(3,0), v1(3,0), v2(3,0), normal_unitaire(3,0);
+    std::vector<double> normal(3,0), v1(3,0), v2(3,0), normal_unitaire(3,0);
     double norme;
     for (int i=0; i<= v1.size(); i++){
         v1[i]=p2[i]-p1[i];
@@ -48,18 +47,18 @@ vector<double> vecteur_normal(vector<double> p1, vector<double> p2){
 }
 
 
-vector<vector<vector<vector<double>>>> get_geometry(Body wing){
-    vector<vector<vector<vector<double>>>> surfaces = wing.get_paired_body_surfaces();
+std::vector<std::vector<std::vector<std::vector<double>>>> get_geometry(Body wing){
+    std::vector<std::vector<std::vector<std::vector<double>>>> surfaces = wing.get_paired_body_surfaces();
     return surfaces;
 }
 
-vector<tuple<int,vector<double>,vector<double>,vector<double>>> maillage_structure(Body wing){
-    vector<tuple<int,vector<double>,vector<double>,vector<double>>> element;
-    vector<double> normal(3,0),pt_normal(3,0);
+std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> maillage_structure(Body wing){
+    std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> element;
+    std::vector<double> normal(3,0),pt_normal(3,0);
     
-    vector<vector<vector<vector<double>>>> surfaces = get_geometry(wing);
+    std::vector<std::vector<std::vector<std::vector<double>>>> surfaces = get_geometry(wing);
     
-    vector<vector<double>> X_U, X_L, Y_U, Y_L, SU, SL;
+    std::vector<std::vector<double>> X_U, X_L, Y_U, Y_L, SU, SL;
     for (int m=0; m < surfaces[0][0].size()-1; m++){
         X_U.push_back(surfaces[0][0][m]);
         X_L.push_back(surfaces[0][1][m]);
@@ -73,7 +72,7 @@ vector<tuple<int,vector<double>,vector<double>,vector<double>>> maillage_structu
     
     if (surfaces.size()>1){
         for (int k=0; k < surfaces.size()-1; k++){
-            vector<vector<vector<double>>> surface = surfaces[k+1];
+            std::vector<std::vector<std::vector<double>>> surface = surfaces[k+1];
             for (int m=0; m < surface[0].size()-1; m++){
                 X_U.push_back(surface[0][m+1]);
                 X_L.push_back(surface[1][m+1]);
@@ -89,50 +88,50 @@ vector<tuple<int,vector<double>,vector<double>,vector<double>>> maillage_structu
     
 
         
-    vector<vector<double>> centre = get_center_point(X_U, Y_U, SU, SL);
+    std::vector<std::vector<double>> centre = get_center_point(X_U, Y_U, SU, SL);
     
     
     
     
     
-    ofstream myfile;
+    std::ofstream myfile;
     myfile.open ("Point_maillage_structure.txt");
     
 
 
         
-        myfile<<"$##### NOEUDS #####"<<endl;
-        myfile<<setprecision(5)<<fixed;
+        myfile<<"$##### NOEUDS #####"<<std::endl;
+        myfile<<std::setprecision(5)<<std::fixed;
         for(int i=0; i<=(centre.size()-1); i++){
-            myfile<<"GRID, "<<i+100<<", ,"<<setprecision(5)<<centre[i][0]<<", "<<setprecision(5)<<centre[i][0]<<", "<<setprecision(5)<<centre[i][2]<<", ,"<<"345"<<endl;
+            myfile<<"GRID, "<<i+100<<", ,"<<std::setprecision(5)<<centre[i][0]<<", "<<std::setprecision(5)<<centre[i][0]<<", "<<std::setprecision(5)<<centre[i][2]<<", ,"<<"345"<<std::endl;
         }
-        myfile <<""<<endl;
-        myfile <<"$##### Connectivity #####"<<endl;
+        myfile <<""<<std::endl;
+        myfile <<"$##### Connectivity #####"<<std::endl;
         for(int i=0; i<=(centre.size()-2); i++){
             normal=vecteur_normal(centre[i+1], centre[i]);
             pt_normal[0]=centre[i][0]+normal[0];
             pt_normal[1]=centre[i][1]+normal[1];
             pt_normal[2]=centre[i][2]+normal[2];
             myfile<<setprecision(5)<<fixed;
-            myfile<<"CBAR, "<<i+1<<", "<<"10, "<<i+100<<", "<<i+101<<", "<<normal[0]<<", "<<normal[1]<<", "<<normal[2]<<endl;
+            myfile<<"CBAR, "<<i+1<<", "<<"10, "<<i+100<<", "<<i+101<<", "<<normal[0]<<", "<<normal[1]<<", "<<normal[2]<<std::endl;
             
             element.push_back(make_tuple(i,centre[i],centre[i+1],pt_normal));
 
         }
     
-    myfile<<""<<endl;
-    myfile<<"$##### Propriétés de sections #####"<<endl;
-    myfile<<"PBAR, "<<"10, "<<"11, "<<"1.0, "<<"0.1, "<<"0.1, "<<"0.1"<<endl;
-    myfile<<"MAT1, "<<"11, "<<"140.E9, "<<"70.E9,"<<endl;
-    myfile <<""<<endl;
-    myfile<<"$##### Contrainte #####"<<endl;
-    myfile<<"SPC1, "<<"100, "<<"123456, "<<"100,"<<endl;
-    myfile <<""<<endl;
-    myfile<<"$##### Charges #####"<<endl;
-    myfile<<"MOMENT, "<<"103, "<<"112, "<<", "<<"3.E4, "<<"0.0, "<<"0.0, "<<"1.0"<<endl;
-    myfile <<""<<endl;
-    myfile<<"$"<<endl;
-    myfile<<"ENDDATA "<<endl;
+    myfile<<""<<std::endl;
+    myfile<<"$##### Propriétés de sections #####"<<std::endl;
+    myfile<<"PBAR, "<<"10, "<<"11, "<<"1.0, "<<"0.1, "<<"0.1, "<<"0.1"<<std::endl;
+    myfile<<"MAT1, "<<"11, "<<"140.E9, "<<"70.E9,"<<std::endl;
+    myfile <<""<<std::endl;
+    myfile<<"$##### Contrainte #####"<<std::endl;
+    myfile<<"SPC1, "<<"100, "<<"123456, "<<"100,"<<std::endl;
+    myfile <<""<<std::endl;
+    myfile<<"$##### Charges #####"<<std::endl;
+    myfile<<"MOMENT, "<<"103, "<<"112, "<<", "<<"3.E4, "<<"0.0, "<<"0.0, "<<"1.0"<<std::endl;
+    myfile <<""<<std::endl;
+    myfile<<"$"<<std::endl;
+    myfile<<"ENDDATA "<<std::endl;
 
     myfile.close();
     
