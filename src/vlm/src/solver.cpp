@@ -5,7 +5,6 @@
 #include <any>
 #include <chrono>
 #include <iomanip>
-#include <iostream>
 #include <thread>
 
 #ifdef _OPENMP
@@ -39,6 +38,8 @@ void linear::steady::solve(model &object) {
   // Initializing linear solver
   BiCGSTAB<MatrixXd> system;
 
+  gui.msg.push("[VLM] Iteration " + std::to_string(iter) + "...");
+
   // Building left hand side
   buildLHS(object);
   system.compute(lhs);
@@ -58,7 +59,8 @@ void linear::steady::solve(model &object) {
   // Exporting solution
   exportSolution(object);
 
-  std::cout << "\t Residual = " << system.error() << std::endl;
+  gui.msg.push("[VLM] Residual " + std::to_string(system.error()));
+
   residuals.push_back(system.error());
   iter++;
 }
@@ -341,9 +343,7 @@ void nonlinear::steady::solve(model &object) {
   buildLHS(object);
   system.compute(lhs);
 
-  if (gui.signal.stop) {
-    return;
-  }
+  if (gui.signal.stop) return;
 
   // Initializing iteration
   double residual;
@@ -351,6 +351,9 @@ void nonlinear::steady::solve(model &object) {
   do {
     while (gui.signal.pause)
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    gui.msg.push("[VLM] Iteration " + std::to_string(iter) + "...");
+
     // Step 1 : Solving VLM
     buildRHS(object);
     VectorXd gamma = system.solve(rhs);
@@ -361,17 +364,14 @@ void nonlinear::steady::solve(model &object) {
     // Step 2: One iteration of aoa correction
     residual = iterate(object);
 
-    std::cout << "Iteration " << iter << std::endl;
-    std::cout << "\t Residual = " << residual << std::endl;
+    gui.msg.push("[VLM] Residual " + std::to_string(system.error()));
 
     residuals.push_back(residual);
     iter++;
   } while ((residual > solvP.tolerance) && (iter <= solvP.max_iter) &&
            (!gui.signal.stop));
 
-  if (gui.signal.stop) {
-    return;
-  }
+  if (gui.signal.stop) return;
 
   // Compute viscous forces
   computeForces(object);
@@ -404,13 +404,6 @@ double nonlinear::steady::iterate(model &object) {
 
       // Step 4 : Viscous lift interpolation
       double cl_visc = database.cl(aoa_eff, wing.get_globalIndex(), spanLoc);
-
-      // Print error if extrapolation is detected
-      if (std::abs(cl_visc) < 1e-15) {
-        std::cerr
-            << "\033[1;31mERROR: Extrapolation detected - Aborting \033[0m"
-            << std::endl;
-      };
 
       // Step 5 : Applying aoa correction
       double dalpha = solvP.relaxation * (cl_visc - cl_inv) / VLM_CL_ALPHA_DEG;
