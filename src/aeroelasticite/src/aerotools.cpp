@@ -153,7 +153,7 @@ namespace aero{
         
         //    Loading STRUCTURE connectivity
 
-        for (int k=0, k<map.size(), ++k)
+        for (int k=0; k<map.size(); ++k)
         {
             force.point_fs.push_back(0);
             force.point_fs.push_back(0);
@@ -248,7 +248,7 @@ namespace aero{
             }
             
         }
-   }
+    }
 
    auto ComputeStructureForces(interpolation_f force,Matrix<double, 6, 1> forces_to_inertial_frame)
 
