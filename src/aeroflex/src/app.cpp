@@ -401,25 +401,27 @@ void GeoLayer::OnUIRender() {
 
 
 void StructureLayer::OnUIRender() {
-	static double Tolerance = 0.00001;
-	static double N_step= 1.0;
-	static double Damping= 1.0;
-	static bool solve_type = 1;
+	static int myValue = 5;
+	static double doubleValue = static_cast<double>(myValue);
+
 	ImGui::Begin("Structure");
 
 	ImGui::Separator();
 	ImGui::Text("Paramètres");
-	ImGui::InputDouble("Tolerence:", &Tolerance, 0.00001, 1.0, "%.5f");
-	ImGui::InputDouble("Step", &N_step, 0.001, 1.0, "%.4f");
-	ImGui::InputDouble("Damping", &Damping, 0.001, 1.0, "%.4f");
+	ImGui::InputDouble("Tolerence:", &app.settings.structure.Tolerance, 0.00001, 1.0, "%.5f");
+
+	ImGui::InputDouble("N_step:", &doubleValue, 1.0, 1.0, "%.0f");
+	app.settings.structure.N_step = static_cast<int>(doubleValue);
+
+	ImGui::InputDouble("Damping", &app.settings.structure.Damping, 0.001, 1.0, "%.4f");
 
 	ImGui::Separator();
 	ImGui::Text("Options");
-	if (ImGui::RadioButton("NLS", solve_type == 0))
-		solve_type = 0;
+	if (ImGui::RadioButton("NLS", *&app.settings.structure.Solve_type == 0))
+		*&app.settings.structure.Solve_type = 0;
 	ImGui::SameLine();
-	if (ImGui::RadioButton("LS", solve_type == 1))
-		solve_type = 1;
+	if (ImGui::RadioButton("LS", *&app.settings.structure.Solve_type == 1))
+		*&app.settings.structure.Solve_type = 1;
 	ImGui::End();
 }
 
