@@ -209,6 +209,7 @@ void doubletPanel::initialize(const std::vector<Vector3d> &nodes,
   SMP=((nodes[panel.nodeIDs[3]]+nodes[panel.nodeIDs[2]])/2-panel.center).norm();
   SMQ=((nodes[panel.nodeIDs[0]]+nodes[panel.nodeIDs[3]])/2-panel.center).norm();
   */
+ 
 }
 
 void doubletPanel::updateGeometry(const std::vector<Vector3d> &nodes) {
@@ -259,14 +260,15 @@ Vector3d doubletPanel::influence_wing(const Vector3d &collocationPoint,
 // Solving the influence of the doublets
 double doubletPanel::influence_patch(const Vector3d &collocationPoint,
                                  const std::vector<Vector3d> &nodes) const {
-  //Vector3d d = Vector3d::Zero();
   double d;
   // la partie en dessous n'est pas encore adapté
   for (size_t i = 0; i != Doublets_vortices.size(); i++) {
     d +=
         Doublets_vortices[i].influence_patch(collocationPoint, nodes, panel.edges[i], Localreference, panel.center);
   }
-  return d;
+  //std::cout<< "panel number " << get_globalIndex() << std::endl;
+  //std::cout<< d << std::endl;
+  return d/(-4 * M_PI);
 }
 
 Vector3d doubletPanel::ProjectingCollocation(const Vector3d &collocationPoint) const{
@@ -288,6 +290,8 @@ double doubletPanel::get_cp() const { return cp; }
 std::vector<int> doubletPanel::get_neighbor() const { return NeighborPanel_IDs; }
 
 Vector3d doubletPanel::get_center() const { return panel.center; }
+
+Vector3d doubletPanel::get_local_velocity() const { return local_velocity; }
 
 std::vector<geom::edgeLine> doubletPanel::get_edges() const { return panel.edges; }
 

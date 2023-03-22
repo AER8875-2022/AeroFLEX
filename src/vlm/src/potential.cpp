@@ -68,8 +68,11 @@ double vortexLine::influence_patch(const Vector3d &collocationPoint,
     //std::cout<< "same" << std::endl;
     return 0;
   } else {
-
-  auto [a, b] = distToPoint(collocationPoint, nodes[edge.get_n1()], nodes[edge.get_n2()]);
+  //il serait mieux de changer le système de référence en matrice plutôt que vecteur
+  //Projecting the nodes in the local reference system
+  Vector3d nodes1 = {nodes[edge.get_n1()].dot(Localreference[0]), nodes[edge.get_n1()].dot(Localreference[1]) , nodes[edge.get_n1()].dot(Localreference[2])};
+  Vector3d nodes2 = {nodes[edge.get_n2()].dot(Localreference[0]), nodes[edge.get_n2()].dot(Localreference[1]) , nodes[edge.get_n2()].dot(Localreference[2])};
+  auto [a, b] = distToPoint(collocationPoint, nodes1, nodes2);
   // (l,m,normal)
   auto SM = edge.get_dl().dot(Localreference[1]);
   auto SL = edge.get_dl().dot(Localreference[0]);
@@ -78,18 +81,18 @@ double vortexLine::influence_patch(const Vector3d &collocationPoint,
   auto AL = a.dot(Localreference[0]);
   auto AM = a.dot(Localreference[1]);
   auto BM = b.dot(Localreference[1]);
-  auto Al2= Localreference[2].dot(edge.get_dl().cross(a)); // erreur possible sur la normal
   auto Al= AM*SL - AL*SM;
 
 //std::cout<< "new value" << std::endl;
 //std::cout<< Al << std::endl;
 //std::cout<< Al2 << std::endl; //l'un est le négatif de l'autre
-  //auto Rck = center_point; //Erreur possible (Centre local ou **centre global**)  
-  auto Pjk = collocationPoint - center_point;
+  //auto Rck = center_point; //Erreur possible (Centre local ou **centre global**)
+  Vector3d local_center_point = {center_point.dot(Localreference[0]), center_point.dot(Localreference[1]), center_point.dot(Localreference[2])};
+  auto Pjk = collocationPoint - local_center_point;
   auto PN = Pjk.dot(Localreference[2]);
 
-  auto PA= (PN*PN) * SL + Al2 * AM;  
-  auto PB= (PN*PN) * SL + Al2 * BM;
+  auto PA= (PN*PN) * SL + Al * AM;
+  auto PB= (PN*PN) * SL + Al * BM;
 
   auto RNUM = SM * PN * (B * PA - A * PB);
   auto DNOM = PA * PB + (PN*PN) * A * B * (SM*SM);
@@ -98,7 +101,7 @@ double vortexLine::influence_patch(const Vector3d &collocationPoint,
   //std::cout << DNOM << std::endl;
 
   //atan is in radians
-  return {atan(RNUM/DNOM)};
+  return {atan2(RNUM, DNOM)};
   }
 }
 

@@ -247,7 +247,7 @@ void patch::ScanNeighbor(std::vector<element::doubletPanel> &doublets) {
   //for the target panel
   for(auto &doub_target : doublets) {
     auto nodes_target = doub_target.get_nodeIDs();
-    //std::cout<< "new panel "<< std::endl;
+    std::cout<< "new panel "<< doub_target.get_globalIndex() << " : " << std::endl;
     for (auto &doub_compared : doublets){
       if (doub_target.get_globalIndex() != doub_compared.get_globalIndex()){
         auto nodes_compared = doub_compared.get_nodeIDs();
@@ -259,6 +259,7 @@ void patch::ScanNeighbor(std::vector<element::doubletPanel> &doublets) {
           //if value found search for the second
           if( it1 != nodes_compared.end() && it2 != nodes_compared.end()) {
             doub_target.NeighborPanel_IDs[i] = doub_compared.get_globalIndex();
+             std::cout<< doub_target.NeighborPanel_IDs[i]<< std::endl;
           } else {
 
           } //******NEED TO CORRECT FOR WHEN POINTS ARE COINCIDED******
@@ -269,7 +270,7 @@ void patch::ScanNeighbor(std::vector<element::doubletPanel> &doublets) {
         auto it2 = std::find(nodes_compared.begin(), nodes_compared.end(), nodes_target.front());
         if( it1 != nodes_compared.end() && it2 != nodes_compared.end()) {
            doub_target.NeighborPanel_IDs[nodes_target.size()-1] = doub_compared.get_globalIndex();
-          //std::cout<< doub_target.NeighborPanel_IDs[nodes_target.size()-1]<< std::endl;
+          std::cout<< doub_target.NeighborPanel_IDs[nodes_target.size()-1]<< std::endl;
         } else {
             
         }
@@ -299,12 +300,10 @@ void patch::Storing_nondirectPanel(std::vector<element::doubletPanel> &doublets)
   }
 }
 
-
-//To be completed
 void patch::computePressure(const input::simParam &sim,
                std::vector<element::doubletPanel> &doublets) {
-  cp = 0.0;
-  auto vinf = sim.vinf;
+  cp = 0.0; //remove in clean up
+  const auto &vinf = sim.vinf;
   for (auto &doublet : doublets) {
     Vector3d sum = Vector3d::Zero();
     //ask if the the coordonnate and segment normal have to be in the local reference system
@@ -313,19 +312,16 @@ void patch::computePressure(const input::simParam &sim,
     auto edge = doublet.get_edges(); // getting the length of the edge from the mesh (not the co-planair panel) [possible mistake]
     auto area = doublet.get_area();
     //Computing Velocity using Green-Gauss
-    std::cout << "Panel number  " << doublet.get_globalIndex() << std::endl;
+    //std::cout << "Panel number  " << doublet.get_globalIndex() << std::endl;
     for (size_t i=0; i<neighbor.size(); i++){
       if (neighbor[i]!=-1){
-        //double upper_f = edge_center[i] - doublets[neighbor[i]].get_center();
-        //double lower_f = doublet.get_center() - doublets[neighbor[i]].get_center();
         double f = (doublets[neighbor[i]].get_center() - edge_center[i]).norm() / (doublets[neighbor[i]].get_center() - doublet.get_center()).norm(); 
         double phi_f = (doublet.mu * f) + (doublets[neighbor[i]].mu * (1 - f));
         Vector3d segment_normal = doublet.ProjectingCollocation((-edge[i].get_dl()).cross(doublet.get_normal())); //normal projeter dans le systeme local
         
         //displaying all the value for troobleshooting
-        //std::cout << "edge numero " << i << " :  " << std::endl;
-            
         /*
+        std::cout << "edge numero " << i << " :  " << std::endl;
         std::cout << "center of the edge " << ":  " << std::endl;
         std::cout << edge_center[i] << std::endl; 
         std::cout << "weighing geometric factor (f) : ";
@@ -334,52 +330,26 @@ void patch::computePressure(const input::simParam &sim,
         std::cout << phi_f <<std::endl;
         */
         sum += phi_f * segment_normal.normalized() * edge[i].get_dl().norm();
-        //std::cout << sum << std::endl;
       }
     }
       
     //La mauvaise aire est utilisé ici. Il faut plutôt prendre l'aire du panneau co-planaire
     Vector3d gradMU = (1 / area) * sum;
+    Vector3d localstream = doublet.ProjectingCollocation(sim.freeStream()); //can be optimized
+    localstream[2]=0;
+    gradMU+=localstream;
     doublet.storing_velocity(gradMU);
-    //std::cout << area << std::endl;
     /*
-        for (int w=0 ; w<3; w++){
+    std::cout << "velocity :" << std::endl;
+            for (int w=0 ; w<3; w++){
             std::cout << gradMU[w] << std::endl;
-          }
-          */
-    double V_k = sqrt(doublet.local_velocity[1]*doublet.local_velocity[1] + doublet.local_velocity[2]*doublet.local_velocity[2]);
-    //std::cout << V_k << std::endl; 
+          } 
+     */
+    double V_k = sqrt(doublet.local_velocity[0]*doublet.local_velocity[0] + doublet.local_velocity[1]*doublet.local_velocity[1]);
+    //std::cout << "vitesse K :  " << V_k << std::endl; 
     doublet.cp = 1 - (V_k*V_k)/(vinf*vinf);
-    //std::cout << "coefficient de pression (Cp)  :";
+    //std::cout << "coefficient de pression (Cp)  : ";
     //std::cout << doublet.cp << std::endl; 
-
-    /*
-    //Pour la résolution d'ordre 1 (approximation de Lagrange)
-    //Calculating the local velocity (tangent) of each panel
-    auto neighbor = doublet.get_neighbor();
-    auto it = std::find(neighbor.begin(), neighbor.end(), -1);
-    if (it != neighbor.end()){
-      //for SMQ
-      double SA = - doublet.SMQ - doublets[neighbor[3]].SMQ;
-      double SB = doublet.SMQ + doublets[neighbor[1]].SMQ;
-      double DA = doublets[neighbor[3]].mu - doublet.mu / SA;
-      double DB = doublets[neighbor[1]].mu - doublet.mu / SB;
-      double DELQ = (DA * SB - DB * SA)/(SB - SA);
-      //for SMP
-      double SA2 = - doublet.SMP - doublets[neighbor[2]].SMP;
-      double SB2 = doublet.SMP + doublets[neighbor[0]].SMP;
-      double DA2 = doublets[neighbor[2]].mu - doublet.mu / SA2;
-      double DB2 = doublets[neighbor[0]].mu - doublet.mu / SB2;
-      double DELP = (DA2 * SB2 - DB2 * SA2)/(SB2 - SA2);
-      //Velocity
-      auto TM = doublet.T * doublet.Localreference[1];
-      auto TL = doublet.T * doublet.Localreference[0];
-      auto VL = - 4 * M_PI * (doublet.SMP * DELP - TM * DELQ)/TL;
-      auto VM = - 4 * M_PI * DELQ;
-      std::cout << VL << std::endl;
-      
-      }
-      */
   }      
 }
 

@@ -290,6 +290,7 @@ public:
   std::vector<Vector3d> get_edge_center() const;
   int get_globalIndex() const;
   std::array<Vector3d, 3> get_LocalCoordinate() const;
+  Vector3d get_local_velocity() const;
   double get_sigma() const;
   double get_mu() const;
 

@@ -186,6 +186,22 @@ void output::exportSurfacesVTU(const model &object, const int it) {
   for (auto &doublet : object.doubletPanels) {
     cp.push_back(doublet.get_cp()); 
   }
+  
+  // local_velocity
+  std::vector<double> local_velocity;
+  local_velocity.reserve(3 * nPanels);
+  for (auto &vortex : object.vortexRings) {
+    local_velocity.push_back(0);
+    local_velocity.push_back(0);
+    local_velocity.push_back(0);
+  }
+  for (auto &doublet : object.doubletPanels) {
+    //auto V = doublet.get_local_velocity();
+    //local_velocity.push_back(sqrt(V[0] * V[0] + V[1] * V[1]));
+    local_velocity.push_back(doublet.get_local_velocity()(0));
+    local_velocity.push_back(doublet.get_local_velocity()(1));
+    local_velocity.push_back(doublet.get_local_velocity()(2));
+  }
   // Creating data object
   std::vector<vtu11::DataSetInfo> dataSetInfo{
       {"strength", vtu11::DataSetType::CellData, 1},
@@ -193,13 +209,14 @@ void output::exportSurfacesVTU(const model &object, const int it) {
       {"cl", vtu11::DataSetType::CellData, 1},
       {"cd", vtu11::DataSetType::CellData, 1}, 
       {"cp", vtu11::DataSetType::CellData, 1},
+      {"Local_velocity", vtu11::DataSetType::CellData, 3},
       {"cm", vtu11::DataSetType::CellData, 3}};
   // Creating mesh object
   vtu11::Vtu11UnstructuredMesh mesh{points, connectivity, offsets, types};
   // Writing file
   vtu11::writeVtu(
       io.outDir + io.baseName + "_surface_" + itStream.str() + ".vtu", mesh,
-      dataSetInfo, {strengths, areas, cl, cd, cp, cm}, "RawBinary");
+      dataSetInfo, {strengths, areas, cl, cd, cp, local_velocity, cm}, "RawBinary");
 }
 
 void output::exportWakeVTU(const model &object, const int it) {
