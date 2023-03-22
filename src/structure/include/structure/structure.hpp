@@ -3,8 +3,10 @@
 #define __STRUCTURE__
 
 #include "common_aeroflex.hpp"
+#include <ios>
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <exception>
 #include <vector>
 #include <atomic>
@@ -14,28 +16,53 @@
 namespace structure {
 
 struct Settings {
-  std::string Mesh_file_path;
-  std::string Solve_type;
-  double Tolerance;
-  int N_step;
-  double Damping;
+
+  std::string Mesh_file_path = "../../../../examples/structure/Moment.txt";
+  double Tolerance = 1e-6;
+  int N_step = 10;
+  double Damping = 1.0;
+
+  std::vector<std::string> Solve_type_options = {"NONLINEAR", "LINEAR"};
+  int Solve_type = 0;
+
+  void set_solve_type(const std::string &solve_type) {
+    if (!solve_type.compare("NONLINEAR"))
+      this->Solve_type = 0;
+    else if (!solve_type.compare("LINEAR"))
+      this->Solve_type = 1;
+  }
+
+  std::string get_solve_type() {
+    return Solve_type_options[Solve_type];
+  }
 
   void import_config_file(tiny::config &config) {
-
-    try {
-
       Mesh_file_path = config.get<std::string>("structure-io", "mesh_file");
-      Solve_type = config.get<std::string>("structure-solver", "type");
       Tolerance = config.get<double>("structure-solver", "tolerance");
       N_step = config.get<int>("structure-solver", "n_steps");
       Damping = config.get<double>("structure-solver", "damping");
-
-    } catch (std::exception &e) {
-      std::cout << e.what() << std::endl;
-    }
-
+      set_solve_type(config.get<std::string>("structure-solver", "type"));
   }
 
+  void export_config_file(tiny::config &config) {
+    // Appending sections to config file
+    config.sections.push_back("structure-io");
+    config.sections.push_back("structure-solver");
+
+    std::stringstream tolerance, damping;
+    tolerance << std::scientific << this->Tolerance;
+    damping << std::scientific << this->Damping;
+
+    // Adding to config map
+    // [structure-io]
+    config.config["structure-io"]["mesh_file"] = Mesh_file_path;
+
+    // [structure-solver]
+    config.config["structure-solver"]["tolerance"] = tolerance.str();
+    config.config["structure-solver"]["n_steps"] = N_step;
+    config.config["structure-solver"]["damping"] = damping.str();
+    config.config["structure-solver"]["type"] = get_solve_type();
+  }
 };
 
 class Structure {
@@ -58,21 +85,33 @@ public:
     FEM.set_K_Final_sparse();
   }
    
-  void solve(Eigen::VectorXd New_F){
-    
-    FEM.set_Load_Vector_From_Vector(New_F);
+  void solve() {
 
-    if (settings.Solve_type == "Linear")
+    // Resetting previous case
+    reset();
+
+    // Allocating memory for residuals
+    // TODO: Setting a max_iter number as imput param!
+    residuals.reserve(100);
+    
+    // FEM.set_Load_Vector_From_Vector(New_F);
+
+    if (!settings.get_solve_type().compare("LINEAR"))
     {
       Solutions.push_back(FEM.get_Lin_Solve());
     }
-    else if(settings.Solve_type == "Non-Linear")
+    else if(!settings.get_solve_type().compare("NONLINEAR"))
     {
       Solutions.push_back(FEM.get_NonLin_Solve(settings.N_step, settings.Tolerance, settings.Damping));
     }
 
-
   }
+
+private:
+    void reset() {
+      iters = 0;
+      residuals.clear();
+    }
 };
 
 }

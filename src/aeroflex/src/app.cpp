@@ -136,7 +136,7 @@ struct DialogLayer : public FlexGUI::Layer {
 
 // SOLVE =================================================================================================
 
-void solve(rans::Rans &rans, vlm::VLM &vlm) {
+void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure) {
 
 	database::table table;
 
@@ -157,6 +157,9 @@ void solve(rans::Rans &rans, vlm::VLM &vlm) {
 	vlm.database.importLocations(vlm.settings.io.locationFile); // Temporary
 	vlm.solve();
 
+	// structure.input();
+	// structure.solve();
+
 	// rans.input();
 	// rans.solve();
 }
@@ -170,9 +173,9 @@ std::optional<Settings> config_open(const std::string &conf_path) {
 	bool success = io.read(conf_path);
 	if (!success) return std::nullopt;
 
-	// Parsing for vlm
 	settings.rans.import_config_file(io);
 	settings.vlm.import_config_file(io);
+	settings.structure.import_config_file(io);
 
 	return settings;
 }
@@ -187,8 +190,8 @@ bool config_save(const std::string &conf_path, Settings &settings) {
 	};
 
 	settings.rans.export_config_file(io);
-	// Exporting for VLM
 	settings.vlm.export_config_file(io);
+	settings.structure.export_config_file(io);
 
 	return io.write(conf_path);
 }
@@ -209,12 +212,15 @@ void App::solve_async() {
 	signal_status_ready = false;
 	signal_status_busy = true;
 	gui.msg.push("-- Starting simulation --");
+
 	rans.settings = settings.rans;
 	vlm.settings = settings.vlm;
+	structure.settings = settings.structure;
+
 	future_solve = std::async(std::launch::async,
 	[&](){
 		try {
-			solve(rans, vlm);
+			solve(rans, vlm, structure);
 		} catch (std::exception &e) {
 			gui.msg.push(e.what());
 		}

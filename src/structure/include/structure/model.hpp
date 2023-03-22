@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <iostream>
+#include <sstream>
 #include <vector>
 #include <cmath>
 #include <map>
@@ -259,10 +260,12 @@ public:
         }
             
 
-        for (double Load_Step = 1.; Load_Step <= Max_load_step; Load_Step ++)
+        for (double Load_Step = 1.; Load_Step <= (double)Max_load_step; Load_Step ++)
         {
-            std::cout<<"\n============"<<std::endl;
-            std::cout<<"Load step: "<< Load_Step <<" / "<< Max_load_step <<std::endl;
+            // std::cout<<"\n=================="<<std::endl;
+            // std::cout<<"Load step: "<< Load_Step <<" / "<< Max_load_step <<std::endl;
+            gui.msg.push("[STRUCT] Load step: " + std::to_string(int(Load_Step))
+                         + " / " + std::to_string(Max_load_step));
             Forces_diff = (Load_Step/Max_load_step)*(Forces) - Forces_int;
             
             set_K_global();
@@ -278,8 +281,8 @@ public:
                 
                 //Delta déplacements
                 Dep += Delta_dep_amor; 
-                std::cout<<"==============="<<std::endl;
-                std::cout<<Dep.tail(3).transpose()<<std::endl;
+                // std::cout<<"=================="<<std::endl;
+                // std::cout<<Dep.tail(3).transpose()<<std::endl;
                 set_Quaternion_Map(Delta_dep_amor); 
 
                 //#pragma omp parallel for
@@ -325,14 +328,19 @@ public:
                 else Delta_dep_amor = Delta_dep_full;
 
                 if (iters%100 == 0 || Residu < tol){
-                std::cout << "Iteration " << iters << std::endl;
-                std::cout << "\t Residual = " << Residu << std::endl;
+                // std::cout << "Iteration " << iters << std::endl;
+                // std::cout << "\t Residual = " << Residu << std::endl;
+                std::stringstream res; res << std::scientific << Residu;
+                gui.msg.push("[STRUCT] Iteration " + std::to_string(iters) + "... "
+                             + "Residual =" + res.str());
                 };
                 
                 // Incrementing current iteration
                 iters++;
                 residuals.push_back(Residu);
+
             } while((Residu> tol) && (!gui.signal.stop));
+            if (gui.signal.stop) break;
         }
         return Dep;
     }

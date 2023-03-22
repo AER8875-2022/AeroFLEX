@@ -29,7 +29,7 @@ int main(int argc, char **argv){
     MODEL M1(settings.Mesh_file_path, gui, iters, residuals);
     Eigen::VectorXd dep;
 
-    if(!settings.Solve_type.compare("NLS"))
+    if(!settings.get_solve_type().compare("NONLINEAR"))
     {   
         int Load_step = settings.N_step;
         double       tol = settings.Tolerance;
