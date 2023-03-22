@@ -86,6 +86,12 @@ class App {
 		App(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, GUIHandler &gui);
 };
 
+struct StructureLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	App &app;
+	StructureLayer(App &app) : app(app) {};
+};
+
 struct RansLayer : public FlexGUI::Layer {
 	virtual void OnUIRender() override;
 	App &app;
@@ -304,6 +310,29 @@ inline void Combo(std::vector<std::string> &vec, int &index, const char* label) 
 		}
 		ImGui::EndCombo();
 	}
+}
+
+void StructureLayer::OnUIRender() {
+	static double Tolerance = 0.00001;
+	static double N_step= 1.0;
+	static double Damping= 1.0;
+	static bool solve_type = 1;
+	ImGui::Begin("Structure");
+
+	ImGui::Separator();
+	ImGui::Text("Paramètres");
+	ImGui::InputDouble("Tolerence:", &Tolerance, 0.00001, 1.0, "%.5f");
+	ImGui::InputDouble("Step", &N_step, 0.001, 1.0, "%.4f");
+	ImGui::InputDouble("Damping", &Damping, 0.001, 1.0, "%.4f");
+
+	ImGui::Separator();
+	ImGui::Text("Options");
+	if (ImGui::RadioButton("NLS", solve_type == 0))
+		solve_type = 0;
+	ImGui::SameLine();
+	if (ImGui::RadioButton("LS", solve_type == 1))
+		solve_type = 1;
+	ImGui::End();
 }
 
 void RansLayer::OnUIRender() {
@@ -645,6 +674,7 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, App& app)
 	application->PushLayer(std::make_shared<RansGraphLayer>(app));
 	application->PushLayer(std::make_shared<VlmGraphLayer>(app));
 	application->PushLayer(std::make_shared<CpLayer>(app));
+	application->PushLayer(std::make_shared<StructureLayer>(app));
 	application->PushLayer(std::make_shared<RansLayer>(app));
 	application->PushLayer(std::make_shared<VlmLayer>(app));
 	application->PushLayer(std::make_shared<ConsoleLayer>(app));
