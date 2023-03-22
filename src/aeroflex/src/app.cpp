@@ -21,6 +21,7 @@
 #include <rans/rans.h>
 #include <vlm/vlm.hpp>
 #include <structure/structure.hpp>
+#include "geometrie/geometry.hpp"
 
 template <class T>
 bool is_future_done(std::future<T> const& f) {
