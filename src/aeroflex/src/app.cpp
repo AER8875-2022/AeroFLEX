@@ -758,6 +758,7 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, App& app)
 	spec.Height = 900;
 
 	FlexGUI::Application* application = new FlexGUI::Application(spec);
+	application->SetTheme(FlexGUI::Theme::Light);
 	application->PushLayer(std::make_shared<ButtonLayer>(app));
 	application->PushLayer(std::make_shared<RansGraphLayer>(app));
 	application->PushLayer(std::make_shared<VlmGraphLayer>(app));
