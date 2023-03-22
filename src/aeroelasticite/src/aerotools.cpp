@@ -27,21 +27,21 @@ namespace aero{
     struct interpolation_f;
 
 
-    void DispInterpol( interpolation &pos,std::vector<surface::wingStation> wingStations,
-                       std::vector<surface::wing> wings,std::vector<element::vortexRing> vortexRings,
-                      std::vector<surface::wing> wings,std::vector<element::vortexRing> vortexRings,std::vector<Vector3d> nodes,map<int,Vector3d> mapStruct,map<int, int> mapStructni) {
-        for (k = 0; k <wings.size() ; ++k)
+    void DispInterpol( interpolation &pos,std::vector<vlm::surface::wingStation> wingStations,
+                       std::vector<vlm::surface::wing> wings,std::vector<element::vortexRing> vortexRings,
+                      std::vector<surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,map<int,Vector3d> mapStruct,map<int, int> mapStructni) {
+        for (int k = 0; k <wings.size() ; ++k)
         {
-            for (i = 0; i <wingStations.size() ; ++i)
+            for (int i = 0; i <wingStations.size() ; ++i)
             {
 
-                auto wstation= wingStations[wings[0].get_wingStationsIDs()[k]];
+                auto wstation= wingStations[wings[0].get_stationsIDs()[k]];
                 auto vring = vortexRings[wstation.get_vortexIDs()[i]];
 
 
 
 
-                for (p=0; p<vring.size(); ++p)
+                for (int p=0; p<vring.size(); ++p)
                 {
                     auto node=nodes[vring.get_nodeIDs()[p]];
                     double bestDistance[2]={10000,10000};
@@ -99,8 +99,8 @@ namespace aero{
 
     auto computeVLMDispalecement(interpolation pos,std::vector<surface::wingStation> wingStations,
                                  std::vector<surface::wing> wings,std::vector<element::vortexRing> vortexRings,std::vector<Vector3d> nodes,map<int,Vector3d> mapStruct,map<int, int> mapStructni) {
-        for (k = 0; k<wings.size(); ++k) {
-            for (i = 0; i<wingStations.size(); ++i) {
+        for (int k = 0; k<wings.size(); ++k) {
+            for (int i = 0; i<wingStations.size(); ++i) {
 
                 auto wstation = wingStations[wings[0].get_wingStationsIDs()[k]];
                 auto vring = vortexRings[wstation.get_vortexIDs()[i]];
