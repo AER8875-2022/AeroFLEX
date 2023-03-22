@@ -234,14 +234,18 @@ void solver::set_bcs(std::map<std::string, boundary_condition> bcs_in) {
     for (int e=0; e<m.edgesCells.cols(); ++e) {
         double& nx = m.edgesNormalsX[e];
         double& ny = m.edgesNormalsY[e];
+
+        double& a0 = m.cellsAreas[m.edgesCells(e, 0)]; 
+        double& a1 = m.cellsAreas[m.edgesCells(e, 1)];
+        double& l = m.edgesLengths[e]; 
         if (edges_flux_to_add[e] == 0) {
-            edges_flux_functions.emplace_back(std::make_unique<internal_flux>(g, nx, ny, viscosity_int));
+            edges_flux_functions.emplace_back(std::make_unique<internal_flux>(g, nx, ny, l, a0, a1, viscosity_int));
         } else if (edges_flux_to_add[e] == 1) {
-            edges_flux_functions.emplace_back(std::make_unique<farfield_flux>(g, nx, ny, viscosity_int));
+            edges_flux_functions.emplace_back(std::make_unique<farfield_flux>(g, nx, ny, l, a0, a1, viscosity_int));
         } else if (edges_flux_to_add[e] == 2) {
-            edges_flux_functions.emplace_back(std::make_unique<slip_wall_flux>(g, nx, ny, viscosity_int));
+            edges_flux_functions.emplace_back(std::make_unique<slip_wall_flux>(g, nx, ny, l, a0, a1, viscosity_int));
         } else if (edges_flux_to_add[e] == 3) {
-            edges_flux_functions.emplace_back(std::make_unique<wall_flux>(g, nx, ny, viscosity_int));
+            edges_flux_functions.emplace_back(std::make_unique<wall_flux>(g, nx, ny, l, a0, a1, viscosity_int));
         }
     }
 }
@@ -335,13 +339,22 @@ void solver::calc_dt() {
             const double eig_L = sqrt(p_L*g.gamma / q(k0)) + abs(V_L);
             const double eig_R = sqrt(p_R*g.gamma / q(k1)) + abs(V_R);
             eig = std::max(eig_L, eig_R);
+
+            if (viscosity_model != "inviscid") {
+                double eigV0 = std::max(4./(3.*q(k0)), g.gamma/q(k0)) * (g.mu_L/g.Pr_L) * m.edgesLengths[e] / std::min(m.cellsAreas[cell0], m.cellsAreas[cell1]);
+                double eigV1 = std::max(4./(3.*q(k1)), g.gamma/q(k1)) * (g.mu_L/g.Pr_L) * m.edgesLengths[e] / std::min(m.cellsAreas[cell0], m.cellsAreas[cell1]);
+                eig += std::max(eigV0, eigV1);
+            }
         } else {
             // Use the internal field
             const double V_L = (q(k0+1)*n(0) + q(k0+2)*n(1))/q(k0);
-
             const double p_L = (g.gamma-1)*(q(k0+3) - 0.5/q(k0)*(q(k0+1)*q(k0+1)+q(k0+2)*q(k0+2)));
 
             eig = sqrt(p_L*g.gamma / q(k0)) + abs(V_L);
+
+            if (viscosity_model != "inviscid") {
+                eig += std::max(4./(3.*q(k0)), g.gamma/q(k0)) * (g.mu_L/g.Pr_L) * m.edgesLengths[e] / m.cellsAreas[cell0];
+            }
         }
 
         dt(cell0) += eig * m.edgesLengths[e];
@@ -367,8 +380,8 @@ void solver::average_gradients(Eigen::VectorXd& gradx, Eigen::VectorXd& grady, c
     }
     
     double tij[2];
-    tij[0] = m.cellsCentersX[cell0] + m.cellsCentersX[cell1];
-    tij[1] = m.cellsCentersY[cell0] + m.cellsCentersY[cell1];
+    tij[0] = m.cellsCentersX[cell1] - m.cellsCentersX[cell0];
+    tij[1] = m.cellsCentersY[cell1] - m.cellsCentersY[cell0];
 
     const double lij = sqrt(tij[0]*tij[0] + tij[1]*tij[1]);
 
@@ -378,7 +391,7 @@ void solver::average_gradients(Eigen::VectorXd& gradx, Eigen::VectorXd& grady, c
     // Directional derivative
     double grad_dir[4];
     for (uint i=0; i<4; ++i) {
-        grad_dir[i] = (q(4*cell0+i) - q(4*cell1+i))/lij;
+        grad_dir[i] = (q(4*cell1+i) - q(4*cell0+i))/lij;
     }
 
     // Arithmetic average gradient
@@ -447,7 +460,7 @@ void solver::calc_gradients(const Eigen::VectorXd& q_) {
             Eigen::VectorXd q_R = edges_flux_functions[e]->vars(q_L, q.segment(4*j, 4));
 
             for (uint k=0; k<4; ++k) {
-                const double fk = (q_L(k)*(1.0 - geom_factor) + q_R(k) * geom_factor) * m.edgesLengths[e];
+                const double fk = (q_L(k) + q_R(k)) * 0.5 * m.edgesLengths[e]; //(q_L(k)*(1.0 - geom_factor) + q_R(k) * geom_factor) * m.edgesLengths[e];
 
                 gx(4*i+k) += fk * m.edgesNormalsX[e];
                 gy(4*i+k) += fk * m.edgesNormalsY[e];

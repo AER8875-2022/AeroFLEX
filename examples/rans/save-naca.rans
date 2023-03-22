@@ -1,0 +1,50 @@
+
+
+[gas]
+    gamma   1.4
+    R       0.71428571428
+    mu_L    1e-5
+end
+
+
+[bc]
+    name    Farfield
+    type    farfield
+    T       1
+    mach    0.25
+    angle   0.02181662
+    p       1
+end
+
+
+[bc]
+    name    Airfoil
+    type    wall
+end
+
+
+
+[solver]
+    type                implicit
+    second_order        true
+    viscosity_model     laminar
+    tolerance           1e-6
+    start_cfl           1
+    slope_cfl           0
+    max_cfl             200
+    relaxation          0.8
+    gradients           least-squares
+    limiter_k           5.
+    rhs_iterations      5
+    airfoil_name        Airfoil
+end
+
+
+[mesh]
+    ../../../../examples/rans/airfoil_API2_coarse.msh
+    ../../../../examples/rans/airfoil_API2_mid.msh
+    ../../../../examples/rans/airfoil_API2_fine.msh
+end
+
+
+
