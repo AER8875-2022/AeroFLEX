@@ -73,7 +73,7 @@ int main(int argc, const char * argv[]) {
         {0.05, 0.1, 0.4},               // z_n
         {0.05, 0.2}                     // delta_alpha_t
     );*/
-    WING_LEFT.mirror_body();
+    WING_LEFT.mirror_body();            //À quoi ça sert ?
 
     WING_RIGHT.change_all_distributions("partial", "cartesian");
     std::vector<std::vector<std::vector<std::vector<double>>>> WR_surfaces = WING_RIGHT.get_paired_body_surfaces();    
