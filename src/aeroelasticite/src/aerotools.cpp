@@ -251,7 +251,85 @@ namespace aero{
            
        }
    }      
-      
+   std::vector<double> ComputeStructureForces(interpolation_f force,Matrix<double, 6, 1> forces_to_inertial_frame)
+
+  {
+       int n=force.point_fa.size()/3;
+       int m=force.point_fs.size()/3;
+       
+       vector <double> forces_s(6*m,0);
+       vector <double> M(3);
+       vector <double> r(3);
+       
+       for (int i=0; i<n; ++i)
+       {
+
+           auto forces = object.forces_to_inertial_frame(i);
+           j=force.poids[3*i];
+           if (j!=m-1)
+           {
+           
+               forces_s[6*j]   += force.poids[3*i+1] * forces[i][0];
+               forces_s[6*j+1] += force.poids[3*i+1] * forces[i][1];
+               forces_s[6*j+2] += force.poids[3*i+1] * forces[i][2];
+               
+               forces_s[6*(j+1)]   += force.poids[3*i+2] * forces[i][0];
+               forces_s[6*(j+1)+1] += force.poids[3*i+2] * forces[i][1];
+               forces_s[6*(j+1)+2] += force.poids[3*i+2] * forces[i][2];
+               
+               M[0]=forces[i][3];
+               M[1]=forces[i][4];
+               M[2]=forces[i][5];
+               
+               r[0]=force.point_fa[3*i] -   force.point_fs[3*j];
+               r[1]=force.point_fa[3*i+1] - force.point_fs[3*j+1];
+               r[2]=force.point_fa[3*i+2] - force.point_fs[3*j+2];
+               
+               M_s=crossProduct (r,M);
+               
+               forces_s[6*j+3]   += force.poids[3*i+1] * (M_s[0] + forces[i][3]);
+               forces_s[6*j+4]   += force.poids[3*i+1] * (M_s[1] + forces[i][4]);
+               forces_s[6*j+5]   += force.poids[3*i+1] * (M_s[2] + forces[i][5]);
+               
+               r[0]=force.point_fa[3*i] -   force.point_fs[3*(j+1)];
+               r[1]=force.point_fa[3*i+1] - force.point_fs[3*(j+1)+1];
+               r[2]=force.point_fa[3*i+2] - force.point_fs[3*(j+1)+2];
+               
+               M_s=crossProduct (r,M);
+               
+               forces_s[6*(j+1)+3]   += force.poids[3*i+2] * (M_s[0] + forces[i][3]);
+               forces_s[6*(j+1)+4]   += force.poids[3*i+2] * (M_s[1] + forces[i][4]);
+               forces_s[6*(j+1)+5]   += force.poids[3*i+2] * (M_s[2] + forces[i][5]);
+           
+           }
+
+           else if (j==m-1)
+           {
+               forces_s[6*j]   += force.poids[i][1] * forces[i][0];
+               forces_s[6*j+1] += force.poids[i][1] * forces[i][1];
+               forces_s[6*j+2] += force.poids[i][1] * forces[i][2];
+
+               M[0]=forces[i][3];
+               M[1]=forces[i][4];
+               M[2]=forces[i][5];
+               
+               r[0]=force.point_fa[3*i] -   force.point_fs[3*j];
+               r[1]=force.point_fa[3*i+1] - force.point_fs[3*j+1];
+               r[2]=force.point_fa[3*i+2] - force.point_fs[3*j+2];
+               
+               M_s=crossProduct (r,M);
+               
+               forces_s[6*j+3]   += force.poids[i][1] * (M_s[0] + forces[i][3]);
+               forces_s[6*j+4]   += force.poids[i][1] * (M_s[1] + forces[i][4]);
+               forces_s[6*j+5]   += force.poids[i][1] * (M_s[2] + forces[i][5]);
+               
+           }
+           
+           
+       }
+       return forces_s;
+   }
+   
 
     vector<double> crossProduct(const vector<double>& i, const vector<double>& j)
     {
