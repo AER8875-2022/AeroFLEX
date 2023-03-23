@@ -97,8 +97,8 @@ namespace aero{
         }
     }
 
-    auto computeVLMDispalecement(interpolation pos,std::vector<surface::wingStation> wingStations,
-                                 std::vector<surface::wing> wings,std::vector<element::vortexRing> vortexRings,std::vector<Vector3d> nodes,map<int,Vector3d> mapStruct,map<int, int> mapStructni) {
+    auto computeVLMDispalecement(interpolation pos,std::vector<vlm::surface::wingStation> wingStations,
+                                 std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,map<int,Vector3d> mapStruct,map<int, int> mapStructni) {
         for (int k = 0; k<wings.size(); ++k) {
             for (int i = 0; i<wingStations.size(); ++i) {
 
