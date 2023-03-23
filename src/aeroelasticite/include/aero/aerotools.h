@@ -20,9 +20,9 @@ namespace aero{
         std::vector<double> weight;};
 
     void DispInterpol(interpolation &pos,std::vector<vlm::surface::wingStation> wingStations,
-                      std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,map<int,Vector3d> mapStruct,map<int, int> mapStructni);
+                      std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,Map<int,Vector3d> mapStruct,map<int, int> mapStructni);
     auto computeVLMDispalecement(interpolation pos,std::vector<vlm::surface::wingStation> wingStations,
-                                 std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes);
+                                 std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,Map<int,Vector3d> mapStruct,map<int, int> mapStructni);
     
     struct interpolation_f {std::vector<double> point_fa; std::vector<double> point_fs;
                         std::vector<double> poids;};
