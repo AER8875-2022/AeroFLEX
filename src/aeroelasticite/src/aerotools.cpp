@@ -29,7 +29,7 @@ namespace aero{
 
     void DispInterpol( interpolation &pos,std::vector<vlm::surface::wingStation> wingStations,
                        std::vector<vlm::surface::wing> wings,std::vector<element::vortexRing> vortexRings,
-                      std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,Map<int,Vector3d> mapStruct,map<int, int> mapStructni) {
+                      std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,Map<int,Vector3d> mapStruct,Map<int, int> mapStructni) {
         for (int k = 0; k <wings.size() ; ++k)
         {
             for (int i = 0; i <wingStations.size() ; ++i)
@@ -98,7 +98,7 @@ namespace aero{
     }
 
     auto computeVLMDispalecement(interpolation pos,std::vector<vlm::surface::wingStation> wingStations,
-                                 std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,Map<int,Vector3d> mapStruct,map<int, int> mapStructni) {
+                                 std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,Map<int,Vector3d> mapStruct,Map<int, int> mapStructni) {
         for (int k = 0; k<wings.size(); ++k) {
             for (int i = 0; i<wingStations.size(); ++i) {
 
