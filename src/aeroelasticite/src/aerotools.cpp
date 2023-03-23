@@ -133,7 +133,124 @@ namespace aero{
         return node ;
     }
    
-        
+  void LoadInterpol(interpolation_f &force, std::vector<vlm::surface::wingStation> wingStations,
+                      std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,Map<int,Vector3d> mapStruct,Map<int, int> mapStructni)
+  {
+       // Loading VLM forceacting Point
+       
+       int n=wings.size(); // nombre de wingstations=size (wings)
+       int m=wingStations.size(); // nombre de vortexRings sur une wingstation
+       int i=0; // numéro du premier vortexring d une wingstation
+       
+       for (int j=0; j<n; ++j)
+       {
+           auto wingstation = wingStations[wings[0].get_wingStationsIDs()[j]];
+           
+           auto vortexring= vortexRings[wstation.get_vortexIDs()[i]];
+           force.point_fa.push_back(vortexRing[i].ForcesActingPoint(nodes, vortexRings));
+           
+           i= i + m;
+       }
+       
+       //    Loading STRUCTURE connectivity
+
+       for (int k=0; k<map.size(); ++k)
+       {
+           force.point_fs.push_back(0);
+           force.point_fs.push_back(0);
+           force.point_fs.push_back(0);
+
+       }
+
+
+       for (auto s : mapStructni)
+       {
+            auto nodeStruct = mapStruct[s.first];
+            force.point_fs[3*s]=nodeStruct[0];
+            force.point_fs[3*s+1]=nodeStruct[1];
+            force.point_fs[3*s+2]=nodeStruct[2];
+       }
+       
+       
+       
+       // Projeter le point_fa sur la droite et calcul de la distance
+       vector <double> point_fp;
+       vector <double> dist(n);
+       vector <double> v(3);
+       
+       vector <double> u(3); // vecteur directeur de la poutre
+       u[0]= force.point_fs[0] - force.point_fs[3];
+       u[1]= force.point_fs[1] - force.point_fs[4];
+       u[2]= force.point_fs[2] - force.point_fs[5];
+       double t;
+
+       for (int i=0; i<n; ++i){
+
+           t= (u[0](force.point_fa[3*i]-force.point_fs[0]) + u[1](force.point_fa[3*i+1]-force.point_fs[1]) +
+                  u[2](force.point_fa[3*i+2]-force.point_fs[2]))/pow(norme(u),2);
+           
+           point_fp.push_back(force.point_fs[0] + t*u[0]);
+           point_fp.push_back(force.point_fs[1] + t*u[1]);
+           point_fp.push_back(force.point_fs[2] + t*u[2]);
+           
+           v[0]= force.point_fa[3*i]   -   point_fp[3*i];
+           v[1]= force.point_fa[3*i+1] -   point_fp[3*i+1];
+           v[2]= force.point_fa[3*i+2] -   point_fp[3*i+2];
+           dist[i]=norme(v);
+           
+       }
+       
+       // Calcul des coefficients d'interpolation
+       ///vector <vector> forces_s[m][6];
+       double dist_0;
+       double dist_1;
+       double dist_2;
+       double epsilon_l;
+       double epsilon_r;
+       
+   
+       
+       for (int i=0; i<n; ++i){
+           
+           
+           for (int j=0; j<map.size(); ++j){
+               v[0]= force.point_fs[3*j]   - point_fs[3*(j+1)];
+               v[1]= force.point_fs[3*j+1] - point_fs[3*(j+1)+1];
+               v[2]= force.point_fs[3*j+2] - point_fs[3*(j+1)+2];
+               dist_0=norme(v);
+               
+               v[0]= force.point_fs[3*j]   - point_fp[3*i];
+               v[1]= force.point_fs[3*j+1] - point_fp[3*i+1];
+               v[2]= force.point_fs[3*j+2] - point_fp[3*i+2];
+               dist_1=norme(v);
+               
+
+
+               v[0]= force.point_fs[3*(j+1)]   - point_fp[3*i];
+               v[1]= force.point_fs[3*(j+1)+1] - point_fp[3*i+1];
+               v[2]= force.point_fs[3*(j+1)+2] - point_fp[3*i+2];
+
+               dist_2=norme(v);
+               
+               if (dist_1<=dist_0 && j != map.size()-1)
+               {
+                   epsilon_l= dist_2/dist_0;
+                   epsilon_r= dist_1/dist_0;
+                   force.poids.push_back(j);
+                   force.poids.push_back(epsilon_l);
+                   force.poids.push_back(epsilon_r);
+                   
+               }
+               else if (j==map.size()-1){
+                   force.poids.push_back(j);
+                   force.poids.push_back(1);
+                   force.poids.push_back(0);
+                   
+               }
+           }
+           
+       }
+   }      
       
 
     vector<double> crossProduct(const vector<double>& i, const vector<double>& j)
