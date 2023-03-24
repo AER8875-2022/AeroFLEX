@@ -1,9 +1,9 @@
 #include "geometrie/euler.hpp"
 #include "geometrie/geometry.hpp"
-using namespace std;
+//using namespace std;
 
 //vector<vector<double>> x, vector<vector<double>> y, vector<vector<double>> su, vector<vector<double>> sl
-void generer(vector<vector<double>> xu, vector<vector<double>> xl, vector<vector<double>> y, vector<vector<double>> su, vector<vector<double>> sl, double disc, string file_name, bool RANS){
+void generer(std::vector<std::vector<double>> xu, std::vector<std::vector<double>> xl, std::vector<std::vector<double>> y, std::vector<std::vector<double>> su, std::vector<std::vector<double>> sl, double disc, std::string file_name, bool RANS){
 
     gmsh::initialize();
 
@@ -20,7 +20,7 @@ void generer(vector<vector<double>> xu, vector<vector<double>> xl, vector<vector
     // Quarter Chord Info
     double max_xu = *max_element(xu[indx].begin(), xu[indx].end());
     double max_xl = *max_element(xu[indx].begin(), xu[indx].end());
-    double max_x=max(max_xu,max_xl);
+    double max_x=std::max(max_xu,max_xl);
     double min_x = *min_element(xu[indx].begin(), xu[indx].end());
     double chord = max_x-min_x;
     double c4_x=min_x+(chord/4);
@@ -54,12 +54,12 @@ void generer(vector<vector<double>> xu, vector<vector<double>> xl, vector<vector
     indx_pt=2*n;
 
     // Airfoil Points Tag List
-    vector<int> point_list; 
+    std::vector<int> point_list; 
     for (int i = 1; i < 2*n; i++) 
         point_list.push_back(i); 
 
     // Fan Points Tag List
-    vector<double> fan_point_list; 
+    std::vector<double> fan_point_list; 
     fan_point_list.push_back(n); 
     fan_point_list.push_back(n+1); 
 
@@ -77,11 +77,11 @@ void generer(vector<vector<double>> xu, vector<vector<double>> xl, vector<vector
     //std::vector<int> new_list{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
     
     // Line tag list 
-    vector<int> lin_list; 
+    std::vector<int> lin_list; 
     for (int i = 1; i < 2*n; i++) 
         lin_list.push_back(i); 
 
-    vector<double> lin_list2; 
+    std::vector<double> lin_list2; 
     for (int i = 1; i < 2*n; i++) 
         lin_list2.push_back(i); 
 
