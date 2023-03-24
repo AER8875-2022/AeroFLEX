@@ -64,6 +64,8 @@ void Rans::run() {
     rans::solver& s = multi.run(true);
     gui.event.rans_solve = true;
 
+    settings.outfilename = "rans-test.vtu";
+
     save(settings.outfilename, s);
     gui.event.rans_postprocess = true;
     std::cout << "Saved results to file " << settings.outfilename << "\n" << std::endl;

@@ -3,8 +3,8 @@ $MeshFormat
 $EndMeshFormat
 $PhysicalNames
 3
-1 1 "Airfoil"
-1 2 "Farfield"
+1 1 "wall"
+1 2 "farfield"
 2 1 "internal"
 $EndPhysicalNames
 $Entities

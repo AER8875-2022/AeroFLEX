@@ -270,6 +270,8 @@ public:
     void compute_wall_dist(const std::map<std::string, boundary_condition> bcs);
 
     void send_mesh_info();
+
+    void normalize(const double& s);
 };
 
 
@@ -884,6 +886,29 @@ void mesh::read_file(std::string filename_in) {
 }
 
 
+
+
+void mesh::normalize(const double& s) {
+
+    for (uint i=0; i<nodesX.size(); ++i) {
+        nodesX[i] /= s;
+        nodesY[i] /= s;
+    }
+
+    for (uint i=0; i<edgesLengths.size(); ++i) {
+        edgesCentersX[i] /= s;
+        edgesCentersY[i] /= s;
+        edgesLengths[i] /= s;
+    }
+
+    for (uint i=0; i<cellsAreas.size(); ++i) {
+        cellsCentersX[i] /= s;
+        cellsCentersY[i] /= s;
+        cellsAreas[i] /= s*s;
+        wall_dist[i] /= s;
+    }
+
+}
 
 
 }

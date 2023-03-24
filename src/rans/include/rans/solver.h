@@ -23,6 +23,7 @@
 #include <rans/mesh.h>
 #include <rans/core.h>
 #include <rans/physics.h>
+#include <rans/handlers.h>
 
 
 #ifdef RANS_MATRIX_FREE
@@ -72,6 +73,8 @@ protected:
 
     std::vector<std::unique_ptr<flux>> edges_flux_functions;
     std::vector<boundary_variables> boundary_vars;
+
+    adim_scale adim_factors;
 
     void set_mesh_and_gas(const mesh& m_in, const gas& g_in);
 
@@ -166,6 +169,43 @@ public:
     const mesh& get_cmesh() const {return m;}
     uint get_print_interval() const {return print_interval;}
     std::map<std::string, boundary_condition> get_bcs() const {return bcs;}
+
+
+    void adimensionalize(const std::string& patch_name) {
+        boundary_variables vars_far = get_boundary_variables();
+
+        double x_min = 0.;
+        double x_max = 0.;
+        bool added_one = false;
+        for (uint b=0; b<m.boundaryEdges.size(); ++b) {
+            if (m.boundaryEdgesPhysicals[b] == patch_name) {
+                uint e = m.boundaryEdges[b];
+                if (!added_one) {
+                    x_min = m.edgesCentersX[e];
+                    x_max = m.edgesCentersX[e];
+                } else {
+                    x_min = std::min(x_min, m.edgesCentersX[e]);
+                    x_max = std::max(x_max, m.edgesCentersX[e]);
+                }
+            }
+        }
+        double corde = x_max - x_min;
+        adim_factors = adim_scale(vars_far, corde, g);
+
+        for (uint b=0; b<m.boundaryEdges.size(); ++b) {
+            const uint e = m.boundaryEdges[b];
+            auto& bc_v = boundary_vars[b];
+
+            auto q_cons = bc_v.get_conservative(g);
+            q_cons.rho /= adim_factors.rho_scale;
+            q_cons.rhou /= adim_factors.rhou_scale;
+            q_cons.rhov /= adim_factors.rhov_scale;
+            q_cons.rhoe /= adim_factors.rhoe_scale;
+            bc_v.from_conservative(q_cons, g);
+        }
+
+        m.normalize(corde);
+    }
 
 
     virtual void fill() {}
@@ -510,7 +550,7 @@ void solver::calc_gradients(const Eigen::VectorXd& q_) {
                 Eigen::VectorXd q_R = edges_flux_functions[e]->vars(q_L, q.segment(4*cell_n, 4));
                 
                 for (uint k=0; k<4; ++k) {
-                    deltas_k(j, k) = q_L(k) - q_R(k);
+                    deltas_k(j, k) = q_R(k) - q_L(k);
                 }
             }
             for (uint k=0; k<4; ++k) {
@@ -1031,15 +1071,18 @@ void implicitSolver::fillRhoLHS() {
         }
 
         // Fill internal matrix elements from flux jacobian
-        for (int e=0; e<m.edgesCells.cols(); ++e) {
+        for (uint e=0; e<m.edgesCells.cols(); ++e) {
 
-            // Get this edges cells index
+            // Get this edge connected cells indices
+            /**/
             int cell0 = m.edgesCells(e, 0);
             int cell1 = m.edgesCells(e, 1);
 
             int k0 = 4*cell0;
             int k1 = 4*cell1;
+            /**/
 
+            /*
             Eigen::VectorXd q_L = q.segment(k0, 4);
             Eigen::VectorXd q_R = q.segment(k1, 4);
 
@@ -1050,10 +1093,13 @@ void implicitSolver::fillRhoLHS() {
             Eigen::VectorXd gradx(4);
             Eigen::VectorXd grady(4);
             average_gradients(gradx, grady, cell0, cell1);
+            /**/
 
+            edge_handler this_edge(m, q, edges_flux_functions, leastSquaresMatrices, second_order, e);
 
             {
-                const Eigen::MatrixXd Jacobian = calc_convective_jacobian(*edges_flux_functions[e], q_L, q_R, gradx, grady) * m.edgesLengths[e];
+                //const Eigen::MatrixXd Jacobian = calc_convective_jacobian(*edges_flux_functions[e], q_L, q_R, gradx, grady) * m.edgesLengths[e];
+                const Eigen::MatrixXd Jacobian = this_edge.jacobian() * m.edgesLengths[e];
 
                 // Set jacobian elements
                 for (int i=0; i<4; ++i) {

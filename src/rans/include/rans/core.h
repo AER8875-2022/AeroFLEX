@@ -26,13 +26,13 @@ namespace rans {
 
 struct gas {
     double R=0.71428571428;
-    double mu_L=1e-5;
+    double mu_L=2.8e-3;
     double Pr_L=0.72;
     double Pr_T=0.9;
     double cp = 1.;
     double gamma=1.4;
 
-    gas(double R_=0.71428571428, double mu_L_=1e-5, double Pr_L_=0.72, double Pr_T_=0.9, double gamma_=1.4) {
+    gas(double R_=0.71428571428, double mu_L_=2.8e-3, double Pr_L_=0.72, double Pr_T_=0.9, double gamma_=1.4) {
         R = R_;
         mu_L = mu_L_;
         Pr_L = Pr_L_;
@@ -81,6 +81,14 @@ struct boundary_variables {
         double rhoE = p / (g.gamma - 1) + 0.5*rho*(u*u + v*v);
         return conservative_variables(rho, rho*u, rho*v, rhoE);
     }
+
+    void from_conservative(const conservative_variables& q, const gas& g) {
+        angle = std::atan2(q.rhov, q.rhou);
+        p = (g.gamma - 1)*(q.rhoe - 0.5/q.rho*(q.rhou*q.rhou + q.rhov*q.rhov));
+        T = p / (g.R * q.rho);
+        double c = sqrt(g.gamma * g.R * T);
+        mach = sqrt(q.rhou*q.rhou + q.rhov*q.rhov)/q.rho * 1./c;
+    }
 };
 
 
@@ -93,16 +101,22 @@ struct adim_scale {
     double rhov_scale;
     double rhoe_scale;
 
-    adim_scale() {}
+    adim_scale() {
+        corde = 1;
+        rho_scale = 1;
+        rhou_scale = 1;
+        rhov_scale = 1;
+        rhoe_scale = 1;
+    }
     adim_scale(const boundary_variables& var_far, const double& corde, const gas& g) {
         auto [rho, rhou, rhov, rhoe] = var_far.get_conservative(g);
 
         double ur = sqrt(rhou*rhou + rhov*rhov)/rho;
 
-        rho_scale = corde / (rho * ur);
-        rhou_scale = corde / (rho * ur * ur);
-        rhov_scale = corde / (rho * ur * ur);
-        rhoe_scale = corde / (rho * ur * ur * ur);
+        rho_scale = 1. / rho;
+        rhou_scale = 1. / sqrt(g.R * var_far.T);
+        rhov_scale = 1. / sqrt(g.R * var_far.T);
+        rhoe_scale = 1. / rhoe;
     }
 
 };
@@ -233,10 +247,11 @@ const std::string bool_to_string(const bool b) {
 }
 
 void Settings::import_config_file(tiny::config &io) {
-    if (io.how_many("rans-bc") != 2) throw std::runtime_error("[RANS] Invalid number of boundary conditions");
+    //if (io.how_many("rans-bc") != 2) throw std::runtime_error("[RANS] Invalid number of boundary conditions");
 
 	g.gamma = io.get<double>("rans-gas", "gamma");
 	g.R = io.get<double>("rans-gas", "R");
+    g.mu_L = io.get<double>("rans-gas", "mu_L");
 
 	for (int i = 0; i < io.how_many("rans-bc"); i++) {
 		std::string type = io.get_i<std::string>("rans-bc", "type", i);
