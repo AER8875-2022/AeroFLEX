@@ -9,15 +9,6 @@
 #define structure_hpp
 #include <stdio.h>
 
-class  param_poutre
-{
-public:
-    
-    //Propriete du materiau MAT1
-    double E //Module de Young
-    double G //Shear modulus
-}
-
 
 std::vector<std::vector<double>> get_center_point(std::vector<std::vector<double>> X, std::vector<std::vector<double>> Y, std::vector<std::vector<double>> Su, std::vector<std::vector<double>> Sl);
 std::vector<double> vecteur_normal(std::vector<double> p1, std::vector<double> p2);
