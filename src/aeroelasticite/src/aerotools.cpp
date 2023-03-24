@@ -35,7 +35,7 @@ namespace aero{
             for (int i = 0; i <wingStations.size() ; ++i)
             {
 
-                auto wstation= wingStations[wings[0].get_stationsIDs()[k]];
+                auto wstation= wingStations[wings[0].get_stationIDs()[k]];
                 auto vring = vortexRings[wstation.get_vortexIDs()[i]];
 
 
@@ -103,9 +103,13 @@ namespace aero{
             for (int i = 0; i<wingStations.size(); ++i) {
 
 
-                auto wstation= wingStations[wings[0].get_stationsIDs()[k]];
+                auto wstation= wingStations[wings[0].get_stationIDs()[k]];
                 auto vring = vortexRings[wstation.get_vortexIDs()[i]];
                 int numPointsVort = vring.size();
+                double angle_x;
+                double angle_y;
+                double angle_z;
+
                 for (int p=0; p<numPointsVort; ++p)
                 {
                     auto node = nodes[vring.get_nodeIDs()[p]];
@@ -181,10 +185,10 @@ namespace aero{
        
        for (int j=0; j<n; ++j)
        {
-           auto wingstation = wingStations[wings[0].get_wingStationsIDs()[j]];
+           auto wingstation = wingStations[wings[0].get_wingStationsID()[j]];
            
-           auto vortexring= vortexRings[wstation.get_vortexIDs()[i]];
-           force.point_fa.push_back(vortexRing[i].ForcesActingPoint(nodes, vortexRings));
+           auto vortexring= vortexRings[wingstation.get_vortexIDs()[i]];
+           force.point_fa.push_back(vortexRings[i].ForcesActingPoint(nodes, vortexRings));
            
            i= i + m;
        }
