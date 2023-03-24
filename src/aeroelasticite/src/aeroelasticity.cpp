@@ -1,6 +1,17 @@
 
 #include "common_aeroflex.hpp"
 #include <aero/aeroelasticity.hpp>
+#include "aero/aerotools.h"
+#include <iostream>
+#include <algorithm>
+#include <array>
+#include <vector>
+#include "vlm/model.hpp"
+#include "structure/structure.hpp"
+#include <Eigen/Dense>
+#include <Eigen/Geometry>
+#include "vlm/vlm.hpp"
+#include <cmath>
 
 using namespace structure;
 using namespace aero;
@@ -13,13 +24,13 @@ Aero::Aero(GUIHandler &gui, vlm::VLM &vlm, structure::Structure &structure)
 void Aero::input() {
     // TODO
     structure.input();
-    vlm.input();
-    interpolation pos;
-    interpolation_f force;
-    auto mapStructni= FEM.indexation_switch;
-    auto mapStruct= FEM.Grid_MAP;
-    dispInterpol(pos, object.wingStations, object.wings, object.vortexRings, object.nodes, mapStruct, mapStructni);
-    LoadInterpol(force, object.wingStations, object.wings, object.vortexRings, object.nodes, stucture.Solutions);
+    vlm.initialize();
+    aero::interpolation pos;
+    aero::interpolation_f force;
+    auto mapStructni= Structure.FEM.indexation_switch;
+    auto mapStruct= Structure.FEM.Grid_MAP;
+    aero::DispInterpol(pos, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings, vlm.object.nodes, mapStruct, mapStructni);
+    aero::LoadInterpol(force, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings, vlm.object.nodes, structure.Solutions);
 
 
 
@@ -37,5 +48,5 @@ void Aero::solve() {
 
     structure.solve(computeVLMForce(force));
 
-    object.updateGeometry(computeVLMDispalecement(pos,object.wingStations,object.wings,object.vortexRings,object.nodes ));
+    vlm.object.updateGeometry(computeVLMDispalecement(pos,vlm.object.wingStations,vlm.object.wings,vlm.object.vortexRings,vlm.object.nodes ));
 }

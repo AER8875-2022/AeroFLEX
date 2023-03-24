@@ -13,8 +13,15 @@
 
 
 int main() {
-    aero::Aero elast;
-    elast.Aero(GUIHandler &gui, vlm::VLM &vlm, structure::Structure &structure);
+
+
+
+
+    GUIHandler gui;
+    vlm::VLM vlm(gui);
+    structure::Structure structure(gui);
+
+    aero::Aero elast(gui, vlm, structure);
     elast.input();
     elast.solve();
 
