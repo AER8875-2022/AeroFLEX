@@ -297,12 +297,13 @@ namespace aero{
        vector <double> forces_s(6*m,0);
        vector <double> M(3);
        vector <double> r(3);
+      vector <double> M_s(3);
        
        for (int i=0; i<n; ++i)
        {
 
            auto forces = object.forces_to_inertial_frame(i);
-           j=force.poids[3*i];
+           int j=force.poids[3*i];
            if (j!=m-1)
            {
            
