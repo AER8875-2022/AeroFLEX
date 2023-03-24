@@ -19,7 +19,7 @@ void Aero::input() {
     auto mapStructni= FEM.indexation_switch;
     auto mapStruct= FEM.Grid_MAP;
     dispInterpol(pos, object.wingStations, object.wings, object.vortexRings, object.nodes, mapStruct, mapStructni);
-    LoadInterpol(force, object.wingStations, object.wings, object.vortexRings, object.nodes, mapStruct, mapStructni);
+    LoadInterpol(force, object.wingStations, object.wings, object.vortexRings, object.nodes, stucture.Solutions);
 
 
 

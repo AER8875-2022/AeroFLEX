@@ -29,7 +29,7 @@ namespace aero{
 
     void DispInterpol( interpolation &pos,std::vector<vlm::surface::wingStation> wingStations,
                        std::vector<vlm::surface::wing> wings,std::vector<element::vortexRing> vortexRings,
-                      std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,std::map<int, Vector3d> mapStruct,std::map<int, int> mapStructni) {
+                      std::vector<Vector3d> nodes,std::map<int, Vector3d> mapStruct,std::map<int, int> mapStructni) {
         for (int k = 0; k <wings.size() ; ++k)
         {
             for (int i = 0; i <wingStations.size() ; ++i)
@@ -98,18 +98,19 @@ namespace aero{
     }
 
     auto computeVLMDispalecement(interpolation pos,std::vector<vlm::surface::wingStation> wingStations,
-                                 std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,std::map<int,Vector3d> mapStruct,std::map<int, int> mapStructni) {
+                                 std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,std::vector<Eigen::VectorXd> Solutions) {
         for (int k = 0; k<wings.size(); ++k) {
             for (int i = 0; i<wingStations.size(); ++i) {
 
-                auto wstation = wingStations[wings[0].get_wingStationsIDs()[k]];
+
+                auto wstation= wingStations[wings[0].get_stationsIDs()[k]];
                 auto vring = vortexRings[wstation.get_vortexIDs()[i]];
                 int numPointsVort = vring.size();
                 for (int p=0; p<numPointsVort; ++p)
                 {
                     auto node = nodes[vring.get_nodeIDs()[p]];
-                    auto nodeStruct1 = mapStruct[pos.node[2*p]];
-                    auto nodeStruct2 = mapStruct[pos.node[2*p+1]];
+                    auto nodeStruct1 = Solutions[pos.node[2*p]];
+                    auto nodeStruct2 = Solutions[pos.node[2*p+1]];
                     auto weight1 = pos.weight[2*p];
                     auto weight2 = pos.weight[2*p+1];
 
@@ -117,15 +118,51 @@ namespace aero{
                     disp[0]=weight1*nodeStruct1[0]+weight2*nodeStruct2[0];
                     disp[1]=weight1*nodeStruct1[1]+weight2*nodeStruct2[1];
                     disp[2]=weight1*nodeStruct1[2]+weight2*nodeStruct2[2];
+                    node[0]=node[0]+disp[0];
+                    node[1]=node[1]+disp[1];
+                    node[2]=node[2]+disp[2];
                     //prise en compte de la rotation
+                    angle_x = weight1*nodeStruct1[3]+weight2*nodeStruct2[3];
+                    angle_y = weight1*nodeStruct1[4]+weight2*nodeStruct2[4];
+                    angle_z = weight1*nodeStruct1[5]+weight2*nodeStruct2[5];
+
+                        // around the X-axis
+                        double cos_angle_x = std::cos(angle_x);
+                        double sin_angle_x = std::sin(angle_x);
+                        std::vector<double> rotated_x = {
+                                node[0],
+                                node[1] * cos_angle_x - node[2] * sin_angle_x,
+                                node[1] * sin_angle_x + node[2] * cos_angle_x
+                        };
+
+                        // around the Y-axis
+                        double cos_angle_y = std::cos(angle_y);
+                        double sin_angle_y = std::sin(angle_y);
+                        std::vector<double> rotated_y = {
+                                rotated_x[0] * cos_angle_y + rotated_x[2] * sin_angle_y,
+                                rotated_x[1],
+                                -rotated_x[0] * sin_angle_y + rotated_x[2] * cos_angle_y
+                        };
+
+                        // around the Z-axis
+                        double cos_angle_z = std::cos(angle_z);
+                        double sin_angle_z = std::sin(angle_z);
+                        std::vector<double> rotated_z = {
+                                rotated_y[0] * cos_angle_z - rotated_y[1] * sin_angle_z,
+                                rotated_y[0] * sin_angle_z + rotated_y[1] * cos_angle_z,
+                                rotated_y[2]
+                        };
+
+
+
 
 
 
                     
 
-                    node[0]=node[0]+disp[0];
-                    node[1]=node[1]+disp[1];
-                    node[2]=node[2]+disp[2];
+                    node[0]=rotated_z[0];
+                    node[1]=rotated_z[1];
+                    node[2]=rotated_z[2];
 
                 }
             }

@@ -7,6 +7,7 @@
 #include <vector>
 #include "aero/aerotools.h"
 #include "vlm/model.hpp"
+#include "aero/aeroelasticity.hpp"
 
 
 
