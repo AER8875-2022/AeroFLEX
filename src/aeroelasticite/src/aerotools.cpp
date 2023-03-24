@@ -188,7 +188,7 @@ namespace aero{
            auto wingstation = wingStations[wings[0].get_wingStationsID()[j]];
            
            auto vortexring= vortexRings[wingstation.get_vortexIDs()[i]];
-           force.point_fa.push_back(vortexRings[i].ForcesActingPoint(nodes, vortexRings));
+           force.point_fa.push_back(vortexRings[i].forceActingPoint(nodes, vortexRings));
            
            i= i + m;
        }
