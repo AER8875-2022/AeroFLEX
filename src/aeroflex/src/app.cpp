@@ -323,9 +323,9 @@ void GeoLayer::OnUIRender() {
 	static double cr= 1.0;
 	static double ct= 1.0;
 	//NACA
-	static double m= 1.0;
-	static double p= 1.0;
-	static double t= 1.0;
+	static int m= 1;
+	static int p= 1;
+	static int t= 1;
 
 	static double twist= 1.0;
 	static double fleche= 1.0;
@@ -357,9 +357,9 @@ void GeoLayer::OnUIRender() {
 	if (S_type == 0){
 		ImGui::Separator();
 		ImGui::Text("NACA 4 digits");
-		ImGui::InputDouble("m", &m, 1.0, 1.0, "%.1f");
-		ImGui::InputDouble("p", &p, 1.0, 1.0, "%.1f");
-		ImGui::InputDouble("t", &t, 1.0, 1.0, "%.1f");}
+		ImGui::InputInt("m", &m, 1, 1);
+		ImGui::InputInt("p", &p, 1, 1);
+		ImGui::InputInt("t", &t, 1, 1);}
 	
 	if (S_type == 1){
 		ImGui::Separator();
