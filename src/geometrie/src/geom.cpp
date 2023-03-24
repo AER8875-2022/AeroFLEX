@@ -80,9 +80,9 @@ void Geom::Geom_gen() {
 
     //RANS
     std::vector<double> disc{100,150,200};
-    cout<<disc[0]<<endl;
-    std::vector<string> file_name{"Airfoil_coarse.msh","Airfoil_normal.msh","Airfoil_fine.msh"};
-    cout<<file_name[0]<<endl;
+    //cout<<disc[0]<<endl;
+    std::vector<std::string> file_name{"Airfoil_coarse.msh","Airfoil_normal.msh","Airfoil_fine.msh"};
+    //std::cout<<file_name[0]<<endl;
     std::vector<std::vector<std::vector<std::vector<double>>>> surfaces = WR_surfaces;
     bool RANS = false; // True = solver RANS, False = solver Euler
     for (int i=0; i < surfaces.size(); i++){

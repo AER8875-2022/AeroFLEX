@@ -14,7 +14,7 @@
 #include "geometrie/geometry.hpp"
 #include "geometrie/structure.hpp"
 
-using namespace std;
+//using namespace std;
 int main(int argc, const char * argv[]) {
 
     std::string body_type = "General";
@@ -96,9 +96,9 @@ int main(int argc, const char * argv[]) {
     //MESH RANS
 
     std::vector<double> disc{100,150,200};
-    cout<<disc[0]<<endl;
-    std::vector<string> file_name{"Airfoil_coarse.msh","Airfoil_normal.msh","Airfoil_fine.msh"};
-    cout<<file_name[0]<<endl;
+    //cout<<disc[0]<<endl;
+    std::vector<std::string> file_name{"Airfoil_coarse.msh","Airfoil_normal.msh","Airfoil_fine.msh"};
+    //cout<<file_name[0]<<endl;
     std::vector<std::vector<std::vector<std::vector<double>>>> surfaces = WR_surfaces;
     bool RANS = false; // True = solver RANS, False = solver Euler
     for (int i=0; i < surfaces.size(); i++){
@@ -107,7 +107,7 @@ int main(int argc, const char * argv[]) {
         }
     }
 
-    vector<tuple<int,vector<double>,vector<double>,vector<double>>> element = maillage_structure(WING_RIGHT);
+    std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> element = maillage_structure(WING_RIGHT);
 
 
     
