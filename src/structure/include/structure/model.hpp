@@ -169,7 +169,7 @@ public:
     void set_K_Final_sparse()
     {
         K_Final_sparse = K_Global_sparse;
-        // #pragma omp parallel for
+       
         for (int i=0 ; i<SPC1_LIST.size();i++)
         {
             SPC1 spc_obj     = SPC1_LIST[i];
@@ -285,7 +285,7 @@ public:
                 // std::cout<<Dep.tail(3).transpose()<<std::endl;
                 set_Quaternion_Map(Delta_dep_amor); 
 
-                //#pragma omp parallel for
+                #pragma omp parallel for
                 for (int i = 0; i < CBAR_keys.size(); ++i)
                 {   
                     int key     = CBAR_keys[i];
@@ -347,7 +347,7 @@ public:
 
     void set_Quaternion_Map(Eigen::VectorXd delta_dep){
 
-        //#pragma omp parallel for
+        #pragma omp parallel for
         for (int i = 0; i < Nbr_Noeud; i++)
         {   
             double rx = delta_dep(i*6 +3);
