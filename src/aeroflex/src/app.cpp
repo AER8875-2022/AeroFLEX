@@ -86,6 +86,18 @@ class App {
 		App(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, GUIHandler &gui);
 };
 
+struct GeoLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	App &app;
+	GeoLayer(App &app) : app(app) {};
+};
+
+struct StructureLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	App &app;
+	StructureLayer(App &app) : app(app) {};
+};
+
 struct RansLayer : public FlexGUI::Layer {
 	virtual void OnUIRender() override;
 	App &app;
@@ -304,6 +316,113 @@ inline void Combo(std::vector<std::string> &vec, int &index, const char* label) 
 		}
 		ImGui::EndCombo();
 	}
+}
+
+void GeoLayer::OnUIRender() {
+	static double envergure = 0.00001; 
+	static double cr= 1.0;
+	static double ct= 1.0;
+	//NACA
+	static int m= 1;
+	static int p= 1;
+	static int t= 1;
+
+	static double twist= 1.0;
+	static double fleche= 1.0;
+	static double diedre= 1.0;
+	static double P_beam= 1.0;
+	static double P_aile= 1.0;
+	//cst
+	static double z_te= 1.0;
+	static double r_le= 1.0;
+	static double Beta= 1.0;
+
+	static double E= 1.0;	
+	static double G= 1.0;
+
+	static bool S_type = 1;
+	static bool Winglet = 1;
+
+	
+	ImGui::Begin("Géométrie");
+	
+	if (ImGui::RadioButton("NACA", S_type == 0))
+		S_type = 0;
+	ImGui::SameLine();
+	if (ImGui::RadioButton("CST", S_type == 1))
+		S_type = 1;
+
+	
+	ImGui::Text("Paramètres");
+	if (S_type == 0){
+		ImGui::Separator();
+		ImGui::Text("NACA 4 digits");
+		ImGui::InputInt("m", &m, 1, 1);
+		ImGui::InputInt("p", &p, 1, 1);
+		ImGui::InputInt("t", &t, 1, 1);}
+	
+	if (S_type == 1){
+		ImGui::Separator();
+		ImGui::Text("CST parametres");
+		ImGui::InputDouble("z_te", &z_te, 1.0, 1.0, "%.4f");
+		ImGui::InputDouble("r_le", &r_le, 1.0, 1.0, "%.4f");
+		ImGui::InputDouble("Beta", &Beta, 1.0, 1.0, "%.4f");}
+
+	ImGui::Separator();
+	ImGui::Text("Wing geometry");
+	ImGui::InputDouble("Span", &envergure, 0.001, 1.0, "%.4f");
+	ImGui::InputDouble("Chord root", &cr, 0.001, 1.0, "%.4f");
+	ImGui::InputDouble("Chord tip", &ct, 0.001, 1.0, "%.4f");
+	ImGui::InputDouble("Beam Position", &P_beam, 0.001, 1.0, "%.4f");
+	ImGui::InputDouble("Wing position", &P_aile, 0.001, 1.0, "%.4f");
+
+	ImGui::Separator();
+	ImGui::Text("Wing angles");
+	ImGui::InputDouble("Twist", &twist, 0.001, 1.0, "%.4f");
+	ImGui::InputDouble("Sweep", &fleche, 0.001, 1.0, "%.4f");
+	ImGui::InputDouble("Dihedral", &diedre, 0.001, 1.0, "%.4f");
+	
+	
+	ImGui::Separator();
+	ImGui::Text("Material properties");
+	ImGui::InputDouble("Young modulus", &E, 0.001, 1.0, "%.4f");
+	ImGui::InputDouble("Shear modulus", &G, 0.001, 1.0, "%.4f");
+
+	ImGui::Separator();
+	ImGui::Text("Winglet");
+	if (ImGui::RadioButton("Oui", Winglet == 0))
+		Winglet = 0;
+	ImGui::SameLine();
+	if (ImGui::RadioButton("Non", Winglet == 1))
+		Winglet = 1;
+	ImGui::End();
+}
+
+
+
+void StructureLayer::OnUIRender() {
+	static int myValue = 5;
+	static double doubleValue = static_cast<double>(myValue);
+
+	ImGui::Begin("Structure");
+
+	ImGui::Separator();
+	ImGui::Text("Paramètres");
+	ImGui::InputDouble("Tolerence:", &app.settings.structure.Tolerance, 0.00001, 1.0, "%.5f");
+
+	ImGui::InputDouble("N_step:", &doubleValue, 1.0, 1.0, "%.0f");
+	app.settings.structure.N_step = static_cast<int>(doubleValue);
+
+	ImGui::InputDouble("Damping", &app.settings.structure.Damping, 0.001, 1.0, "%.4f");
+
+	ImGui::Separator();
+	ImGui::Text("Options");
+	if (ImGui::RadioButton("NLS", *&app.settings.structure.Solve_type == 0))
+		*&app.settings.structure.Solve_type = 0;
+	ImGui::SameLine();
+	if (ImGui::RadioButton("LS", *&app.settings.structure.Solve_type == 1))
+		*&app.settings.structure.Solve_type = 1;
+	ImGui::End();
 }
 
 void RansLayer::OnUIRender() {
@@ -641,10 +760,13 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, App& app)
 	spec.Height = 900;
 
 	FlexGUI::Application* application = new FlexGUI::Application(spec);
+	application->SetTheme(FlexGUI::Theme::Light);
 	application->PushLayer(std::make_shared<ButtonLayer>(app));
 	application->PushLayer(std::make_shared<RansGraphLayer>(app));
 	application->PushLayer(std::make_shared<VlmGraphLayer>(app));
 	application->PushLayer(std::make_shared<CpLayer>(app));
+	application->PushLayer(std::make_shared<GeoLayer>(app));
+	application->PushLayer(std::make_shared<StructureLayer>(app));
 	application->PushLayer(std::make_shared<RansLayer>(app));
 	application->PushLayer(std::make_shared<VlmLayer>(app));
 	application->PushLayer(std::make_shared<ConsoleLayer>(app));
