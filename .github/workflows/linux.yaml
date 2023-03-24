@@ -22,10 +22,6 @@ jobs:
         compiler: [gcc]
 
     steps:
-      # - name: Get current date as package key
-      #   id: cache_key
-      #   run: echo "key=$(date +'%W')" >> $GITHUB_OUTPUT
-
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -43,12 +39,7 @@ jobs:
         uses: xmake-io/github-action-setup-xmake@v1
         with:
           xmake-version: latest
-          # actions-cache-folder: .xmake-cache-W${{ steps.cache_key.outputs.key }}
           actions-cache-folder: .xmake-cache
-
-      # Update xmake repository (in order to have the file that will be cached)
-      # - name: Update xmake repository
-      #   run: xmake repo --update
 
       # Fetch xmake dephash
       - name: Retrieve dependencies hash
