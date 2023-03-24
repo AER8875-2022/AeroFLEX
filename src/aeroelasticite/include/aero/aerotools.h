@@ -20,15 +20,15 @@ namespace aero{
         std::vector<double> weight;};
 
     void DispInterpol(interpolation &pos,std::vector<vlm::surface::wingStation> wingStations,
-                      std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,Map<int,Vector3d> mapStruct,Map<int, int> mapStructni);
+                      std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,std::map<int,Vector3d> mapStruct,std::map<int, int> mapStructni);
     auto computeVLMDispalecement(interpolation pos,std::vector<vlm::surface::wingStation> wingStations,
-                                 std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,Map<int,Vector3d> mapStruct,Map<int, int> mapStructni);
+                                 std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,std::map<int,Vector3d> mapStruct,std::map<int, int> mapStructni);
     
     struct interpolation_f {std::vector<double> point_fa; std::vector<double> point_fs;
                         std::vector<double> poids;};
     
     void LoadInterpol(interpolation_f &force, std::vector<vlm::surface::wingStation> wingStations,
-                 std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,Map<int,Vector3d> mapStruct,Map<int, int> mapStructni);
+                 std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,std::map<int,Vector3d> mapStruct,std::map<int, int> mapStructni);
 
     std::vector<double> ComputeStructureForces(interpolation_f force,Matrix<double, 6, 1> forces_to_inertial_frame);
 
