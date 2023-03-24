@@ -59,7 +59,7 @@ struct Settings {
 
     // [structure-solver]
     config.config["structure-solver"]["tolerance"] = tolerance.str();
-    config.config["structure-solver"]["n_steps"] = N_step;
+    config.config["structure-solver"]["n_steps"] = std::to_string(N_step);
     config.config["structure-solver"]["damping"] = damping.str();
     config.config["structure-solver"]["type"] = get_solve_type();
   }

@@ -233,7 +233,8 @@ public:
 
     Eigen::VectorXd get_Lin_Solve()
     {   
-        return get_Solve(Forces); 
+        residuals.push_back(0);
+        return get_Solve(Forces);
     }
     
     Eigen::VectorXd get_NonLin_Solve(int Max_load_step, double tol, double amor)
