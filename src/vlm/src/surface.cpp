@@ -1,6 +1,7 @@
 
 #include "vlm/surface.hpp"
 #include "vlm/input.hpp"
+#include <Eigen/Dense>
 
 using namespace vlm;
 using namespace surface;
@@ -64,8 +65,11 @@ Vector3d wingStation::forceActingPoint() const {
 void wingStation::updateLocalStream(const double dalpha,
                                     const input::simParam &sim) {
   local_aoa += dalpha;
-  local_stream = sim.freeStream(local_aoa);
-  to_local(local_stream);
+
+  // Rotating local stream by dalpha angle
+  Quaterniond rotator(AngleAxisd(dalpha,Vector3d::UnitY()));
+  local_stream = rotator*local_stream;
+
   for (auto &vortexID : vortexIDs) {
     vortices[vortexID].local_aoa += dalpha;
     vortices[vortexID].local_stream = local_stream;

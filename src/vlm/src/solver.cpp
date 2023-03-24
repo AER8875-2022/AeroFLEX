@@ -462,8 +462,8 @@ void nonlinear::steady::computeForces(model &object) {
       double lever = object.sim.origin()(0) - station.forceActingPoint()(0);
 
       // Updating station's force coefficients
-      station.cl = cl * std::abs(station.liftAxis().dot(object.sim.liftAxis()));
-      station.cy = cl * std::abs(station.liftAxis().dot(Vector3d::UnitY()));
+      station.cl = cl * station.liftAxis().dot(object.sim.liftAxis());
+      station.cy = cl * station.liftAxis().dot(Vector3d::UnitY());
       station.cd = cd;
 
       station.to_local(station.cm);
