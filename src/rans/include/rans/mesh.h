@@ -32,17 +32,7 @@ namespace rans {
 
 
 
-
-// Options for boundary conditions
-std::map<std::string, int> boundaries {
-    {"farfield", 0},
-    {"slipwall", 1},
-    {"wall", 2}
-};
-
-
-
-
+const uint MESH_EDGE_NULL = 4294967295;
 
 
 // Cut string by character c
@@ -210,8 +200,6 @@ public:
 
     std::string filename;
 
-    bool do_compute_wall_dist = true;
-
     std::map<std::string, std::string> meshFormat;
 
     std::map<uint, std::string> physicalNames;
@@ -239,6 +227,7 @@ public:
     std::map<std::tuple<uint, uint>, uint> edgesRef;
 
     meshArray<4> cellsNodes;
+    meshArray<4> cellsEdges;
     std::vector<bool> cellsIsTriangle;
     std::vector<double> cellsAreas;
     std::vector<double> cellsCentersX;
@@ -270,7 +259,7 @@ public:
 
     void read_file(std::string filename);
 
-    int find_edge_with_nodes(const uint n0, const uint n1);
+    uint find_edge_with_nodes(const uint n0, const uint n1);
     uint find_bound_with_nodes(const uint n0, const uint n1);
     bool find_if_edge_in_mesh(const uint n0, const uint n1);
 
@@ -278,7 +267,7 @@ public:
     void compute_mesh();
     void add_cell_edges(uint cell_id);
 
-    void compute_wall_dist();
+    void compute_wall_dist(const std::map<std::string, boundary_condition> bcs);
 
     void send_mesh_info();
 };
@@ -298,7 +287,7 @@ namespace rans {
 
 
 
-int mesh::find_edge_with_nodes(const uint n0, const uint n1) {
+uint mesh::find_edge_with_nodes(const uint n0, const uint n1) {
     const uint nmin = std::min(n0, n1);
     const uint nmax = std::max(n0, n1);
     // Also check in bounds
@@ -307,7 +296,7 @@ int mesh::find_edge_with_nodes(const uint n0, const uint n1) {
         // Found
         return edgesRef.at(tp);
     } else {
-        return -1;
+        return MESH_EDGE_NULL;
     }
 }
 
@@ -359,7 +348,7 @@ void mesh::convert_node_face_info() {
     //      bounds contain no face connectivity data
 
     // Loop over all faces
-    std::vector<int> cellEdges(4);
+    std::vector<uint> cellEdges(4);
     for (int i=0; i<cellsAreas.size(); ++i) {
 
 		// Find edges
@@ -367,15 +356,16 @@ void mesh::convert_node_face_info() {
         cellEdges[1] = find_edge_with_nodes(cellsNodes(i, 1), cellsNodes(i, 2));
         if (cellsIsTriangle[i]) {
             cellEdges[2] = find_edge_with_nodes(cellsNodes(i, 2), cellsNodes(i, 0));
-            cellEdges[3] = -1;
+            cellEdges[3] = MESH_EDGE_NULL;
         } else {
             cellEdges[2] = find_edge_with_nodes(cellsNodes(i, 2), cellsNodes(i, 3));
             cellEdges[3] = find_edge_with_nodes(cellsNodes(i, 3), cellsNodes(i, 0));
         }
+        cellsEdges.push_back(cellEdges);
 
         // Now update these edges with face connectivity info
         for (int ei : cellEdges) {
-            if (ei != -1) {
+            if (ei != MESH_EDGE_NULL) {
                 if (i != edgesCells(ei, 0)) {
                     edgesCells(ei, 1) = i;
                 }
@@ -493,7 +483,7 @@ void mesh::read_entities() {
                 auto lineS = cut_str(line, ' ');
                 std::string pnamei = lineS[2];
                 pnamei.erase(remove(pnamei.begin(), pnamei.end(), '"'), pnamei.end());
-                physicalNames[std::stoi(lineS[1])] = pnamei;
+                physicalNames[std::stoi(lineS[1]) + 1000*std::stoi(lineS[0])] = pnamei;
             }
         } else if (currentSection == "Entities") {
             // Entities are nodes on border elements
@@ -511,35 +501,10 @@ void mesh::read_entities() {
             } else if (nss <= entitiesNumber["curves"]) {
                 // Reading curves
                 auto l = str_to_ints(line);
-                entityTagToPhysicalTag[l[0]] = l[8];
+                entityTagToPhysicalTag[l[0]] = l[8] + 1000*1;
             } else if (nss <= entitiesNumber["surfaces"]) {
                 // Reading surfaces
                 auto l = str_to_ints(line);
-            }
-        } else if (currentSection == "PartitionedEntities") {
-            if (ns < 2) {
-            } else if (ns == 2) {
-                auto l = str_to_ints(line);
-                nGhostEntities = l[0];
-                nss = 524288;
-            } else if (ns == (3 + nGhostEntities)) {
-                auto l = str_to_ints(line);
-                entitiesNumber["points"] = l[0];
-                entitiesNumber["curves"] = l[1] + l[0];
-                entitiesNumber["surfaces"] = l[2] + l[1] + l[0];
-                entitiesNumber["volumes"] = l[3] + l[2] + l[1] + l[0];
-
-                nss = 0;
-            } else if (nss <= entitiesNumber["points"]) {
-                // Reading points
-            } else if (nss <= entitiesNumber["curves"]) {
-                // Reading curves
-                auto l = str_to_ints(line);
-                if (l[1] == 1)
-                    entityTagToPhysicalTag[l[0]] =
-                        entityTagToPhysicalTag.at(l[2]);
-            } else if (nss <= entitiesNumber["surfaces"]) {
-                // Reading surfaces
             }
         } else if (currentSection == "Nodes") {
             // Do not read nodes, break
@@ -815,9 +780,6 @@ void mesh::add_boundary_cells() {
 
         // Add edge index to boundary edges
         boundaryEdges.push_back(e);
-        if (boundaries.find(physicalNames[boundaryEdgesIntTag[i]]) == boundaries.end()) {
-            throw std::invalid_argument("Physical name " + physicalNames[boundaryEdgesIntTag[i]] + " of tag " + std::to_string(boundaryEdgesIntTag[i]) + " has invalid physical name. Options are farfield, wall and slipwall");
-        }
         boundaryEdgesPhysicals.push_back(
             physicalNames.at(boundaryEdgesIntTag[i])
         );
@@ -829,33 +791,38 @@ void mesh::add_boundary_cells() {
 
 
 
-void mesh::compute_wall_dist() {
+void mesh::compute_wall_dist(const std::map<std::string, boundary_condition> bcs) {
 
 
     // Compute the distance to the wall
-    wall_dist.resize(cellsAreas.size());
-
     #pragma omp parallel for
     for (int i=0; i<cellsAreas.size(); ++i) {
         double& cx = cellsCentersX[i];
         double& cy = cellsCentersY[i];
 
         double mind = 1;
+        bool first_added = true;
         // Loop over all boundary cells
         for (uint j=0; j<boundaryEdges.size(); ++j) {
-            const int& e = boundaryEdges[j];
+            if (
+                (bcs.at(boundaryEdgesPhysicals[j]).bc_type == "wall") |
+                (bcs.at(boundaryEdgesPhysicals[j]).bc_type == "slip-wall")
+            ) {
+                const int& e = boundaryEdges[j];
 
-            double& wx = edgesCentersX[e];
-            double& wy = edgesCentersY[e];
+                double& wx = edgesCentersX[e];
+                double& wy = edgesCentersY[e];
 
-            double dx = cx - wx;
-            double dy = cy - wy;
-            double d = sqrt(dx*dx + dy*dy);
+                double dx = cx - wx;
+                double dy = cy - wy;
+                double d = sqrt(dx*dx + dy*dy);
 
-            if (j == 0) {
-                mind = d;
-            } else {
-                mind = std::min(mind, d);
+                if (first_added) {
+                    mind = d;
+                    first_added = false;
+                } else {
+                    mind = std::min(mind, d);
+                }
             }
         }
         wall_dist[i] = mind;
@@ -911,12 +878,8 @@ void mesh::read_file(std::string filename_in) {
     add_boundary_cells();
 
     // Compute wall distance
-    if (do_compute_wall_dist) {
-        compute_wall_dist();
-    } else {
-        wall_dist.resize(cellsAreas.size());
-        for (auto& i : wall_dist) i = 0;
-    }
+    wall_dist.resize(cellsAreas.size());
+    for (auto& i : wall_dist) i = 0;
 
 }
 

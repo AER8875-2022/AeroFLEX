@@ -277,6 +277,17 @@ namespace FlexGUI {
 		m_Running = false;
 	}
 
+	void Application::SetTheme(FlexGUI::Theme theme) {
+		if (theme == FlexGUI::Theme::Dark)
+		{
+			ImGui::StyleColorsDark();
+		}
+		else if (theme == FlexGUI::Theme::Light)
+		{
+			ImGui::StyleColorsLight();
+		}
+	};
+
 	float Application::GetTime()
 	{
 		return (float)glfwGetTime();

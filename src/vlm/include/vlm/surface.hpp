@@ -44,6 +44,9 @@ class wingStation {
   /** @brief Local chord of the current wing station */
   double chord;
 
+  /** @brief Local force vector */
+  Matrix<double, 6, 1> forces = Matrix<double, 6, 1>::Zero();
+
   /** @brief Local lift coefficient */
   double cl = 0.0;
 
@@ -113,6 +116,9 @@ public:
 
   /** @brief Getter method for vortexIDS */
   std::vector<int> get_vortexIDs() const;
+
+  /** @brief Getter method for forces */
+  Matrix<double, 6, 1> get_forces() const;
 
   /** @brief Getter method for cl */
   double get_cl() const;

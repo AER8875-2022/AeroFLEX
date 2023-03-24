@@ -123,7 +123,7 @@ Vector3d vortexRing::streamInfluence(const Vector3d &collocationPoint) const {
 
 void vortexRing::updateGeometry() {
   panel.updateGeometry();
-  // computeCollocationPoint();
+  computeCollocationPoint();
 }
 
 void vortexRing::updateGamma(const double gamma) {
@@ -144,6 +144,8 @@ std::vector<int> vortexRing::get_nodeIDs() const { return panel.nodeIDs; }
 int vortexRing::get_globalIndex() const { return globalIndex; }
 
 double vortexRing::get_gamma() const { return gamma; }
+
+Matrix<double, 6, 1> vortexRing::get_forces() const { return forces; }
 
 double vortexRing::get_cl() const { return cl; }
 

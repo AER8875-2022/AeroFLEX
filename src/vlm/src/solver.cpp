@@ -13,13 +13,12 @@ using namespace vlm;
 using namespace solver;
 using namespace Eigen;
 
-linear::steady::steady(std::atomic<int> &iter, std::vector<double> &residuals,
+linear::steady::steady(input::solverParam &solvP, std::atomic<int> &iter, std::vector<double> &residuals,
                        GUIHandler &gui)
-    : iter(iter), residuals(residuals), gui(gui) {}
+    : solvP(solvP), iter(iter), residuals(residuals), gui(gui) {}
 
-void linear::steady::initialize(const input::solverParam &solvP,
+void linear::steady::initialize(
                                 const model &object, const database::table &) {
-  this->solvP = solvP;
   this->lhs =
       MatrixXd::Zero(object.vortexRings.size() + object.doubletPanels.size(),
                      object.vortexRings.size() + object.doubletPanels.size());
@@ -278,14 +277,13 @@ void linear::steady::buildRHS(const model &object) {
 
 // -------------------------------------------
 
-nonlinear::steady::steady(std::atomic<int> &iter,
+nonlinear::steady::steady(input::solverParam &solvP, std::atomic<int> &iter,
                           std::vector<double> &residuals, GUIHandler &gui)
-    : linear::steady(iter, residuals, gui) {}
+    : linear::steady(solvP, iter, residuals, gui) {}
 
-void nonlinear::steady::initialize(const input::solverParam &solvP,
+void nonlinear::steady::initialize(
                                    const model &object,
                                    const database::table &database) {
-  this->solvP = solvP;
   this->lhs =
       MatrixXd::Zero(object.vortexRings.size() + object.doubletPanels.size(),
                      object.vortexRings.size() + object.doubletPanels.size());
@@ -330,6 +328,8 @@ void nonlinear::steady::solve(model &object) {
   freeStream.normalize();
   object.initializeWake(100.0 * object.sim.cref);
 
+  if (gui.signal.stop) { return; }
+
   // Initializing linear solver
   BiCGSTAB<MatrixXd> system;
 
@@ -337,9 +337,10 @@ void nonlinear::steady::solve(model &object) {
   buildLHS(object);
   system.compute(lhs);
 
+  if (gui.signal.stop) { return; }
+
   // Initializing iteration
   double residual;
-
   // Main solving loop
   do {
     while (gui.signal.pause)
@@ -353,12 +354,17 @@ void nonlinear::steady::solve(model &object) {
     iterateLift(object);
     // Step 2: One iteration of aoa correction
     residual = iterate(object);
+
     std::cout << "Iteration " << iter << std::endl;
     std::cout << "\t Residual = " << residual << std::endl;
+
     residuals.push_back(residual);
     iter++;
   } while ((residual > solvP.tolerance) && (iter <= solvP.max_iter) &&
            (!gui.signal.stop));
+
+  if (gui.signal.stop) { return; }
+
   // Compute viscous forces
   computeForces(object);
   // Computing 3D effects on drag
@@ -371,7 +377,7 @@ double nonlinear::steady::iterate(model &object) {
   double residual = 0.0;
 
   for (int wingID = 0; wingID < object.wings.size(); wingID++) {
-    auto &wing = object.wings[wingID];
+    auto &wing = object.wings.at(wingID);
 
 #pragma omp parallel for reduction(+ : residual)
     for (int i = 0; i < wing.get_stationIDs().size(); i++) {
@@ -395,7 +401,6 @@ double nonlinear::steady::iterate(model &object) {
       if (std::abs(cl_visc) < 1e-15) {
         std::cerr << "\033[1;31mERROR: Extrapolation detected\033[0m"
                   << std::endl;
-        exit(1);
       };
 
       // Step 5 : Applying aoa correction
@@ -444,7 +449,7 @@ void nonlinear::steady::computeForces(model &object) {
       auto [cl, cd, cmy] =
           database.coefficients(aoa_eff, wing.get_globalIndex(), spanLoc);
       // Lever used to transfer to 2D moment to 3D moment at specified origin
-      double lever = object.sim.origin(0) - station.forceActingPoint()(0);
+      double lever = object.sim.origin()(0) - station.forceActingPoint()(0);
       // Updating station's force coefficients
       station.cl = cl;
       station.cd = cd;

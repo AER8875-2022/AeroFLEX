@@ -24,6 +24,7 @@
 #include <rans/core.h>
 #include <rans/physics.h>
 
+
 #ifdef RANS_MATRIX_FREE
     #include <rans/ransMatrix.h>
 #endif
@@ -80,11 +81,22 @@ protected:
     void calc_gradients(const Eigen::VectorXd&);
     void calc_limiters(const Eigen::VectorXd&);
 
+    void average_gradients(Eigen::VectorXd& gxi, Eigen::VectorXd& gyi, const uint& cell0, const uint& cell1);
+
+    void calc_least_squares_matrices();
+
     double cfl = 1;
 
     uint print_interval;
 
     std::string viscosity_model;
+
+    std::string gradient_scheme = "green-gauss";
+
+    std::vector<Eigen::Matrix2d> leastSquaresMatrices;
+    double limiter_k = 5.;
+
+    std::string airfoil_name;
 
 public:
     std::map<std::string, boundary_condition> bcs;
@@ -113,9 +125,18 @@ public:
         return *this;
     }
 
+
+    boundary_variables get_boundary_variables();
+
     void set_bcs(std::map<std::string, boundary_condition> bcs_in);
 
     void set_cfl(const double& cfl_in);
+
+    void set_limiter_k(const double& x) {limiter_k = x;}
+    double get_limiter_k() const {return limiter_k;}
+
+    void set_airfoil_name(const std::string& x) {airfoil_name = x;}
+    std::string get_airfoil_name() const {return airfoil_name;}
 
     void init();
 
@@ -124,6 +145,12 @@ public:
     Eigen::VectorXd& get_q();
     gas& get_gas() {return g;}
     const gas& get_gas() const {return g;}
+
+    void set_gradient_scheme(std::string grads) {
+        gradient_scheme = grads;
+        if (gradient_scheme == "least-squares") calc_least_squares_matrices();
+    }
+    std::string get_gradient_scheme() const {return gradient_scheme;}
 
     std::string get_viscosity_model() const {return viscosity_model;}
 
@@ -143,12 +170,11 @@ public:
 
     virtual void fill() {}
     virtual int compute() {return -1;}
-    virtual double solve(const double relaxation=1, const double tol=0) {return -1;}
+    virtual double solve(const double relaxation=1, const double tol=0, const int rhs_iterations=5) {return -1;}
 
 };
 
 void solver::set_mesh_and_gas(const mesh& m_in, const gas& g_in) {
-    second_order = true;
 
     m = m_in;
     g = g_in;
@@ -330,28 +356,98 @@ void solver::calc_dt() {
 }
 
 
+void solver::average_gradients(Eigen::VectorXd& gradx, Eigen::VectorXd& grady, const uint& cell0, const uint& cell1) {
+    
+    if (cell0 == cell1) {
+        for (uint i=0; i<4; ++i) {
+            gradx(i) = gx(4*cell0+i);
+            grady(i) = gy(4*cell0+i);
+        }
+        return;
+    }
+    
+    double tij[2];
+    tij[0] = m.cellsCentersX[cell0] + m.cellsCentersX[cell1];
+    tij[1] = m.cellsCentersY[cell0] + m.cellsCentersY[cell1];
+
+    const double lij = sqrt(tij[0]*tij[0] + tij[1]*tij[1]);
+
+    tij[0] /= lij;
+    tij[1] /= lij;
+
+    // Directional derivative
+    double grad_dir[4];
+    for (uint i=0; i<4; ++i) {
+        grad_dir[i] = (q(4*cell0+i) - q(4*cell1+i))/lij;
+    }
+
+    // Arithmetic average gradient
+    double gradx_bar[4];
+    double grady_bar[4];
+    for (uint i=0; i<4; ++i) {
+        gradx_bar[i] = (gx(4*cell0+i) + gx(4*cell1+i))*0.5;
+        grady_bar[i] = (gy(4*cell0+i) + gy(4*cell1+i))*0.5;
+    }
+
+    // Corrected gradient
+    for (uint i=0; i<4; ++i) {
+        const double grad_dot = gradx_bar[i]*tij[0] + grady_bar[i]*tij[1];
+        gradx(i) = gradx_bar[i] - (grad_dot - grad_dir[i])*tij[0];
+        grady(i) = grady_bar[i] - (grad_dot - grad_dir[i])*tij[1];
+    }
+}
+
+
+
+void solver::calc_least_squares_matrices() {
+
+    leastSquaresMatrices.resize(m.nRealCells);
+    for (uint i=0; i<m.nRealCells; ++i) {
+        const uint size_i = m.cellsIsTriangle[i] ? 3 : 4;
+        
+        Eigen::MatrixXd d(size_i, 2);
+
+        for (uint j=0; j<size_i; ++j) {
+            const uint e = m.cellsEdges(i, j);
+
+            const uint cell_p = i;
+            const uint cell_n = m.edgesCells(e, 0) == i ? m.edgesCells(e, 1) : m.edgesCells(e, 0);
+
+            d(j, 0) = m.cellsCentersX[cell_n] - m.cellsCentersX[cell_p];
+            d(j, 1) = m.cellsCentersY[cell_n] - m.cellsCentersY[cell_p];
+        }
+
+        leastSquaresMatrices[i] = (d.transpose() * d).inverse();
+    }
+}
+
+
 void solver::calc_gradients(const Eigen::VectorXd& q_) {
 
-    #pragma omp parallel for
-    for (int i=0; i<gx.size(); ++i) {gx(i) = 0; gy(i) = 0;}
 
-    for (uint e=0; e<m.edgesNodes.cols(); ++e) {
-        const uint& i = m.edgesCells(e, 0);
-        const uint& j = m.edgesCells(e, 1);
+    if (gradient_scheme == "green-gauss") {
+        #pragma omp parallel for
+        for (int i=0; i<gx.size(); ++i) {gx(i) = 0; gy(i) = 0;}
 
-        const double dxif = m.edgesCentersX[e] - m.cellsCentersX[i];
-        const double dyif = m.edgesCentersY[e] - m.cellsCentersY[i];
-        const double dif = sqrt(dxif*dxif + dyif*dyif);
+        for (uint e=0; e<m.edgesNodes.cols(); ++e) {
+            const uint& i = m.edgesCells(e, 0);
+            const uint& j = m.edgesCells(e, 1);
 
-        const double dxij = m.cellsCentersX[i] - m.cellsCentersX[j];
-        const double dyij = m.cellsCentersY[i] - m.cellsCentersY[j];
-        const double dij = sqrt(dxij*dxij + dyij*dyij);
+            const double dxif = m.edgesCentersX[e] - m.cellsCentersX[i];
+            const double dyif = m.edgesCentersY[e] - m.cellsCentersY[i];
+            const double dif = sqrt(dxif*dxif + dyif*dyif);
 
-        const double geom_factor = dif / dij;
+            const double dxij = m.cellsCentersX[i] - m.cellsCentersX[j];
+            const double dyij = m.cellsCentersY[i] - m.cellsCentersY[j];
+            const double dij = sqrt(dxij*dxij + dyij*dyij);
 
-        if (i != j) {
+            const double geom_factor = dif / dij;
+
+            Eigen::VectorXd q_L = q.segment(4*i, 4);
+            Eigen::VectorXd q_R = edges_flux_functions[e]->vars(q_L, q.segment(4*j, 4));
+
             for (uint k=0; k<4; ++k) {
-                const double fk = (q_(4*i+k)*(1.0 - geom_factor) + q_(4*j+k) * geom_factor) * m.edgesLengths[e];
+                const double fk = (q_L(k)*(1.0 - geom_factor) + q_R(k) * geom_factor) * m.edgesLengths[e];
 
                 gx(4*i+k) += fk * m.edgesNormalsX[e];
                 gy(4*i+k) += fk * m.edgesNormalsY[e];
@@ -359,25 +455,61 @@ void solver::calc_gradients(const Eigen::VectorXd& q_) {
                 gx(4*j+k) -= fk * m.edgesNormalsX[e];
                 gy(4*j+k) -= fk * m.edgesNormalsY[e];
             }
-        } else {
-            for (uint k=0; k<4; ++k) {
-                const double fk = q(4*i+k) * m.edgesLengths[e];
+        }
 
-                gx(4*i+k) += fk * m.edgesNormalsX[e];
-                gy(4*i+k) += fk * m.edgesNormalsY[e];
+        #pragma omp parallel for
+        for (int i=0; i<m.nRealCells; ++i) {
+            gx.segment(4*i, 4) /= m.cellsAreas[i];
+            gy.segment(4*i, 4) /= m.cellsAreas[i];
+        }
+        #pragma omp parallel for
+        for (int i=m.nRealCells; i<m.cellsAreas.size(); ++i) {
+            gx.segment(4*i, 4) *= 0;
+            gy.segment(4*i, 4) *= 0;
+        }
+    } else if (gradient_scheme == "least-squares") {
+        for (uint i=0; i<m.nRealCells; ++i) {
+            const uint size_i = m.cellsIsTriangle[i] ? 3 : 4;
+            
+            Eigen::MatrixXd d(size_i, 2);
+
+            Eigen::Vector2d grad_i;
+
+            for (uint j=0; j<size_i; ++j) {
+                const uint e = m.cellsEdges(i, j);
+
+                const uint cell_p = i;
+                const uint cell_n = m.edgesCells(e, 0) == i ? m.edgesCells(e, 1) : m.edgesCells(e, 0);
+
+                d(j, 0) = m.cellsCentersX[cell_n] - m.cellsCentersX[cell_p];
+                d(j, 1) = m.cellsCentersY[cell_n] - m.cellsCentersY[cell_p];
+            }
+
+            Eigen::MatrixXd deltas_k(size_i, 4);
+
+            for (uint j=0; j<size_i; ++j) {
+                const uint e = m.cellsEdges(i, j);
+
+                const uint cell_p = i;
+                const uint cell_n = m.edgesCells(e, 0) == i ? m.edgesCells(e, 1) : m.edgesCells(e, 0);
+
+                Eigen::VectorXd q_L = q.segment(4*cell_p, 4);
+                Eigen::VectorXd q_R = edges_flux_functions[e]->vars(q_L, q.segment(4*cell_n, 4));
+                
+                for (uint k=0; k<4; ++k) {
+                    deltas_k(j, k) = q_L(k) - q_R(k);
+                }
+            }
+            for (uint k=0; k<4; ++k) {
+                grad_i = leastSquaresMatrices[i] * d.transpose() * deltas_k.col(k);
+                gx(4*i + k) = grad_i(0);
+                gy(4*i + k) = grad_i(1);
             }
         }
-    }
-
-    #pragma omp parallel for
-    for (int i=0; i<m.nRealCells; ++i) {
-        gx.segment(4*i, 4) /= m.cellsAreas[i];
-        gy.segment(4*i, 4) /= m.cellsAreas[i];
-    }
-    #pragma omp parallel for
-    for (int i=m.nRealCells; i<m.cellsAreas.size(); ++i) {
-        gx.segment(4*i, 4) *= 0;
-        gy.segment(4*i, 4) *= 0;
+        for (int i=m.nRealCells; i<m.cellsAreas.size(); ++i) {
+            gx.segment(4*i, 4) *= 0;
+            gy.segment(4*i, 4) *= 0;
+        }
     }
 }
 
@@ -416,7 +548,7 @@ void solver::calc_limiters(const Eigen::VectorXd& q_) {
                     double delta_max = q_max(4*id+k) - q_(4*id+k);
                     double delta_min = q_min(4*id+k) - q_(4*id+k);
 
-                    const double Ka = 5. * sqrt_area;
+                    const double Ka = limiter_k * sqrt_area;
                     const double K3a = Ka * Ka * Ka;
                     const double dMaxMin2 = (delta_max - delta_min)*(delta_max - delta_min);
 
@@ -462,21 +594,29 @@ void solver::calc_limiters(const Eigen::VectorXd& q_) {
 
 
 
+boundary_variables solver::get_boundary_variables() {
+    // First, try to find the farfield / inlet condition
+    boundary_variables vars_far;
+
+    for (uint b=0; b<m.boundaryEdges.size(); ++b) {
+        if (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "farfield") {
+            vars_far = boundary_vars[b];
+            break;
+        } else if (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "inlet-outlet") {
+            vars_far = boundary_vars[b];
+            break;
+        }
+    }
+    return vars_far;
+}
+
+
+
 void solver::init() {
     // Init from the farfield / inlet condition
 
     // First, try to find the farfield / inlet condition
-    boundary_variables vars_init;
-
-    for (uint b=0; b<m.boundaryEdges.size(); ++b) {
-        if (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "farfield") {
-            vars_init = boundary_vars[b];
-            break;
-        } else if (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "inlet-outlet") {
-            vars_init = boundary_vars[b];
-            break;
-        }
-    }
+    boundary_variables vars_init = get_boundary_variables();
     int N = m.nRealCells;
 
     conservative_variables q_init = vars_init.get_conservative(g);
@@ -497,17 +637,7 @@ double solver::get_uniform_residual() {
     // Get residual assuming a uniform flow field corresponding to vars_far
 
     // First, try to find the farfield / inlet condition
-    boundary_variables vars_far;
-
-    for (uint b=0; b<m.boundaryEdges.size(); ++b) {
-        if (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "farfield") {
-            vars_far = boundary_vars[b];
-            break;
-        } else if (bcs.at(m.boundaryEdgesPhysicals[b]).bc_type == "inlet-outlet") {
-            vars_far = boundary_vars[b];
-            break;
-        }
-    }
+    boundary_variables vars_far = get_boundary_variables();
 
     // Reset qW to zero
     #pragma omp parallel for
@@ -529,20 +659,24 @@ double solver::get_uniform_residual() {
     for (int e=0; e<m.edgesCells.cols(); ++e) {
 
         // Get this edges cells index
-        int cell0 = m.edgesCells(e, 0);
-        int cell1 = m.edgesCells(e, 1);
+        uint cell0 = m.edgesCells(e, 0);
+        uint cell1 = m.edgesCells(e, 1);
 
-        int k0 = 4*cell0;
-        int k1 = 4*cell1;
+        uint k0 = 4*cell0;
+        uint k1 = 4*cell1;
 
 
         Eigen::VectorXd n(2);
         n(0) = m.edgesNormalsX[e];
         n(1) = m.edgesNormalsY[e];
 
+        Eigen::VectorXd gradx(4);
+        Eigen::VectorXd grady(4);
+        average_gradients(gradx, grady, cell0, cell1);
+
         // Set flux
         {
-            const Eigen::VectorXd this_flux = (*edges_flux_functions[e])(q_far, q_far) * m.edgesLengths[e];
+            const Eigen::VectorXd this_flux = (*edges_flux_functions[e])(q_far, q_far, gradx, grady) * m.edgesLengths[e];
             for (int i=0; i<4; ++i) {
                 qW(k0+i) -= this_flux(i);
                 if (edges_flux_functions[e]->two_sided)
@@ -557,24 +691,7 @@ double solver::get_uniform_residual() {
 
 
 solution solver::get_solution() {
-    int N = m.cellsAreas.size();
-
-    solution s;
-    s.gamma = g.gamma;
-    s.R = g.R;
-
-    s.rho.resize(N);
-    s.rhou.resize(N);
-    s.rhov.resize(N);
-    s.rhoe.resize(N);
-
-    #pragma omp parallel for
-    for (int i=0; i<N; ++i) {
-        s.rho(i) = q(4*i);
-        s.rhou(i) = q(4*i+1);
-        s.rhov(i) = q(4*i+2);
-        s.rhoe(i) = q(4*i+3);
-    }
+    solution s(q, g);
 
     return s;
 }
@@ -612,7 +729,7 @@ public:
 
     explicitSolver(const mesh& m_in, const gas& g_in, std::string viscosity_model)
     : solver(m_in, g_in, viscosity_model) {
-        print_interval = 100;
+        print_interval = 1;
         qk.resize(q.size());
     }
 
@@ -620,7 +737,7 @@ public:
 
     void fill() {}
     int compute() {return 0;}
-    double solve(const double relaxation=1, const double tol=0);
+    double solve(const double relaxation=1, const double tol=0, const int rhs_iterations=5);
 
 };
 
@@ -647,6 +764,10 @@ void explicitSolver::calc_residual(const Eigen::VectorXd& q_) {
         n(0) = m.edgesNormalsX[e];
         n(1) = m.edgesNormalsY[e];
 
+        Eigen::VectorXd gradx(4);
+        Eigen::VectorXd grady(4);
+        average_gradients(gradx, grady, cell0, cell1);
+
         // Use linear interpolation (second order)
         Eigen::VectorXd this_flux;
         if (second_order) {
@@ -659,9 +780,9 @@ void explicitSolver::calc_residual(const Eigen::VectorXd& q_) {
             const Eigen::VectorXd q_L_o2 = q_L + ( gx.segment(k0,4)*d0x + gy.segment(k0,4)*d0y ).cwiseProduct(limiters.segment(k0,4));
             const Eigen::VectorXd q_R_o2 = q_R + ( gx.segment(k1,4)*d1x + gy.segment(k1,4)*d1y ).cwiseProduct(limiters.segment(k1,4));
 
-            this_flux = (*edges_flux_functions[e])(q_L_o2, q_R_o2) * m.edgesLengths[e];
+            this_flux = (*edges_flux_functions[e])(q_L_o2, q_R_o2, gradx, grady) * m.edgesLengths[e];
         } else {
-            this_flux = (*edges_flux_functions[e])(q_L, q_R) * m.edgesLengths[e];
+            this_flux = (*edges_flux_functions[e])(q_L, q_R, gradx, grady) * m.edgesLengths[e];
         }
         for (int i=0; i<4; ++i) {
             qW(k0+i) -= this_flux(i);
@@ -678,17 +799,20 @@ void explicitSolver::calc_residual(const Eigen::VectorXd& q_) {
 }
 
 
-double explicitSolver::solve(const double relaxation, const double tol) {
+double explicitSolver::solve(const double relaxation, const double tol, const int rhs_iterations) {
     calc_dt();
 
     #pragma omp parallel for
     for (int i=0; i<qk.size(); ++i) qk(i) = q(i);
 
     for (const double& ai : alpha) {
-        if (second_order) {
+
+        if ((viscosity_model != "inviscid")|(second_order)) {
             set_walls_from_internal(qk);
             calc_gradients(qk);
-            calc_limiters(qk);
+            if (second_order) {
+                calc_limiters(qk);
+            }
         }
         calc_residual(qk);
         for (uint i=0; i<m.nRealCells; ++i) {
@@ -774,11 +898,21 @@ public:
 
         // Linear solver parameters
         #ifndef RANS_BICGSTAB
+            /*
             rho_solver.setTolerance(1e-2);
             rho_solver.preconditioner().setFillfactor(3);
             rho_solver.preconditioner().setDroptol(1e-4);
+            /**/
+            #ifndef RANS_MATRIX_FREE
+                rho_solver.setTolerance(1e-2);
+                rho_solver.preconditioner().setFillfactor(2);
+                rho_solver.preconditioner().setDroptol(1e-3);
+                rho_solver.setMaxIterations(500);
+            #else
+                rho_solver.setTolerance(1e-3);
+                rho_solver.setMaxIterations(1000);
+            #endif
 
-            rho_solver.setMaxIterations(500);
         #endif
 
         int N = m.cellsAreas.size();
@@ -831,7 +965,7 @@ public:
 
     void fill();
     int compute();
-    double solve(const double relaxation=1, const double tol=0);
+    double solve(const double relaxation=1, const double tol=0, const int rhs_iterations=5);
 
 };
 
@@ -845,6 +979,11 @@ void implicitSolver::fill() {
 void implicitSolver::fillRhoLHS() {
 
     calc_dt();
+
+    if (viscosity_model != "inviscid") {
+        set_walls_from_internal(q);
+        calc_gradients(q);
+    }
 
     // Reset rho matrix to zero
     #ifndef RANS_MATRIX_FREE
@@ -877,60 +1016,60 @@ void implicitSolver::fillRhoLHS() {
                 RhoMatrix.coeffRef(k+j, k+j) = m.cellsAreas[i]/dt(i);
             }
         }
-    #endif
 
-    // Fill internal matrix elements from flux jacobian
-    for (int e=0; e<m.edgesCells.cols(); ++e) {
+        // Fill internal matrix elements from flux jacobian
+        for (int e=0; e<m.edgesCells.cols(); ++e) {
 
-        // Get this edges cells index
-        int cell0 = m.edgesCells(e, 0);
-        int cell1 = m.edgesCells(e, 1);
+            // Get this edges cells index
+            int cell0 = m.edgesCells(e, 0);
+            int cell1 = m.edgesCells(e, 1);
 
-        int k0 = 4*cell0;
-        int k1 = 4*cell1;
+            int k0 = 4*cell0;
+            int k1 = 4*cell1;
 
-        Eigen::VectorXd q_L = q.segment(k0, 4);
-        Eigen::VectorXd q_R = q.segment(k1, 4);
+            Eigen::VectorXd q_L = q.segment(k0, 4);
+            Eigen::VectorXd q_R = q.segment(k1, 4);
 
-        Eigen::VectorXd n(2);
-        n(0) = m.edgesNormalsX[e];
-        n(1) = m.edgesNormalsY[e];
+            Eigen::VectorXd n(2);
+            n(0) = m.edgesNormalsX[e];
+            n(1) = m.edgesNormalsY[e];
+
+            Eigen::VectorXd gradx(4);
+            Eigen::VectorXd grady(4);
+            average_gradients(gradx, grady, cell0, cell1);
 
 
-        #ifndef RANS_MATRIX_FREE
-        {
-            const Eigen::MatrixXd Jacobian = calc_convective_jacobian(*edges_flux_functions[e], q_L, q_R) * m.edgesLengths[e];
+            {
+                const Eigen::MatrixXd Jacobian = calc_convective_jacobian(*edges_flux_functions[e], q_L, q_R, gradx, grady) * m.edgesLengths[e];
 
-            // Set jacobian elements
-            for (int i=0; i<4; ++i) {
-                for (int j=0; j<4; ++j) {
-                    RhoMatrix.coeffRef(k0+i, k0+j) += Jacobian(i, j);
-                    RhoMatrix.coeffRef(k0+i, k1+j) += Jacobian(i, j+4);
+                // Set jacobian elements
+                for (int i=0; i<4; ++i) {
+                    for (int j=0; j<4; ++j) {
+                        RhoMatrix.coeffRef(k0+i, k0+j) += Jacobian(i, j);
+                        RhoMatrix.coeffRef(k0+i, k1+j) += Jacobian(i, j+4);
 
-                    if (edges_flux_functions[e]->two_sided) {
-                        RhoMatrix.coeffRef(k1+i, k0+j) += Jacobian(i+4, j);
-                        RhoMatrix.coeffRef(k1+i, k1+j) += Jacobian(i+4, j+4);
+                        if (edges_flux_functions[e]->two_sided) {
+                            RhoMatrix.coeffRef(k1+i, k0+j) += Jacobian(i+4, j);
+                            RhoMatrix.coeffRef(k1+i, k1+j) += Jacobian(i+4, j+4);
+                        }
                     }
                 }
             }
         }
-        #endif
-    }
 
-    // Also fill bcs
-    #pragma omp parallel for
-    for (int ci=m.nRealCells; ci<m.cellsAreas.size(); ++ci) {
-        int k = 4*ci;
+        // Also fill bcs
+        #pragma omp parallel for
+        for (int ci=m.nRealCells; ci<m.cellsAreas.size(); ++ci) {
+            int k = 4*ci;
 
-        #ifndef RANS_MATRIX_FREE
-        for (int i=0; i<4; ++i) {
-            for (int j=0; j<4; ++j) {
-                RhoMatrix.coeffRef(k+i, k+j) = 0;
+            for (int i=0; i<4; ++i) {
+                for (int j=0; j<4; ++j) {
+                    RhoMatrix.coeffRef(k+i, k+j) = 0;
+                }
+                RhoMatrix.coeffRef(k+i, k+i) = 1;
             }
-            RhoMatrix.coeffRef(k+i, k+i) = 1;
         }
-        #endif
-    }
+    #endif
 
 
 }
@@ -941,11 +1080,11 @@ void implicitSolver::fillRhoRHS() {
 
     calc_dt();
 
-    if (second_order) {
+    if (second_order|(viscosity_model != "inviscid")) {
         set_walls_from_internal(q);
         calc_gradients(q);
-        calc_limiters(q);
     }
+    if (second_order) calc_limiters(q);
 
     // Reset rho vector
     #pragma omp parallel for
@@ -971,6 +1110,10 @@ void implicitSolver::fillRhoRHS() {
         n(0) = m.edgesNormalsX[e];
         n(1) = m.edgesNormalsY[e];
 
+        Eigen::VectorXd gradx(4);
+        Eigen::VectorXd grady(4);
+        average_gradients(gradx, grady, cell0, cell1);
+
         // Set flux
         {
             // Use linear interpolation (second order)
@@ -985,9 +1128,9 @@ void implicitSolver::fillRhoRHS() {
                 const Eigen::VectorXd q_L_o2 = q_L + ( gx.segment(k0,4)*d0x + gy.segment(k0,4)*d0y ).cwiseProduct(limiters.segment(k0,4));
                 const Eigen::VectorXd q_R_o2 = q_R + ( gx.segment(k1,4)*d1x + gy.segment(k1,4)*d1y ).cwiseProduct(limiters.segment(k1,4));
 
-                this_flux = (*edges_flux_functions[e])(q_L_o2, q_R_o2) * m.edgesLengths[e];
+                this_flux = (*edges_flux_functions[e])(q_L_o2, q_R_o2, gradx, grady) * m.edgesLengths[e];
             } else {
-                this_flux = (*edges_flux_functions[e])(q_L, q_R) * m.edgesLengths[e];
+                this_flux = (*edges_flux_functions[e])(q_L, q_R, gradx, grady) * m.edgesLengths[e];
             }
             for (int i=0; i<4; ++i) {
                 RhoVector(k0+i) -= this_flux(i);
@@ -1026,7 +1169,8 @@ int implicitSolver::compute() {
 
 double implicitSolver::solve(
     const double relaxation,
-    const double tol
+    const double tol, 
+    const int rhs_iterations
 ) {
     // Solve rho, rho_u, rho_v, rho_e
     fillRhoRHS();
@@ -1043,7 +1187,7 @@ double implicitSolver::solve(
         q += qW*relaxation;
     }
 
-    for (uint i=0; i<10; ++i) {
+    for (int i=0; i<rhs_iterations; ++i) {
         fillRhoRHS();
 
         err = RhoVector.norm();
