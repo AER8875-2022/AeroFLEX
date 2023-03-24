@@ -40,7 +40,7 @@ jobs:
       - name: Update xmake repository
         run: xmake repo --update
 
-      # Fetch xmake dephash
+      # Fetch xmake dep hash
       - name: Retrieve dependencies hash
         id: dep_hash
         run: echo "hash=$(xmake l utils.ci.packageskey)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
