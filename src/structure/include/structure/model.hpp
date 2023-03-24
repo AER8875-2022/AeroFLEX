@@ -279,8 +279,8 @@ public:
                 //Delta déplacements
                 Dep += Delta_dep_amor; 
                 std::cout<<"==============="<<std::endl;
-                std::cout<<Dep.tail(3).transpose()<<std::endl;
-                set_Quaternion_Map(Dep); 
+                //std::cout<<Dep.tail(3).transpose()<<std::endl;
+                set_Quaternion_Map(Delta_dep_amor); 
 
                 //#pragma omp parallel for
                 for (int i = 0; i < CBAR_keys.size(); ++i)
@@ -342,26 +342,22 @@ public:
         {   
             double rx = delta_dep(i*6 +3);
             double ry = delta_dep(i*6 +4);
-            double rz = delta_dep(i*6 +5);
+            double rz = delta_dep(i*6 +5);          
             
-            double vx = cos(0.5*rz) * cos(0.5*ry) * sin(0.5*rx) - sin(0.5*rz) * sin(0.5*ry) * cos(0.5*rx);
-            //if(abs(vx)<1E-12) vx=0.0;
+            double cr = cos(rx * 0.5);
+            double sr = sin(rx * 0.5);
+            double cp = cos(ry * 0.5);
+            double sp = sin(ry * 0.5);
+            double cy = cos(rz * 0.5);
+            double sy = sin(rz * 0.5);
 
-            double vy = cos(0.5*rz) * sin(0.5*ry) * cos(0.5*rx) + sin(0.5*rz) * cos(0.5*ry) * sin(0.5*rx);
-            //if(abs(vy)<1E-12) vy=0.0;
-
-            double vz = sin(0.5*rz) * cos(0.5*ry) * cos(0.5*rx) - cos(0.5*rz) * sin(0.5*ry) * sin(0.5*rx);
-            //if(abs(vz)<1E-12) vz=0.0;
-
-            double s  = cos(0.5*rz) * cos(0.5*ry) * cos(0.5*rx) + sin(0.5*rz) * sin(0.5*ry) * sin(0.5*rx);
-            //if(abs(s)<1E-12) s=0.0;
+            double s  = cr * cp * cy + sr * sp * sy;
+            double vx = sr * cp * cy - cr * sp * sy;
+            double vy = cr * sp * cy + sr * cp * sy;
+            double vz = cr * cp * sy - sr * sp * cy;
 
             Eigen::Quaterniond delta_q(s,vx,vy,vz);
 
-            if(i== (Nbr_Noeud-1))
-            {   
-                std::cout<<delta_q<<std::endl;
-            }
             QUATERNION_MAP[i] = delta_q ;
         }
     }
