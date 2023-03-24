@@ -352,16 +352,20 @@ public:
         {   
             double rx = delta_dep(i*6 +3);
             double ry = delta_dep(i*6 +4);
-            double rz = delta_dep(i*6 +5);
+            double rz = delta_dep(i*6 +5);          
             
-            double vx = cos(0.5*rz) * cos(0.5*ry) * sin(0.5*rx) - sin(0.5*rz) * sin(0.5*ry) * cos(0.5*rx);
+            double cr = cos(rx * 0.5);
+            double sr = sin(rx * 0.5);
+            double cp = cos(ry * 0.5);
+            double sp = sin(ry * 0.5);
+            double cy = cos(rz * 0.5);
+            double sy = sin(rz * 0.5);
 
-            double vy = cos(0.5*rz) * sin(0.5*ry) * cos(0.5*rx) + sin(0.5*rz) * cos(0.5*ry) * sin(0.5*rx);
+            double s  = cr * cp * cy + sr * sp * sy;
+            double vx = sr * cp * cy - cr * sp * sy;
+            double vy = cr * sp * cy + sr * cp * sy;
+            double vz = cr * cp * sy - sr * sp * cy;
 
-            double vz = sin(0.5*rz) * cos(0.5*ry) * cos(0.5*rx) - cos(0.5*rz) * sin(0.5*ry) * sin(0.5*rx);
-
-            double s  = cos(0.5*rz) * cos(0.5*ry) * cos(0.5*rx) + sin(0.5*rz) * sin(0.5*ry) * sin(0.5*rx);
-    
             Eigen::Quaterniond delta_q(s,vx,vy,vz);
 
             QUATERNION_MAP[i] = delta_q ;
