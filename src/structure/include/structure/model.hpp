@@ -169,7 +169,7 @@ public:
     void set_K_Final_sparse()
     {
         K_Final_sparse = K_Global_sparse;
-        // #pragma omp parallel for
+       
         for (int i=0 ; i<SPC1_LIST.size();i++)
         {
             SPC1 spc_obj     = SPC1_LIST[i];
@@ -285,7 +285,7 @@ public:
                 // std::cout<<Dep.tail(3).transpose()<<std::endl;
                 set_Quaternion_Map(Delta_dep_amor); 
 
-                //#pragma omp parallel for
+                #pragma omp parallel for
                 for (int i = 0; i < CBAR_keys.size(); ++i)
                 {   
                     int key     = CBAR_keys[i];
@@ -347,21 +347,25 @@ public:
 
     void set_Quaternion_Map(Eigen::VectorXd delta_dep){
 
-        //#pragma omp parallel for
+        #pragma omp parallel for
         for (int i = 0; i < Nbr_Noeud; i++)
         {   
             double rx = delta_dep(i*6 +3);
             double ry = delta_dep(i*6 +4);
-            double rz = delta_dep(i*6 +5);
+            double rz = delta_dep(i*6 +5);          
             
-            double vx = cos(0.5*rz) * cos(0.5*ry) * sin(0.5*rx) - sin(0.5*rz) * sin(0.5*ry) * cos(0.5*rx);
+            double cr = cos(rx * 0.5);
+            double sr = sin(rx * 0.5);
+            double cp = cos(ry * 0.5);
+            double sp = sin(ry * 0.5);
+            double cy = cos(rz * 0.5);
+            double sy = sin(rz * 0.5);
 
-            double vy = cos(0.5*rz) * sin(0.5*ry) * cos(0.5*rx) + sin(0.5*rz) * cos(0.5*ry) * sin(0.5*rx);
+            double s  = cr * cp * cy + sr * sp * sy;
+            double vx = sr * cp * cy - cr * sp * sy;
+            double vy = cr * sp * cy + sr * cp * sy;
+            double vz = cr * cp * sy - sr * sp * cy;
 
-            double vz = sin(0.5*rz) * cos(0.5*ry) * cos(0.5*rx) - cos(0.5*rz) * sin(0.5*ry) * sin(0.5*rx);
-
-            double s  = cos(0.5*rz) * cos(0.5*ry) * cos(0.5*rx) + sin(0.5*rz) * sin(0.5*ry) * sin(0.5*rx);
-    
             Eigen::Quaterniond delta_q(s,vx,vy,vz);
 
             QUATERNION_MAP[i] = delta_q ;

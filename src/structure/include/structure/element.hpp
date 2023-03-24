@@ -121,20 +121,22 @@ public:
 
         //Vecteur Y_bar est parallèle au vecteur V. Juste à le rendre unitaire
         V= V/V.norm();
-        const double l2 = V(0);
-        const double m2 = V(1);
-        const double n2 = V(2);
-
         //Vecteur Z_bar est ortogonal au X_bar et Y_bar. Pour trouver ses composantes, faire un produit vectoriel.
-        const Eigen::Vector3d cross_product = unit_N1_to_N2.cross(V);
+        Eigen::Vector3d cross_product = unit_N1_to_N2.cross(V);
+        cross_product = cross_product/cross_product.norm();
         const double l3 = cross_product(0);
         const double m3 = cross_product(1);
-        const double n3 = cross_product(2);      
+        const double n3 = cross_product(2); 
+        
+        const Eigen::Vector3d cross_product2 = -unit_N1_to_N2.cross(cross_product);
+        const double l2 = cross_product2(0);
+        const double m2 = cross_product2(1);
+        const double n2 = cross_product2(2);
+             
 
         Lambda   << l1, m1, n1,
                     l2, m2, n2,  
                     l3, m3, n3;
-
 
         T_Rotation                   = Eigen::MatrixXd::Zero(12,12);
         T_Rotation.block(0, 0, 3, 3) = Lambda;
@@ -163,7 +165,8 @@ public:
 
 
     void set_qe_From_Rotation_Matrix(Eigen::Matrix3d mat)  //Set q_e
-    {
+    {   
+        
         const double trace = mat(0,0) + mat(1,1) + mat(2,2);
         double cst, s, v_x, v_y, v_z;
 
@@ -171,11 +174,9 @@ public:
         {
             cst = 0.5  / sqrt(trace + 1.0);
             s   = 0.25 / cst;
-
             v_x = (mat(1,2) - mat(2,1)) * cst;
             v_y = (mat(2,0) - mat(0,2)) * cst;
             v_z = (mat(0,1) - mat(1,0)) * cst;
-        
         }
         else
         {
@@ -185,7 +186,7 @@ public:
                 s   = ( mat(1,2) - mat(2,1) ) / cst;
                 v_x = 0.25 * cst ;
                 v_y = ( mat(1,0) + mat(0,1) ) / cst;
-                v_z = ( mat(2,2) + mat(0,2) ) / cst;
+                v_z = ( mat(2,0) + mat(0,2) ) / cst;
             }
             else if(mat(1,1) > mat(2,2))
             {
@@ -205,20 +206,23 @@ public:
             }
         }
         
-        q_e = Eigen::Quaterniond(s, v_x, v_y, v_z);
+        q_e = Eigen::Quaterniond(s,v_x,v_y,v_z);
         q_1 = q_e;
         
         q_2 = q_e;
         q_mid = q_e;
 
+        //if(N2_ID==12) std::cout<<"q_e : "<<q_e<<std::endl;
+
     }
 
     void set_q1_And_q2(Eigen::Quaterniond delta_q_1 ,Eigen::Quaterniond delta_q_2 )
     {
-        q_1 =  q_1 * delta_q_1.conjugate() ;
-        q_2 =  q_2 * delta_q_2.conjugate() ;
+        q_1 = delta_q_1 * q_1 ;
+        q_2 = delta_q_2 * q_2 ;
+        
+        //if(N2_ID==12) std::cout<<"q_2 : "<<q_2<<std::endl;
     }
-   
 
     Eigen::Matrix3d get_Rotation_Matrix_From_Quaternion(Eigen::Quaterniond q)
     {
@@ -235,7 +239,6 @@ public:
 
         return Matrix;
     };
-    
 
    void set_qmid_From_Interpolation()  //Trouver q_mid à partir de q_1 et q_2
     {
@@ -264,13 +267,15 @@ public:
                 q_mid =  q_1;
             } 
         }
+         //if(N2_ID==12) std::cout<<"q_mid : "<<q_mid<<std::endl;
     };
 
     void set_Quaternion_Local_Rotations() //Puisqu'on utilise des quaternion unitaire, le conjugate et la transpose sont équivalent.
     {   
-        q_1_rot_prime = q_mid.conjugate()*q_e.conjugate() * q_1 * q_e;
-        q_2_rot_prime = q_mid.conjugate()*q_e.conjugate() * q_2 * q_e;
+        q_1_rot_prime = q_mid.conjugate()* q_1 ;
+        q_2_rot_prime = q_mid.conjugate()* q_2 ;
         
+         //if(N2_ID==12) std::cout<<"q_2_rot_prime : "<<q_2_rot_prime<<std::endl;
     };
 
     Eigen::Vector3d get_Euler_Angles_From_Local_Rotation(Eigen::Quaterniond q_n_rot_local)  //Trouve les déformations angulaires à partir des q_rot,i'
@@ -288,18 +293,19 @@ public:
 
         return THETA_local;
     };
-
+    
+    /*
     Eigen::VectorXd get_Deformation_Local_Ref()
     {    
         const Eigen::Vector3d theta_1_local = get_Euler_Angles_From_Local_Rotation(q_1_rot_prime);
         const Eigen::Vector3d theta_2_local = get_Euler_Angles_From_Local_Rotation(q_2_rot_prime);
         
-        const Eigen::Matrix3d R_ec          = get_Rotation_Matrix_From_Quaternion(q_e.inverse()*q_mid);              //R(q_mid)
+        const Eigen::Matrix3d R_ec          = get_Rotation_Matrix_From_Quaternion(q_e.inverse() * q_mid);                     //R(q_mid)
         
         const Eigen::Vector3d dr_1          = R_ec*r1 - r1;                                                           //Déplacement induit par la rotation
         const Eigen::Vector3d dr_2          = R_ec*r2 - r2;                                                           //Déplacement induit par la rotation 
-   
-        const Eigen::Matrix3d R_gc          = get_Rotation_Matrix_From_Quaternion(q_mid);
+
+        const Eigen::Matrix3d R_gc          = get_Rotation_Matrix_From_Quaternion(q_mid*q_e);
         
         const Eigen::Vector3d d_1_prime     =  R_gc.transpose() * (u_1.segment(0,3) - u_mid.segment(0,3) - dr_1);     //Déplacement du noeud causé pas les déformations dans le repère de l'élément
         const Eigen::Vector3d d_2_prime     =  R_gc.transpose() * (u_2.segment(0,3) - u_mid.segment(0,3) - dr_2);     //Déplacement du noeud causé pas les déformations dans le repère de l'élément
@@ -312,27 +318,32 @@ public:
         D_local.segment(9,3) = theta_2_local;
 
         return D_local;
-    };
+    };*/
 
     Eigen::VectorXd get_Force_In_GlobalRef()
     {   
         const Eigen::Vector3d theta_1_local = get_Euler_Angles_From_Local_Rotation(q_1_rot_prime);
         const Eigen::Vector3d theta_2_local = get_Euler_Angles_From_Local_Rotation(q_2_rot_prime);
         
-        const Eigen::Matrix3d R_ec          = get_Rotation_Matrix_From_Quaternion(q_e.inverse()*q_mid);              //R(q_mid)
-        
+        const Eigen::Matrix3d R_ec          = get_Rotation_Matrix_From_Quaternion(q_mid*q_e.conjugate());              //R(q_mid)
         const Eigen::Vector3d dr_1          = R_ec*r1 - r1;                                                           //Déplacement induit par la rotation
         const Eigen::Vector3d dr_2          = R_ec*r2 - r2;                                                           //Déplacement induit par la rotation 
    
         const Eigen::Matrix3d R_gc          = get_Rotation_Matrix_From_Quaternion(q_mid);
         
+        /*if(N2_ID==12)
+         {
+            std::cout<<"theta_2_local : "<<theta_2_local.transpose()<<std::endl;
+            std::cout<<"dr_2          : "<<dr_2.transpose()<<std::endl;
+         }
+        */
         const Eigen::Vector3d d_1_prime     =  R_gc.transpose() * (u_1.segment(0,3) - u_mid.segment(0,3) - dr_1);     //Déplacement du noeud causé pas les déformations dans le repère de l'élément
         const Eigen::Vector3d d_2_prime     =  R_gc.transpose() * (u_2.segment(0,3) - u_mid.segment(0,3) - dr_2);     //Déplacement du noeud causé pas les déformations dans le repère de l'élément
 
-        if(N2_ID==12){
+        /*if(N2_ID==12){
         //std::cout<<"============\n"<<std::endl;
         //std::cout<<q_mid<<std::endl;
-        }
+        }*/
         Eigen::VectorXd D_local(12);
         
         D_local.segment(0,3) = d_1_prime;
