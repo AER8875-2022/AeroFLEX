@@ -41,6 +41,10 @@ jobs:
           xmake-version: latest
           actions-cache-folder: .xmake-cache
 
+      # Update xmake repository
+      - name: Update xmake repository
+        run: xmake repo --update
+
       # Fetch xmake dephash
       - name: Retrieve dependencies hash
         id: dep_hash
