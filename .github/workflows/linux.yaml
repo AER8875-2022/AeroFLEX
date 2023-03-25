@@ -65,7 +65,7 @@ jobs:
       - name: Retrieve cached xmake build
         uses: actions/cache@v3
         with:
-          path: ${{ github.workspace }}/build
+          path: ${{ runner.workspace }}/build
           key: Linux-Build-${{ matrix.arch }}-${{ matrix.mode }}
 
       - name: Build
