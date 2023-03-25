@@ -58,7 +58,7 @@ jobs:
           xmake f -y -a ${{ matrix.arch }} -m ${{ matrix.mode }} --toolchain=${{ matrix.compiler }}
 
       - name: Test stuff
-      run: |
+        run: |
           pwd
           ls
       # Cache xmake build
