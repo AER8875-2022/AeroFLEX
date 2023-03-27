@@ -497,7 +497,7 @@ void solver::calc_gradients(const Eigen::VectorXd& q_) {
             const double geom_factor = dif / dij;
 
             Eigen::VectorXd q_L = q.segment(4*i, 4);
-            Eigen::VectorXd q_R = edges_flux_functions[e]->vars(q_L, q.segment(4*j, 4));
+            Eigen::VectorXd q_R = edges_flux_functions[e]->vars(q_L, q.segment(4*j, 4), Eigen::VectorXd::Zero(4), Eigen::VectorXd::Zero(4));
 
             for (uint k=0; k<4; ++k) {
                 const double fk = (q_L(k) + q_R(k)) * 0.5 * m.edgesLengths[e]; //(q_L(k)*(1.0 - geom_factor) + q_R(k) * geom_factor) * m.edgesLengths[e];
@@ -547,7 +547,7 @@ void solver::calc_gradients(const Eigen::VectorXd& q_) {
                 const uint cell_n = m.edgesCells(e, 0) == i ? m.edgesCells(e, 1) : m.edgesCells(e, 0);
 
                 Eigen::VectorXd q_L = q.segment(4*cell_p, 4);
-                Eigen::VectorXd q_R = edges_flux_functions[e]->vars(q_L, q.segment(4*cell_n, 4));
+                Eigen::VectorXd q_R = edges_flux_functions[e]->vars(q_L, q.segment(4*cell_n, 4), Eigen::VectorXd::Zero(4), Eigen::VectorXd::Zero(4));
                 
                 for (uint k=0; k<4; ++k) {
                     deltas_k(j, k) = q_R(k) - q_L(k);

@@ -31,9 +31,9 @@ Physical Curve("left") = {4};
 Physical Curve("right") = {6};
 Physical Surface("internal") = {1, 2};
 
-Transfinite Curve {5, -7} = 40 Using Progression 1.1;   // 90
-Transfinite Curve {-1, 3} = 15 Using Progression 1.2;   // 30
-Transfinite Curve {2, -4, 6} = 60 Using Progression 1.15;  // 110
+Transfinite Curve {5, -7} = 60 Using Progression 1.05;   // 90
+Transfinite Curve {-1, 3} = 20 Using Progression 1.1;   // 30
+Transfinite Curve {2, -4, 6} = 90 Using Progression 1.08;  // 110
 
 Transfinite Surface {1};
 Transfinite Surface {2};

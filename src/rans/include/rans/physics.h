@@ -88,7 +88,11 @@ inline double sabs(const double& x) {
 
 
 
-// Crude evaluation using first-order scalar dissipation upwind scheme
+
+
+
+
+// Class for flux
 class flux {
 public:
     gas& g;
@@ -105,11 +109,30 @@ public:
     flux(gas& g, double& nx, double& ny, double& l, double& a0, double& a1, int viscous_type) 
     : g(g), nx(nx), ny(ny), l(l), a0(a0), a1(a1), viscous_type(viscous_type) {}
 
+    double calc_sa_source(
+        const Eigen::VectorXd& q,
+        const Eigen::MatrixXd& gx,
+        const Eigen::MatrixXd& gy,
+        const double& nu,
+        const double& g_nu_x,
+        const double& g_nu_y,
+        const double& wall_dist
+    );
+
+    virtual double calc_sa_flux(
+        const double* q,
+        const Eigen::MatrixXd grads,
+        const double& wall_dist
+    ) {
+        throw std::logic_error( "default sa-flux called" );
+        return 0.;
+    }
+
     virtual Eigen::VectorXd operator()(
         const Eigen::VectorXd& q_L,
         const Eigen::VectorXd& q_R,
-        const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
-        const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
+        const Eigen::VectorXd& gx,
+        const Eigen::VectorXd& gy,
         const double& nu_L = 0,
         const double& nu_R = 0
     ) {
@@ -120,8 +143,8 @@ public:
     virtual Eigen::VectorXd vars(
         const Eigen::VectorXd& q_L,
         const Eigen::VectorXd& q_R,
-        const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
-        const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
+        const Eigen::VectorXd& gx,
+        const Eigen::VectorXd& gy,
         const double& nu_L = 0,
         const double& nu_R = 0
     ) {
@@ -130,6 +153,82 @@ public:
     }
 
 };
+
+
+
+double flux::calc_sa_source(
+    const Eigen::VectorXd& q,
+    const Eigen::MatrixXd& gx,
+    const Eigen::MatrixXd& gy,
+    const double& nu,
+    const double& g_nu_x,
+    const double& g_nu_y,
+    const double& wall_dist
+) {
+
+    // Turbulence source term
+    Eigen::VectorXd gradu(2);
+    Eigen::VectorXd gradv(2);
+    calc_grad_u(gradu, q, gx, gy, g);
+    calc_grad_v(gradv, q, gx, gy, g);
+
+    // Model constants
+    const double Cb1 = 0.1355;
+    const double Cb2 = 0.622;
+    const double Cv1 = 7.1;
+    const double Cv2 = 5;
+    const double sigma = 2./3.;
+    const double kappa = 0.41;
+    const double Cw1 = Cb1/(kappa*kappa) + (1. + Cb2)/sigma;
+    const double Cw2 = 0.3;
+    const double Cw3 = 2;
+    const double Ct1 = 1;
+    const double Ct2 = 2;
+    const double Ct3 = 1.3;
+    const double Ct4 = 0.5;
+
+    // Velocity gradient tensor
+    const double S_xx = 0.5*(gradu(0) + gradu(0));
+    const double S_xy = 0.5*(gradu(1) + gradv(0));
+    const double S_yy = 0.5*(gradv(1) + gradv(1));
+
+    const double O_xx = 0.5*(gradu(0) - gradu(0));
+    const double O_xy = 0.5*(gradu(1) - gradv(0));
+    const double O_yy = 0.5*(gradv(1) - gradv(1));
+
+    // Other terms
+    const double nu_L = g.mu_L / q(0);
+    const double nu_tilda = nu;
+
+    const double X = nu_tilda / nu_L;
+    const double X3 = X*X*X;
+
+    const double fv1 = (X3)/(X3 + Cv1*Cv1*Cv1);
+    
+    double fv2 = 1 + X/Cv2;
+    fv2 = 1/(fv2*fv2*fv2);
+
+    const double fv3 = (1 + X*fv1)*(1 - fv2)/std::max(X, 0.001);
+
+    double S_tilda = fv3*sqrt(2*O_xy*O_xy) + nu_tilda/(kappa*kappa * wall_dist*wall_dist) * fv2;
+
+    const double Cw3_6 = Cw3*Cw3*Cw3 * Cw3*Cw3*Cw3;
+    const double r = nu_tilda/(S_tilda*kappa*kappa*wall_dist*wall_dist);
+    const double g = r + Cw2*(r*r*r*r*r*r - r);
+    double fw = (1 + Cw3_6)/(g*g*g * g*g*g + Cw3_6);
+    fw = g * std::pow(fw, 1./6.);
+
+    const double ft2 = Ct3*std::exp(-Ct4*X*X);
+    
+    // Source terms
+    const double term_0 = Cb1*(1 - ft2)*S_tilda*nu_tilda;
+    const double term_1 = Cb2/sigma*(g_nu_x*g_nu_x + g_nu_y*g_nu_y);
+    const double term_2 = -(Cw1*fw - Cb1/(kappa*kappa)*ft2)*(nu_tilda*nu_tilda/(wall_dist*wall_dist));
+    // Ignore production from the trip point
+
+    return term_0 + term_1 + term_2;
+}
+
 
 
 class internal_flux : public flux {
@@ -142,11 +241,22 @@ public:
     : flux(g, nx, ny, l, a0, a1, viscous_type) {
         two_sided = true;
     }
+
+    double calc_sa_flux(
+        const Eigen::VectorXd& q_L,
+        const Eigen::VectorXd& q_R,
+        const Eigen::MatrixXd gx,
+        const Eigen::MatrixXd gy,
+        const double& nu_L,
+        const double& nu_R,
+        const double& wall_dist
+    );
+
     inline Eigen::VectorXd operator()(
         const Eigen::VectorXd& q_L,
         const Eigen::VectorXd& q_R,
-        const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
-        const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
+        const Eigen::VectorXd& gx,
+        const Eigen::VectorXd& gy,
         const double& nu_L = 0,
         const double& nu_R = 0
     );
@@ -154,8 +264,8 @@ public:
     Eigen::VectorXd vars(
         const Eigen::VectorXd& q_L,
         const Eigen::VectorXd& q_R,
-        const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
-        const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
+        const Eigen::VectorXd& gx,
+        const Eigen::VectorXd& gy,
         const double& nu_L = 0,
         const double& nu_R = 0
     );
@@ -271,6 +381,66 @@ inline Eigen::VectorXd internal_flux::operator()(
 }
 
 
+
+double internal_flux::calc_sa_flux(
+    const Eigen::VectorXd& q_L,
+    const Eigen::VectorXd& q_R,
+    const Eigen::MatrixXd gx,
+    const Eigen::MatrixXd gy,
+    const double& nu_L,
+    const double& nu_R,
+    const double& wall_dist
+) {
+
+    double f = 0;
+
+    // Central flux
+    const double& rho_L = q_L(0);
+    const double& rho_u_L = q_L(1);
+    const double& rho_v_L = q_L(2);
+    const double& rho_e_L = q_L(3);
+
+    const double& rho_R = q_R(0);
+    const double& rho_u_R = q_R(1);
+    const double& rho_v_R = q_R(2);
+    const double& rho_e_R = q_R(3);
+
+    const double V_L = (rho_u_L*nx + rho_v_L*ny)/rho_L;
+    const double V_R = (rho_u_R*nx + rho_v_R*ny)/rho_R;
+
+    const double p_L = (g.gamma - 1)*(rho_e_L - 0.5/rho_L*(rho_u_L*rho_u_L + rho_v_L*rho_v_L));
+    const double p_R = (g.gamma - 1)*(rho_e_R - 0.5/rho_R*(rho_u_R*rho_u_R + rho_v_R*rho_v_R));
+
+    f = (V_L*nu_L + V_R*nu_R)*0.5;
+
+    // Upwind flux
+    const double pL = p_L;
+    const double pR = p_R;
+
+    // Roe variables
+    const double uL = q_L(1)/q_L(0);
+    const double uR = q_R(1)/q_R(0);
+    const double vL = q_L(2)/q_L(0);
+    const double vR = q_R(2)/q_R(0);
+
+    const double srhoL = sqrt(q_L(0));
+    const double srhoR = sqrt(q_R(0));
+    const double rho = srhoR*srhoL;
+    const double u = (uL*srhoL + uR*srhoR)/(srhoL + srhoR);
+    const double v = (vL*srhoL + vR*srhoR)/(srhoL + srhoR);
+    const double h = ((q_L(3) + pL)/q_L(0)*srhoL + (q_R(3) + pR)/q_R(0)*srhoR)/(srhoL + srhoR);
+    const double q2 = u*u + v*v;
+    const double c = sqrt( (g.gamma - 1.) * (h - 0.5*q2) );
+    const double V = u*nx + v*ny;
+
+    f -= 0.5*(abs(V)+c)*(nu_R - nu_L);
+
+
+
+    return f;
+}
+
+
 Eigen::VectorXd internal_flux::vars(
     const Eigen::VectorXd& q_L,
     const Eigen::VectorXd& q_R,
@@ -295,8 +465,8 @@ public:
     inline Eigen::VectorXd operator()(
         const Eigen::VectorXd& q_L,
         const Eigen::VectorXd& _q_bc,
-        const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
-        const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
+        const Eigen::VectorXd& gx,
+        const Eigen::VectorXd& gy,
         const double& nu_L = 0,
         const double& nu_R = 0
     ) {
@@ -309,8 +479,8 @@ public:
     Eigen::VectorXd vars(
         const Eigen::VectorXd& q_L,
         const Eigen::VectorXd& _q_bc,
-        const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
-        const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
+        const Eigen::VectorXd& gx,
+        const Eigen::VectorXd& gy,
         const double& nu_L = 0,
         const double& nu_R = 0
     );
@@ -361,8 +531,8 @@ public:
     inline Eigen::VectorXd operator()(
         const Eigen::VectorXd& q_L,
         const Eigen::VectorXd& q_bc,
-        const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
-        const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
+        const Eigen::VectorXd& gx,
+        const Eigen::VectorXd& gy,
         const double& nu_L = 0,
         const double& nu_R = 0
     ) {
@@ -375,8 +545,8 @@ public:
     Eigen::VectorXd vars(
         const Eigen::VectorXd& q_L,
         const Eigen::VectorXd& q_bc,
-        const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
-        const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
+        const Eigen::VectorXd& gx,
+        const Eigen::VectorXd& gy,
         const double& nu_L = 0,
         const double& nu_R = 0
     );
@@ -415,8 +585,8 @@ public:
     inline Eigen::VectorXd operator()(
         const Eigen::VectorXd& q_L,
         const Eigen::VectorXd& q_bc,
-        const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
-        const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
+        const Eigen::VectorXd& gx,
+        const Eigen::VectorXd& gy,
         const double& nu_L = 0,
         const double& nu_R = 0
     ) {
@@ -432,8 +602,8 @@ public:
     Eigen::VectorXd vars(
         const Eigen::VectorXd& q_L,
         const Eigen::VectorXd& _q_bc,
-        const Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
-        const Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
+        const Eigen::VectorXd& gx,
+        const Eigen::VectorXd& gy,
         const double& nu_L = 0,
         const double& nu_R = 0
     );
@@ -527,14 +697,14 @@ inline Eigen::VectorXd farfield_flux::vars(
     return q_R;
 }
 
-
+/*
 template <typename _flux>
 inline Eigen::MatrixXd calc_convective_jacobian(
     _flux& flux_function,
     Eigen::VectorXd& q_L,
     Eigen::VectorXd& q_R,
-    Eigen::VectorXd& gx = Eigen::VectorXd::Zero(4),
-    Eigen::VectorXd& gy = Eigen::VectorXd::Zero(4),
+    Eigen::VectorXd& gx,
+    Eigen::VectorXd& gy,
     const double& nu_L = 0,
     const double& nu_R = 0
 ) {
@@ -552,16 +722,8 @@ inline Eigen::MatrixXd calc_convective_jacobian(
             const double update = std::max(1e-6, abs(q_L(i))*1e-6);
 
             q_L(i) += update;
-            /*
-            gx(i) += update * 0.5 * flux_function.nx * flux_function.l / flux_function.a0;
-            gy(i) += update * 0.5 * flux_function.ny * flux_function.l / flux_function.a0;
-            /**/
             const Eigen::VectorXd fp = flux_function(q_L, q_R, gx, gy, nu_L, nu_R);
             q_L(i) -= update;
-            /*
-            gx(i) -= update * 0.5 * flux_function.nx * flux_function.l / flux_function.a0;
-            gy(i) -= update * 0.5 * flux_function.ny * flux_function.l / flux_function.a0;
-            /**/
             J.block(0, i, 4, 1) = (fp  - f)/update;
             J.block(4, i, 4, 1) = -J.block(0, i, 4, 1);
         }
@@ -571,16 +733,8 @@ inline Eigen::MatrixXd calc_convective_jacobian(
             const double update = std::max(1e-6, abs(q_R(i))*1e-6);
 
             q_R(i) += update;
-            /*
-            gx(i) += update * 0.5 * flux_function.nx * flux_function.l / flux_function.a0;
-            gy(i) += update * 0.5 * flux_function.ny * flux_function.l / flux_function.a0;
-            /**/
             const Eigen::VectorXd fp = flux_function(q_L, q_R, gx, gy, nu_L, nu_R);
             q_R(i) -= update;
-            /*
-            gx(i) -= update * 0.5 * flux_function.nx * flux_function.l / flux_function.a0;
-            gy(i) -= update * 0.5 * flux_function.ny * flux_function.l / flux_function.a0;
-            /**/
 
             J.block(0, i+4, 4, 1) = (fp  - f)/update;
             J.block(4, i+4, 4, 1) = -J.block(0, i+4, 4, 1);
@@ -589,7 +743,7 @@ inline Eigen::MatrixXd calc_convective_jacobian(
 
     return J;
 }
-
+/**/
 
 #define RANS_YT 2.0
 

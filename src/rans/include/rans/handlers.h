@@ -70,7 +70,7 @@ Eigen::MatrixXd cell_handler::gradients() {
         const uint cell_n = m.edgesCells(e, 0) == id ? m.edgesCells(e, 1) : m.edgesCells(e, 0);
 
         Eigen::VectorXd q_L = q.segment(4*cell_p, 4);
-        Eigen::VectorXd q_R = flux_functions[e]->vars(q_L, q.segment(4*cell_n, 4));
+        Eigen::VectorXd q_R = flux_functions[e]->vars(q_L, q.segment(4*cell_n, 4), Eigen::VectorXd::Zero(4), Eigen::VectorXd::Zero(4));
         
         for (uint k=0; k<4; ++k) {
             deltas_k(j, k) = q_R(k) - q_L(k);
