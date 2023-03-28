@@ -16,6 +16,8 @@
 #include <iomanip>
 #include <sstream>
 #include <limits>
+#include <iostream>
+#include <atomic>
 
 #include <Eigen/Dense>
 #include <fstream>
@@ -180,6 +182,10 @@ class CpProfile {
     public:
     double x_moment;
     double y_moment;
+    std::atomic<double> xmax = 1.0;
+    std::atomic<double> xmin = 0.0;
+    std::atomic<int> nb_neg = 0;
+    std::atomic<int> nb_pos = 0;
 
     VectorMutex<double> x;
     VectorMutex<double> y;
@@ -225,6 +231,10 @@ class CpProfile {
             }
         }
 
+        xmax = xright;
+        xmin = xleft;
+        std::cout << xmax << " " << xmin << std::endl;
+
         y_moment = (yright - yleft)*0.25 + yleft;
         x_moment = (xright - xleft)*0.25 + xleft;
     }
@@ -237,6 +247,8 @@ class CpProfile {
         solution sol = s.get_solution();
 
         int idx = 0;
+        int idx_neg = 0;
+        int idx_pos = 0;
         for (uint b=0; b<m.boundaryEdges.size(); ++b) {
             if (m.boundaryEdgesPhysicals[b] == af) {
                 const uint e = m.boundaryEdges[b];
@@ -260,16 +272,25 @@ class CpProfile {
                 const double cp_ = 2./(sol.gamma()*mach_inf*mach_inf)*(p/p_inf - 1.);
 
                 cp[idx] = cp_;
-                if (cp_ > 0) {
-                    cp_airfoil_pos_x[idx] = x - nx*cp_*0.1;
-                    cp_airfoil_pos_y[idx] = y - ny*cp_*0.1;
+                double xpos;
+                if (cp_ > 0.0) {
+                    xpos = x - nx*cp_*0.1;
+                    cp_airfoil_pos_x[idx_pos] = xpos;
+                    cp_airfoil_pos_y[idx_pos] = y - ny*cp_*0.1;
+                    idx_pos++;
                 } else {
-                    cp_airfoil_neg_x[idx] = x + nx*cp_*0.1;
-                    cp_airfoil_neg_y[idx] = y + ny*cp_*0.1;
+                    xpos = x + nx*cp_*0.1;
+                    cp_airfoil_neg_x[idx_neg] = xpos;
+                    cp_airfoil_neg_y[idx_neg] = y + ny*cp_*0.1;
+                    idx_neg++;
                 }
+                xmax = xpos > xmax ? xpos : xmax;
+                xmin = xpos < xmin ? xpos : xmin;
                 idx++;
             }
         }
+        nb_neg = idx_neg;
+        nb_pos = idx_pos;
     }
 };
 

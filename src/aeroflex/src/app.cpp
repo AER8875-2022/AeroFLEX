@@ -138,8 +138,8 @@ void solve(rans::Rans &rans, vlm::VLM &vlm) {
 	database::table table;
 
 	if (!vlm.settings.sim.get_databaseFormat().compare("NONE")) {
-		table.airfoils["airfoil_demo_fine"];
-		table.airfoils["airfoil_demo_fine"].alpha = {1.0, 5.0, 10.0};
+		table.airfoils["naca0012q_mid"];
+		table.airfoils["naca0012q_mid"].alpha = {1.0, 5.0, 10.0};
 
 		for (auto& [airfoil, db] : table.airfoils) {
 			rans.solve_airfoil(airfoil, db);
@@ -504,9 +504,9 @@ void CpLayer::OnUIRender() {
 	{
 		ImGui::Begin("Rans-Cp");
 		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
-		static ImPlotAxisFlags xflags_2 = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
+		static ImPlotAxisFlags xflags_2 = ImPlotAxisFlags_AutoFit;
 		static ImPlotAxisFlags yflags_1 = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit|ImPlotAxisFlags_Invert;
-		static ImPlotAxisFlags yflags_2 = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
+		static ImPlotAxisFlags yflags_2 = ImPlotAxisFlags_AutoFit;
 
 		if (ImPlot::BeginPlot("Profil_Cp", ImVec2(-1,300))) {
 			ImPlot::SetupAxisLimits(ImAxis_X1, -0.1, 1.1, ImPlotCond_Always);
@@ -517,9 +517,10 @@ void CpLayer::OnUIRender() {
 
 		if (ImPlot::BeginPlot("Airfoil_Cp", ImVec2(-1,300))) {
 			ImPlot::SetupAxes("x","Cp",xflags,yflags_2);
-			ImPlot::PlotLine("Cp", app.rans.profile.x.data(), app.rans.profile.y.data(), app.rans.profile.x.size());
-			ImPlot::PlotLine("Neg", app.rans.profile.cp_airfoil_neg_x.data(), app.rans.profile.cp_airfoil_neg_y.data(), app.rans.profile.cp_airfoil_neg_x.size());
-			ImPlot::PlotLine("Pos", app.rans.profile.cp_airfoil_pos_x.data(), app.rans.profile.cp_airfoil_pos_y.data(), app.rans.profile.cp_airfoil_pos_x.size());
+			ImPlot::SetupAxisLimits(ImAxis_X1, app.rans.profile.xmin-0.1, app.rans.profile.xmax+0.1, ImPlotCond_Always);
+			ImPlot::PlotLine("Airfoil", app.rans.profile.x.data(), app.rans.profile.y.data(), app.rans.profile.x.size());
+			ImPlot::PlotScatter("Neg", app.rans.profile.cp_airfoil_neg_x.data(), app.rans.profile.cp_airfoil_neg_y.data(), app.rans.profile.nb_neg);
+			ImPlot::PlotScatter("Pos", app.rans.profile.cp_airfoil_pos_x.data(), app.rans.profile.cp_airfoil_pos_y.data(), app.rans.profile.nb_pos);
 			ImPlot::EndPlot();
 		}
 
