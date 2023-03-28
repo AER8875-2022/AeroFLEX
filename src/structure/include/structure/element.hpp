@@ -344,8 +344,7 @@ public:
         return Rot*F_int_elem_local;  
     }
         
-}
+};
 
-}
-
+};
 #endif
