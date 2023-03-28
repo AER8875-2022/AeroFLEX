@@ -2,7 +2,7 @@
 #ifndef __AEROELASTICITY__
 #define __AEROELASTICITY__
 
-#include "common_aeroflex.hpp"
+//#include "common_aeroflex.hpp"
 #include "vlm/vlm.hpp"
 #include "structure/structure.hpp"
 #include <vector>
