@@ -1,7 +1,6 @@
 
 #include "vlm/model.hpp"
 #include <iostream>
-#include <omp.h>
 #include <unordered_set>
 
 using namespace vlm;
@@ -61,7 +60,7 @@ void model::clear() {
   }
   // TODO: Update Doublet solution
   for (auto &wingStation : wingStations) {
-    wingStation.resetLocalAoa(sim);
+    wingStation.resetLocalStream(sim);
   }
 }
 
@@ -104,5 +103,7 @@ void model::build(const input::meshData &mesh) {
 double model::get_cl() const { return cl; }
 
 double model::get_cd() const { return cd; }
+
+double model::get_cy() const { return cy; }
 
 Vector3d model::get_cm() const { return cm; }
