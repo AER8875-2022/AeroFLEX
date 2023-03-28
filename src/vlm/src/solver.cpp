@@ -40,8 +40,6 @@ void linear::steady::solve(model &object) {
   // Initializing linear solver
   BiCGSTAB<MatrixXd> system;
 
-  gui.msg.push("[VLM] Iteration " + std::to_string(iter) + "...");
-
   // Building left hand side
   buildLHS(object);
   system.compute(lhs);
@@ -63,7 +61,8 @@ void linear::steady::solve(model &object) {
 
   std::stringstream res;
   res << std::scientific << system.error();
-  gui.msg.push("[VLM] Residual " + res.str());
+  gui.msg.push("[VLM] Iteration " + std::to_string(iter) + "... "
+               + "Residual " + res.str());
 
   residuals.push_back(system.error());
   iter++;
@@ -357,8 +356,6 @@ void nonlinear::steady::solve(model &object) {
     while (gui.signal.pause)
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    gui.msg.push("[VLM] Iteration " + std::to_string(iter) + "...");
-
     // Step 1 : Solving VLM
     buildRHS(object);
     VectorXd gamma = system.solve(rhs);
@@ -371,7 +368,8 @@ void nonlinear::steady::solve(model &object) {
 
     std::stringstream res;
     res << std::scientific << residual;
-    gui.msg.push("[VLM] Residual " + res.str());
+    gui.msg.push("[VLM] Iteration " + std::to_string(iter) + "... "
+                + "Residual " + res.str());
 
     residuals.push_back(residual);
     iter++;
