@@ -16,6 +16,9 @@
 #include <rans/multigrid.h>
 #include <rans/post.h>
 #include "common_aeroflex.hpp"
+#include "database/database.hpp"
+
+#include <string>
 
 namespace rans {
 
@@ -24,7 +27,10 @@ class Rans {
     // This is a mess because of no separation of IO and computation...
     std::vector<double> residuals;
     std::atomic<int> iters = 0;
-    Settings data;
+
+    CpProfile profile;
+
+    Settings settings;
 
     std::vector<mesh> ms;
     bool mesh_loaded = false;
@@ -35,12 +41,15 @@ class Rans {
 
     void input();
     void solve();
+    void solve_airfoil(const std::string& airfoil, database::airfoil& db);
+
     template<class T> void run();
+    template<class T> void run_airfoil(const std::string& airfoil, database::airfoil& db);
 };
 
 void Rans::input() {
     if (!mesh_loaded) {
-        for (const auto& mesh_name : data.meshes) {
+        for (const auto& mesh_name : settings.meshes) {
             ms.push_back(mesh(mesh_name));
         }
         mesh_loaded = true;
@@ -49,22 +58,58 @@ void Rans::input() {
 
 template<class T>
 void Rans::run() {
-    multigrid<T> multi(ms, data, gui, residuals, iters);
+    multigrid<T> multi(ms, settings, gui, residuals, iters, profile);
     gui.event.rans_preprocess = true;
 
     rans::solver& s = multi.run(true);
     gui.event.rans_solve = true;
 
-    save(data.outfilename, s);
+    save(settings.outfilename, s);
     gui.event.rans_postprocess = true;
-    std::cout << "Saved results to file " << data.outfilename << "\n" << std::endl;
+    std::cout << "Saved results to file " << settings.outfilename << "\n" << std::endl;
+}
+
+template<class T>
+void Rans::run_airfoil(const std::string& airfoil, database::airfoil& db) {
+    gui.msg.push("[RANS] Solving airfoil: " + airfoil);
+    ms.clear();
+    // TODO: check with geom for the naming convention
+    // For the moment we will only load 1 mesh
+    ms.push_back(mesh("../../../../examples/rans/" + airfoil + ".msh"));
+    settings.bcs["farfield"].vars_far.angle = db.alpha[0] * 0.01745;
+    multigrid<T> multi(ms, settings, gui, residuals, iters, profile);
+    multi.solvers[0].init();
+
+    for (auto& alpha: db.alpha) {
+        gui.msg.push("[RANS] Solving for alpha = " + std::to_string(alpha) + " deg.");
+        settings.bcs["farfield"].vars_far.angle = alpha * 0.01745; // deg to rad
+        for (auto& s: multi.solvers) {
+            s.set_bcs(settings.bcs);
+        };
+        rans::solver& s = multi.run(false);
+        wallProfile wp = get_wall_profile(s, "wall");
+        db.cl.push_back(wp.cl);
+        db.cd.push_back(wp.cd);
+        db.cmy.push_back(wp.cm);
+        save(airfoil + "_" + std::to_string(alpha) + ".vtu", s);
+        if (gui.signal.stop) break;
+    }
 }
 
 void Rans::solve() {
-    if (data.solver_type == "implicit") {
+    if (settings.solver_type() == "implicit") {
         run<implicitSolver>();
-    } else if (data.solver_type == "explicit") {
+    } else if (settings.solver_type() == "explicit") {
         run<explicitSolver>();
+    }
+};
+
+void Rans::solve_airfoil(const std::string& airfoil, database::airfoil& db) {
+    iters = 0;
+    if (settings.solver_type() == "implicit") {
+        run_airfoil<implicitSolver>(airfoil, db);
+    } else if (settings.solver_type() == "explicit") {
+        run_airfoil<explicitSolver>(airfoil, db);
     }
 };
 

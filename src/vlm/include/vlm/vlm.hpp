@@ -6,16 +6,16 @@
 #include "vlm/input.hpp"
 #include "vlm/model.hpp"
 #include "vlm/solver.hpp"
-#include "vlm/utils.hpp"
+#include "vlm/info.hpp"
 
 namespace vlm {
 
 class VLM {
 
 public:
-  vlm::model object;
+  model object;
   database::table database;
-  input::settings data;
+  Settings settings;
 
   std::vector<double> residuals;
   std::atomic<int> iters = 0;
@@ -26,7 +26,7 @@ private:
 
 public:
   VLM(GUIHandler &gui);
-  void input();
+  void initialize();
   void solve();
 
 private:

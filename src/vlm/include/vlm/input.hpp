@@ -1,11 +1,12 @@
 
-#ifndef INPUT_HPP
-#define INPUT_HPP
+#ifndef VLM_INPUT_HPP
+#define VLM_INPUT_HPP
 
 #include "Eigen/Dense"
 #include <map>
 #include <string>
 #include <tuple>
+#include "tinyconfig.hpp"
 
 #ifndef M_PI
 #define M_PI 3.141592653589793115997963468544185161590576171875
@@ -23,31 +24,46 @@ namespace input {
 struct simParam {
 
   /** @brief Geometric angle of attack in degrees */
-  double aoa;
+  double aoa = 5.0;
 
   /** @brief Geometric angle of side slip in degrees */
-  double sideslip;
+  double sideslip = 0.0;
 
   /** @brief Free stream magnitude velocity */
-  double vinf;
+  double vinf = 1.0;
 
   /** @brief Density of the fluid */
-  double rho;
+  double rho = 1.0;
 
   /** @brief Reference chord length */
-  double cref;
+  double cref = 1.0;
 
   /** @brief Reference surface area */
-  double sref;
+  double sref = 32.0;
 
-  /** @brief Origin to which the x and z moment are computed */
-  Vector3d origin;
+  /** @brief X component of origin to which the x and z moment are computed */
+  double x0 = 0.0;
+
+  /** @brief Y component of origin to which the x and z moment are computed */
+  double y0 = 0.0;
+
+  /** @brief Z component of origin to which the x and z moment are computed */
+  double z0 = 0.0;
 
   /** @brief Viscous relaxation value applied on the vortex filament kernel */
-  double coreRadius;
+  double coreRadius = 0.0;
 
-  /** @brief Input format of the database (FILE, NONE) */
-  std::string databaseFormat;
+  /** @brief Input options format of the database */
+  std::vector<std::string> databaseFormat_options = {"NONE", "FILE"};
+
+  /** @brief Input format of the database */
+  int databaseFormat = 0;
+
+  /** @brief Setter for databaseFormat */
+  void set_databaseFormat(const std::string &item);
+
+  /** @brief Getter for databaseFormat */
+  std::string get_databaseFormat() const;
 
   /** @brief Method computing the free stream vector in the plane's referential
    *  @return Free stream vector */
@@ -80,60 +96,79 @@ struct simParam {
   /** @brief Method computing the dynamic pressure
    *  @return Dynamic pressure value */
   double dynamicPressure() const;
+
+  /** @brief Method that returns the origin to which the moments are calculated
+   *  @return Origin vector */
+  Vector3d origin() const;
+
 };
 
 /** @brief Object holding input/output information */
 struct ioParam {
 
   /** @brief Prefix that will be applied to all output files */
-  std::string baseName;
+  std::string baseName = "vlm";
 
   /** @brief Path of the directory to which the solution will be outputted */
-  std::string outDir;
+  std::string outDir = "vlm_out/";
 
   /** @brief Path to the mesh file */
-  std::string meshFile;
+  std::string meshFile = "../../../../examples/vlm/smith_wing.dat";
 
   /** @brief Path to the database file (if required) */
-  std::string databaseFile;
+  std::string databaseFile = "../../../../examples/vlm/database_stall.dat";
+
+  /** @brief Path to the location file for database evalutation */
+  std::string locationFile = "../../../../examples/vlm/locations.dat";
 };
 
 /** @brief Object holding solver parameters */
 struct solverParam {
 
+  /** @brief Time domain options of the simulation */
+  std::vector<std::string> timeDomain_options = {"STEADY", "UNSTEADY"};
+
   /** @brief Time domain of the simulation (steady or time-dependent) */
-  std::string timeDomain;
+  int timeDomain = 0;
+
+  /** @brief Setter for timeDomain */
+  void set_timeDomain(const std::string &item);
+
+  /** @brief Getter for timeDomain */
+  std::string get_timeDomain() const;
+
+  /** @brief Type of solver options utilised (linear or non linear) */
+  std::vector<std::string> type_options = {"LINEAR", "NONLINEAR"};
 
   /** @brief Type of solver utilised (linear or non linear) */
-  std::string type;
+  int type = 1;
+
+  /** @brief Setter for type */
+  void set_type(const std::string &item);
+
+  /** @brief Getter for type */
+  std::string get_type() const;
 
   /** @brief Tolerance of the non linear iterative solver */
-  double tolerance;
+  double tolerance = 1e-14;
 
-  /** @brief Interpolation type for viscous database */
-  std::string interpolation;
+  /** @brief Linear solver options type */
+  std::vector<std::string> linearSolver_options = {"BICGSTAB", "DIRECT"};
 
   /** @brief Linear solver type */
-  std::string linearSolver;
+  int linearSolver = 0;
+
+  /** @brief Setter for linearSolver */
+  void set_linearSolver(const std::string &item);
+
+  /** @brief Getter for linearSolver */
+  std::string get_linearSolver() const;
 
   /** @brief Relaxation for the iterative scheme */
-  double relaxation;
+  double relaxation = 1.0;
 
   /** @brief Max number of iterations for the iterative scheme */
-  int max_iter;
-};
-
-/** @brief Main struct holding parameters on the current case */
-struct settings {
-
-  /** @brief Object holding case and physics-oriented parameters */
-  simParam sim;
-
-  /** @brief Object holding input/output information */
-  ioParam io;
-
-  /** @brief Object holding solver parameters */
-  solverParam solver;
+  int max_iter = 200;
 };
 
 /** @brief Object holding the connectivity obtained from the mesh file */
@@ -161,17 +196,6 @@ struct meshData {
   std::map<unsigned int, std::vector<int>> patchIDs;
 };
 
-/** @brief Function wrapper that imports user parameters from the .ini
- * configuration file
- *  @param path Path to the configuration file
- *  @return Tuple holding the three parameters objects */
-std::tuple<ioParam, simParam, solverParam>
-importConfigFile(const std::string path);
-
-/** @brief Function that checks for disrepencies in the imported mesh
- *  @param mesh meshData object that holds information on the input mesh */
-void meshCheck(const meshData &mesh);
-
 /** @brief Function wrapper that import connectivity data specified in the mesh
  * file
  *  @param names input/output parameters object
@@ -179,6 +203,26 @@ void meshCheck(const meshData &mesh);
 meshData importMeshFile(const ioParam &names);
 
 } // namespace input
+
+/** @brief Main struct holding parameters on the current case */
+struct Settings {
+
+  /** @brief Object holding case and physics-oriented parameters */
+  input::simParam sim;
+
+  /** @brief Object holding input/output information */
+  input::ioParam io;
+
+  /** @brief Object holding solver parameters */
+  input::solverParam solver;
+
+  /** @brief Function to import parameters from config file */
+  void import_config_file(tiny::config &config);
+
+  /** @brief Function to export parameters to config file */
+  void export_config_file(tiny::config &config);
+};
+
 } // namespace vlm
 
 #endif
