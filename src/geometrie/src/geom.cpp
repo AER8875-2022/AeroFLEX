@@ -94,3 +94,56 @@ void Geom::Geom_gen() {
     // Structure
     std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> element = maillage_structure(WING_RIGHT);
 }
+
+
+void Settings::import_config_file(tiny::config &io) {
+
+
+	cr = io.get<double>("Wing-geometry", "Chord_root");
+	ct = io.get<double>("Wing-geometry", "Chord_tip");
+	envergure = io.get<double>("Wing-geometry", "Span");
+	twist = io.get<double>("Wing-geometry", "Twist_angle");
+	fleche = io.get<double>("Wing-geometry", "Sweep_angle");
+	dihedre = io.get<double>("Wing-geometry", "Diherdral_angle");
+    P_beam = io.get<double>("Wing-geometry", "Beam_position");
+	P_aile = io.get<double>("Wing-geometry", "Wing_position");
+	Winglet = io.get<bool>("Wing-geometry", "Winglet");
+	S_type = io.get<bool>("Wing-geometry", "Airfoil_type");
+
+    m = io.get<double>("NACA", "m");
+    p = io.get<double>("NACA", "p");
+    t = io.get<double>("NACA", "t");
+
+    z_te = io.get<double>("CST", "Trailing_edge_dist");
+	r_le = io.get<double>("CST", "Leading_edge_r");
+	Beta = io.get<double>("CST", "Trailing_edge_angle");
+
+}
+
+static const std::string bool_to_string(const bool b) {
+    return b ? "true" : "false";
+}
+
+void Settings::export_config_file(tiny::config &io) {
+
+	io.config["Wing-geometry"]["Chord_root"] = std::to_string(cr);
+	io.config["Wing-geometry"]["Chord_tip"] = std::to_string(ct);
+	io.config["Wing-geometry"]["Span"] = std::to_string(envergure);
+	io.config["Wing-geometry"]["Twist_angle"] = std::to_string(twist);
+	io.config["Wing-geometry"]["Sweep_angle"] = std::to_string(fleche);
+	io.config["Wing-geometry"]["Diherdral_angle"] = std::to_string(dihedre);
+	io.config["Wing-geometry"]["Beam_position"] = std::to_string(P_beam);
+	io.config["Wing-geometry"]["Wing_position"] = std::to_string(P_aile);
+	io.config["Wing-geometry"]["Winglet"] = bool_to_string(Winglet);
+	io.config["Wing-geometry"]["Airfoil_type"] = bool_to_string(S_type);
+
+	io.config["NACA"]["m"] = std::to_string(m);
+	io.config["NACA"]["p"] = std::to_string(p);
+	io.config["NACA"]["t"] = std::to_string(t);
+
+    io.config["CST"]["Trailing_edge_dist"] = std::to_string(z_te);
+	io.config["CST"]["Leading_edge_r"] = std::to_string(r_le);
+    io.config["CST"]["Trailing_edge_angle"] = std::to_string(Beta);
+
+}
+

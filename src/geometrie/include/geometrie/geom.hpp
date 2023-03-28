@@ -14,39 +14,44 @@
 #include "geometrie/euler.hpp"
 #include "geometrie/geometry.hpp"
 #include "geometrie/structure.hpp"
+#include "tinyconfig.hpp"
 
 namespace geom {
 
 struct Settings {
     //General
-    double cr;          //Chord Root
-    double ct;          //Chords Tip
-    double envergure;   //total Span
+    double cr = 1.0;          //Chord Root
+    double ct = 1.0;          //Chords Tip
+    double envergure = 30.0;   //total Span
 
     //Angles
-    double twist;       //twist angle
-    double fleche;      //sweep angle
-    double dihedre;     //diherdral angle
+    double twist = 0.0;       //twist angle
+    double fleche = 0.0;      //sweep angle
+    double dihedre = 0.0;     //diherdral angle
 
     // Wing position
-    double P_beam;      //Wing structural beam position
-    double P_aile;      //Wing position on fuselage
+    double P_beam = 0;      //Wing structural beam position
+    double P_aile = 0;      //Wing position on fuselage
 
     //NACA 4-digit
-    double m;
-    double p;
-    double t;
+    double m = 0;
+    double p = 0;
+    double t = 12;
 
     //CST
-    double z_te;        //Trailing edge distance betweem 2 last points
-    double r_le;        //Leading edge radius
-    double Beta;        //Leading edge angle
+    double z_te = 0.001;        //Trailing edge distance betweem 2 last points
+    double r_le = 0.05;        //Leading edge radius
+    double Beta = 0.2;        //Leading edge angle
 
     //Winglet;
-    bool Winglet;       //1-> yes, 0->no
+    bool Winglet = 0;       //1-> yes, 0->no
 
     //Airfoil Type
-    bool S_type;        //1-> CST, 0->NACA
+    bool S_type = 0;        //1-> CST, 0->NACA
+
+    //import
+    void import_config_file(tiny::config &io);
+    void export_config_file(tiny::config &io);
 };
 
 class Geom {
