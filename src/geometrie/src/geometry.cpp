@@ -5,6 +5,10 @@
 #include <cmath>
 #include "geometrie/geometry.hpp"
 
+#ifndef M_PI
+#define M_PI 3.141592653589793115997963468544185161590576171875
+#endif
+
 // Initialize the methods above to avoid issues when calling
 std::vector<double> bernstein_coefficients(double z_te, double r_le, double beta, double c, int order, double scale);
 std::vector<double> bernstein_function(std::vector<double> eps, std::vector<double> coefficients);
@@ -629,8 +633,8 @@ std::vector<double> distribute_points(double start, double end, int nb, std::str
 std::vector<double> c_function(std::vector<double> eps, std::vector<double> ns) {
     std::vector<double> y;
     for (int i=0; i < eps.size(); i++) {
-        if (ns[0] == 0 and eps[i] == 0) {y.push_back(1);}
-        else if (ns[1] == 0 and eps[i] == 1) {y.push_back(1);}
+        if (ns[0] == 0 && eps[i] == 0) {y.push_back(1);}
+        else if (ns[1] == 0 && eps[i] == 1) {y.push_back(1);}
         else {y.push_back(pow(eps[i], ns[0]) * pow((1 - eps[i]), ns[1]));};
     };
     return y;
