@@ -35,13 +35,18 @@ void info::printCaseInfo(const Settings &settings) {
   coreRadius << std::setprecision(4) << settings.sim.coreRadius;
 
   std::cout << std::endl;
-  std::cout << "     \033[1;20mVLM CASE:\033[0m " << settings.io.baseName << "\n";
+  std::cout << "     \033[1;20mVLM CASE:\033[0m " << settings.io.baseName
+            << "\n";
   std::cout << "      \033[1;20mOUT DIR:\033[0m " << settings.io.outDir << "\n";
-  std::cout << "    \033[1;20mMESH FILE:\033[0m " << settings.io.meshFile << "\n\n";
+  std::cout << "    \033[1;20mMESH FILE:\033[0m " << settings.io.meshFile
+            << "\n\n";
 
-  std::cout << "  \033[1;20mSOLVER TYPE:\033[0m " << settings.solver.type << "\n";
-  std::cout << "  \033[1;20mTIME DOMAIN:\033[0m " << settings.solver.timeDomain << "\n";
-  std::cout << "    \033[1;20mTOLERANCE:\033[0m " << settings.solver.tolerance << "\n\n";
+  std::cout << "  \033[1;20mSOLVER TYPE:\033[0m " << settings.solver.type
+            << "\n";
+  std::cout << "  \033[1;20mTIME DOMAIN:\033[0m " << settings.solver.timeDomain
+            << "\n";
+  std::cout << "    \033[1;20mTOLERANCE:\033[0m " << settings.solver.tolerance
+            << "\n\n";
 
   std::cout << "          \033[1;20mAOA:\033[0m " << aoa.str() << "\n";
   std::cout << "     \033[1;20mSIDESLIP:\033[0m " << sideslip.str() << "\n";

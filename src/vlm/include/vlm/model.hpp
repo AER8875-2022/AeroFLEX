@@ -54,6 +54,9 @@ private:
   /** @brief Global drag coefficient */
   double cd = 0.0;
 
+  /** @brief Global side force coefficient */
+  double cy = 0.0;
+
   /** @brief Global moment coefficients vector */
   Vector3d cm = Vector3d::Zero();
 
@@ -84,6 +87,9 @@ public:
 
   /** @brief Getter method for the drag coefficient */
   double get_cd() const;
+
+  /** @brief Getter method for the side force coefficient */
+  double get_cy() const;
 
   /** @brief Getter method for the moment coefficients vector */
   Vector3d get_cm() const;
