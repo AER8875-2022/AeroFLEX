@@ -504,13 +504,22 @@ void CpLayer::OnUIRender() {
 	{
 		ImGui::Begin("Rans-Cp");
 		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
-		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit|ImPlotAxisFlags_Invert;
-		const double xticks = 1;
+		static ImPlotAxisFlags xflags_2 = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
+		static ImPlotAxisFlags yflags_1 = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit|ImPlotAxisFlags_Invert;
+		static ImPlotAxisFlags yflags_2 = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
 
-		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,400))) {
+		if (ImPlot::BeginPlot("Profil_Cp", ImVec2(-1,300))) {
 			ImPlot::SetupAxisLimits(ImAxis_X1, -0.1, 1.1, ImPlotCond_Always);
-			ImPlot::SetupAxes("x","Cp",xflags,yflags);
+			ImPlot::SetupAxes("x","Cp",xflags,yflags_1);
 			ImPlot::PlotLine("Cp", app.rans.profile.x.data(), app.rans.profile.cp.data(), app.rans.profile.x.size());
+			ImPlot::EndPlot();
+		}
+
+		if (ImPlot::BeginPlot("Airfoil_Cp", ImVec2(-1,300))) {
+			ImPlot::SetupAxes("x","Cp",xflags,yflags_2);
+			ImPlot::PlotLine("Cp", app.rans.profile.x.data(), app.rans.profile.y.data(), app.rans.profile.x.size());
+			ImPlot::PlotLine("Neg", app.rans.profile.cp_airfoil_neg_x.data(), app.rans.profile.cp_airfoil_neg_y.data(), app.rans.profile.cp_airfoil_neg_x.size());
+			ImPlot::PlotLine("Pos", app.rans.profile.cp_airfoil_pos_x.data(), app.rans.profile.cp_airfoil_pos_y.data(), app.rans.profile.cp_airfoil_pos_x.size());
 			ImPlot::EndPlot();
 		}
 
