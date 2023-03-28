@@ -41,7 +41,7 @@ namespace aero{
 
 
 
-                for (int p=0; p<vring.size(); ++p)
+                for (int p=0; p<vortexRings.size(); ++p)
                 {
                     auto node=nodes[vring.get_nodeIDs()[p]];
                     double bestDistance[2]={10000,10000};
@@ -105,7 +105,7 @@ namespace aero{
 
                 auto wstation= wingStations[wings[0].get_stationIDs()[k]];
                 auto vring = vortexRings[wstation.get_vortexIDs()[i]];
-                int numPointsVort = vring.size();
+                int numPointsVort = vortexRings.size();
                 double angle_x;
                 double angle_y;
                 double angle_z;
@@ -171,45 +171,49 @@ namespace aero{
                 }
             }
         }
-        return node ;
+        return nodes ;
     }
    
-  void LoadInterpol(interpolation_f &force, std::vector<vlm::surface::wingStation> wingStations,
-                      std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,std::map<int,Vector3d> mapStruct,std::map<int, int> mapStructni)
+  void LoadInterpol(interpolation_f &force, std::vector<vlm::surface::wingStation> wingStations, std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,std::map<int,Vector3d> mapStruct,std::map<int, int> mapStructni)
   {
        // Loading VLM forceacting Point
        
        int n=wings.size(); // nombre de wingstations=size (wings)
        int m=wingStations.size(); // nombre de vortexRings sur une wingstation
        int i=0; // numéro du premier vortexring d une wingstation
+
+       
        
        for (int j=0; j<n; ++j)
        {
            auto wingstation = wingStations[wings[0].get_stationIDs()[j]];
            
            auto vortexring= vortexRings[wingstation.get_vortexIDs()[i]];
-           force.point_fa.push_back(vortexRings[i].forceActingPoint(nodes, vortexRings));
+
+           force.point_fa.push_back(vortexRings[i].forceActingPoint()[0]);
+           force.point_fa.push_back(vortexRings[i].forceActingPoint()[1]);
+           force.point_fa.push_back(vortexRings[i].forceActingPoint()[2]);
+           force.point_fa.push_back(vortexRings[i].forceActingPoint()[3]);
+           force.point_fa.push_back(vortexRings[i].forceActingPoint()[4]);
+           force.point_fa.push_back(vortexRings[i].forceActingPoint()[5]);
            
            i= i + m;
        }
        
        //    Loading STRUCTURE connectivity
 
-       for (int k=0; k<map.size(); ++k)
-       {
-           force.point_fs.push_back(0);
-           force.point_fs.push_back(0);
-           force.point_fs.push_back(0);
+      
 
-       }
-
+      
+       int num=0;
 
        for (auto s : mapStructni)
        {
             auto nodeStruct = mapStruct[s.first];
-            force.point_fs[3*s]=nodeStruct[0];
-            force.point_fs[3*s+1]=nodeStruct[1];
-            force.point_fs[3*s+2]=nodeStruct[2];
+            force.point_fs.push_back(nodeStruct[0]);
+            force.point_fs.push_back(nodeStruct[1]);
+            force.point_fs.push_back(nodeStruct[2]);
+            num+=1;
        }
        
        
@@ -254,7 +258,7 @@ namespace aero{
        for (int i=0; i<n; ++i){
            
            
-           for (int j=0; j<map.size(); ++j){
+           for (int j=0; j<num; ++j){
                v[0]= force.point_fs[3*j]   - force.point_fs[3*(j+1)];
                v[1]= force.point_fs[3*j+1] - force.point_fs[3*(j+1)+1];
                v[2]= force.point_fs[3*j+2] - force.point_fs[3*(j+1)+2];
@@ -273,7 +277,7 @@ namespace aero{
 
                dist_2=norme(v);
                
-               if (dist_1<=dist_0 && j != map.size()-1)
+               if (dist_1<=dist_0 && j != num-1)
                {
                    epsilon_l= dist_2/dist_0;
                    epsilon_r= dist_1/dist_0;
@@ -282,7 +286,7 @@ namespace aero{
                    force.poids.push_back(epsilon_r);
                    
                }
-               else if (j==map.size()-1){
+               else if (j==num-1){
                    force.poids.push_back(j);
                    force.poids.push_back(1);
                    force.poids.push_back(0);
@@ -292,7 +296,7 @@ namespace aero{
            
        }
    }      
-   std::vector<double> ComputeStructureForces(interpolation_f force,Matrix<double, 6, 1> forces_to_inertial_frame)
+   std::vector<double> ComputeStructureForces(interpolation_f force,vlm::model object, std::vector<vlm::surface::wingStation> wingStations)
 
   {
        int n=force.point_fa.size()/3;
@@ -306,22 +310,22 @@ namespace aero{
        for (int i=0; i<n; ++i)
        {
 
-           auto forces = object.forces_to_inertial_frame(i);
+           auto forces = wingStations[i].get_forces();
            int j=force.poids[3*i];
            if (j!=m-1)
            {
            
-               forces_s[6*j]   += force.poids[3*i+1] * forces[i][0];
-               forces_s[6*j+1] += force.poids[3*i+1] * forces[i][1];
-               forces_s[6*j+2] += force.poids[3*i+1] * forces[i][2];
+               forces_s[6*j]   += force.poids[3*i+1] * forces[0];
+               forces_s[6*j+1] += force.poids[3*i+1] * forces[1];
+               forces_s[6*j+2] += force.poids[3*i+1] * forces[2];
                
-               forces_s[6*(j+1)]   += force.poids[3*i+2] * forces[i][0];
-               forces_s[6*(j+1)+1] += force.poids[3*i+2] * forces[i][1];
-               forces_s[6*(j+1)+2] += force.poids[3*i+2] * forces[i][2];
+               forces_s[6*(j+1)]   += force.poids[3*i+2] * forces[0];
+               forces_s[6*(j+1)+1] += force.poids[3*i+2] * forces[1];
+               forces_s[6*(j+1)+2] += force.poids[3*i+2] * forces[2];
                
-               M[0]=forces[i][3];
-               M[1]=forces[i][4];
-               M[2]=forces[i][5];
+               M[0]=forces[3];
+               M[1]=forces[4];
+               M[2]=forces[5];
                
                r[0]=force.point_fa[3*i] -   force.point_fs[3*j];
                r[1]=force.point_fa[3*i+1] - force.point_fs[3*j+1];
@@ -329,9 +333,9 @@ namespace aero{
                
                M_s=crossProduct (r,M);
                
-               forces_s[6*j+3]   += force.poids[3*i+1] * (M_s[0] + forces[i][3]);
-               forces_s[6*j+4]   += force.poids[3*i+1] * (M_s[1] + forces[i][4]);
-               forces_s[6*j+5]   += force.poids[3*i+1] * (M_s[2] + forces[i][5]);
+               forces_s[6*j+3]   += force.poids[3*i+1] * (M_s[0] + forces[3]);
+               forces_s[6*j+4]   += force.poids[3*i+1] * (M_s[1] + forces[4]);
+               forces_s[6*j+5]   += force.poids[3*i+1] * (M_s[2] + forces[5]);
                
                r[0]=force.point_fa[3*i] -   force.point_fs[3*(j+1)];
                r[1]=force.point_fa[3*i+1] - force.point_fs[3*(j+1)+1];
@@ -339,21 +343,21 @@ namespace aero{
                
                M_s=crossProduct (r,M);
                
-               forces_s[6*(j+1)+3]   += force.poids[3*i+2] * (M_s[0] + forces[i][3]);
-               forces_s[6*(j+1)+4]   += force.poids[3*i+2] * (M_s[1] + forces[i][4]);
-               forces_s[6*(j+1)+5]   += force.poids[3*i+2] * (M_s[2] + forces[i][5]);
+               forces_s[6*(j+1)+3]   += force.poids[3*i+2] * (M_s[0] + forces[3]);
+               forces_s[6*(j+1)+4]   += force.poids[3*i+2] * (M_s[1] + forces[4]);
+               forces_s[6*(j+1)+5]   += force.poids[3*i+2] * (M_s[2] + forces[5]);
            
            }
 
            else if (j==m-1)
            {
-               forces_s[6*j]   += force.poids[3*i+1] * forces[i][0];
-               forces_s[6*j+1] += force.poids[3*i+1] * forces[i][1];
-               forces_s[6*j+2] += force.poids[3*i+1] * forces[i][2];
+               forces_s[6*j]   += force.poids[3*i+1] * forces[0];
+               forces_s[6*j+1] += force.poids[3*i+1] * forces[1];
+               forces_s[6*j+2] += force.poids[3*i+1] * forces[2];
 
-               M[0]=forces[i][3];
-               M[1]=forces[i][4];
-               M[2]=forces[i][5];
+               M[0]=forces[3];
+               M[1]=forces[4];
+               M[2]=forces[5];
                
                r[0]=force.point_fa[3*i] -   force.point_fs[3*j];
                r[1]=force.point_fa[3*i+1] - force.point_fs[3*j+1];
@@ -361,9 +365,9 @@ namespace aero{
                
                M_s=crossProduct (r,M);
                
-               forces_s[6*j+3]   += force.poids[3*i+1] * (M_s[0] + forces[i][3]);
-               forces_s[6*j+4]   += force.poids[3*i+1] * (M_s[1] + forces[i][4]);
-               forces_s[6*j+5]   += force.poids[3*i+1] * (M_s[2] + forces[i][5]);
+               forces_s[6*j+3]   += force.poids[3*i+1] * (M_s[0] + forces[3]);
+               forces_s[6*j+4]   += force.poids[3*i+1] * (M_s[1] + forces[4]);
+               forces_s[6*j+5]   += force.poids[3*i+1] * (M_s[2] + forces[5]);
                
            }
            
