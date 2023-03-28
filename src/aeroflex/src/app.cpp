@@ -335,11 +335,9 @@ void StructureLayer::OnUIRender() {
 
 	ImGui::Separator();
 	ImGui::Text("Options");
-	if (ImGui::RadioButton("NONLINEAR", *&app.settings.structure.Solve_type == 0))
-		*&app.settings.structure.Solve_type = 0;
+	if (ImGui::RadioButton("NONLINEAR", app.settings.structure.Solve_type == 0)) app.settings.structure.Solve_type = 0;
 	ImGui::SameLine();
-	if (ImGui::RadioButton("LINEAR", *&app.settings.structure.Solve_type == 1))
-		*&app.settings.structure.Solve_type = 1;
+	if (ImGui::RadioButton("LINEAR", app.settings.structure.Solve_type == 1)) app.settings.structure.Solve_type = 1;
 	ImGui::End();
 }
 
