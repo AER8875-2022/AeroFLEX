@@ -1,7 +1,7 @@
 #include "geometrie/euler.hpp"
 #include "geometrie/geometry.hpp"
 //using namespace std;
-
+#include <algorithm>
 //vector<vector<double>> x, vector<vector<double>> y, vector<vector<double>> su, vector<vector<double>> sl
 void generer(std::vector<std::vector<double>> xu, std::vector<std::vector<double>> xl, std::vector<std::vector<double>> y, std::vector<std::vector<double>> su, std::vector<std::vector<double>> sl, double disc, std::string file_name, bool RANS){
 
@@ -18,12 +18,12 @@ void generer(std::vector<std::vector<double>> xu, std::vector<std::vector<double
     int indx_phys=1;          // Curve index initialisation
 
     // Quarter Chord Info
-    double max_xu = *max_element(xu[indx].begin(), xu[indx].end());
-    double max_xl = *max_element(xu[indx].begin(), xu[indx].end());
-    double max_x=std::max(max_xu,max_xl);
-    double min_x = *min_element(xu[indx].begin(), xu[indx].end());
-    double chord = max_x-min_x;
-    double c4_x=min_x+(chord/4);
+    auto max_xu = std::max_element(xu[indx].begin(), xu[indx].end());
+    auto max_xl = std::max_element(xu[indx].begin(), xu[indx].end());
+    double max_x=std::max(*max_xu,*max_xl);
+    auto min_x = std::min_element(xu[indx].begin(), xu[indx].end());
+    double chord = max_x-*min_x;
+    double c4_x=*min_x+(chord/4);
     double su_int=1;
     double sl_int=1;
     bool xu_int = true;
@@ -31,16 +31,16 @@ void generer(std::vector<std::vector<double>> xu, std::vector<std::vector<double
     for (int i=0; i < n; i++){
         if (xu[indx][i] > c4_x && xu_int) {
             su_int=su[indx][i-1]+(c4_x-xu[indx][i-1])*((su[indx][i]-su[indx][i-1])/(xu[indx][i]-xu[indx][i-1]));
-            xu_int = false; 
+            xu_int = false;
             }
         if (xl[indx][i] > c4_x && xl_int) {
             sl_int=sl[indx][i-1]+(c4_x-xl[indx][i-1])*((sl[indx][i]-sl[indx][i-1])/(xl[indx][i]-xl[indx][i-1]));
             xl_int = false;
-            }         
+            }
     }
     double c4_z=(su_int+sl_int)/2;
 
-    // First element size 
+    // First element size
     double lc = chord/disc;         // mesh element size
 
     // Point definition
@@ -54,14 +54,14 @@ void generer(std::vector<std::vector<double>> xu, std::vector<std::vector<double
     indx_pt=2*n;
 
     // Airfoil Points Tag List
-    std::vector<int> point_list; 
-    for (int i = 1; i < 2*n; i++) 
-        point_list.push_back(i); 
+    std::vector<int> point_list;
+    for (int i = 1; i < 2*n; i++)
+        point_list.push_back(i);
 
     // Fan Points Tag List
-    std::vector<double> fan_point_list; 
-    fan_point_list.push_back(n); 
-    fan_point_list.push_back(n+1); 
+    std::vector<double> fan_point_list;
+    fan_point_list.push_back(n);
+    fan_point_list.push_back(n+1);
 
 
     // Line definition
@@ -75,15 +75,15 @@ void generer(std::vector<std::vector<double>> xu, std::vector<std::vector<double
         indx_line++;
     }
     //std::vector<int> new_list{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
-    
-    // Line tag list 
-    std::vector<int> lin_list; 
-    for (int i = 1; i < 2*n; i++) 
-        lin_list.push_back(i); 
 
-    std::vector<double> lin_list2; 
-    for (int i = 1; i < 2*n; i++) 
-        lin_list2.push_back(i); 
+    // Line tag list
+    std::vector<int> lin_list;
+    for (int i = 1; i < 2*n; i++)
+        lin_list.push_back(i);
+
+    std::vector<double> lin_list2;
+    for (int i = 1; i < 2*n; i++)
+        lin_list2.push_back(i);
 
 
 
