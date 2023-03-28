@@ -18,13 +18,10 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         arch: [x86_64]
-        compiler: ["--toolchain=gcc"]
+        mode: [release]
+        compiler: [clang, gcc]
 
     steps:
-      - name: Get current date as package key
-        id: cache_key
-        run: echo "key=$(date +'%W')" >> $GITHUB_OUTPUT
-
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -42,30 +39,30 @@ jobs:
         uses: xmake-io/github-action-setup-xmake@v1
         with:
           xmake-version: latest
-          actions-cache-folder: .xmake-cache-W${{ steps.cache_key.outputs.key }}
+          actions-cache-folder: .xmake-cache
 
-      # Update xmake repository (in order to have the file that will be cached)
+      # Update xmake repository
       - name: Update xmake repository
         run: xmake repo --update
 
       # Fetch xmake dephash
       - name: Retrieve dependencies hash
         id: dep_hash
-        run:
-          keys=$(echo $(xmake l utils.ci.packageskey) | tr '\n' ' ')
-          echo "hash=$keys" >> $GITHUB_OUTPUT
+        run: echo "hash=$(xmake l utils.ci.packageskey)" >> $GITHUB_OUTPUT
 
       # Cache xmake dependencies
       - name: Retrieve cached xmake dependencies
         uses: actions/cache@v3
         with:
           path: ${{ env.XMAKE_GLOBALDIR }}/.xmake/packages
-          key: Linux-${{ matrix.arch }}-${{ matrix.mode }}-${{ steps.dep_hash.outputs.hash }}-W${{ steps.cache_key.outputs.key }}
+          key: Linux-${{ matrix.compiler }}-${{ matrix.arch }}-${{ matrix.mode }}-${{ steps.dep_hash.outputs.hash }}
 
+      # Config xmake
       - name: Config
         run: |
-          xmake f -y -m release ${{ matrix.compiler }}
+          xmake f -y -a ${{ matrix.arch }} -m ${{ matrix.mode }} --toolchain=${{ matrix.compiler }}
 
+      # Build
       - name: Build
         run: |
-          xmake -v --yes
+          xmake -vD
