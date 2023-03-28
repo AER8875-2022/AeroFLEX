@@ -212,16 +212,12 @@ public:
         q_2 = q_e;
         q_mid = q_e;
 
-        //if(N2_ID==12) std::cout<<"q_e : "<<q_e<<std::endl;
-
     }
 
     void set_q1_And_q2(Eigen::Quaterniond delta_q_1 ,Eigen::Quaterniond delta_q_2 )
     {
         q_1 = delta_q_1 * q_1 ;
         q_2 = delta_q_2 * q_2 ;
-        
-        //if(N2_ID==12) std::cout<<"q_2 : "<<q_2<<std::endl;
     }
 
     Eigen::Matrix3d get_Rotation_Matrix_From_Quaternion(Eigen::Quaterniond q)
@@ -267,15 +263,12 @@ public:
                 q_mid =  q_1;
             } 
         }
-         //if(N2_ID==12) std::cout<<"q_mid : "<<q_mid<<std::endl;
     };
 
     void set_Quaternion_Local_Rotations() //Puisqu'on utilise des quaternion unitaire, le conjugate et la transpose sont équivalent.
     {   
         q_1_rot_prime = q_mid.conjugate()* q_1 ;
         q_2_rot_prime = q_mid.conjugate()* q_2 ;
-        
-         //if(N2_ID==12) std::cout<<"q_2_rot_prime : "<<q_2_rot_prime<<std::endl;
     };
 
     Eigen::Vector3d get_Euler_Angles_From_Local_Rotation(Eigen::Quaterniond q_n_rot_local)  //Trouve les déformations angulaires à partir des q_rot,i'
@@ -330,22 +323,10 @@ public:
         const Eigen::Vector3d dr_2          = R_ec*r2 - r2;                                                           //Déplacement induit par la rotation 
    
         const Eigen::Matrix3d R_gc          = get_Rotation_Matrix_From_Quaternion(q_mid);
-        
-        /*if(N2_ID==12)
-         {
-            std::cout<<"theta_2_local : "<<theta_2_local.transpose()<<std::endl;
-            std::cout<<"dr_2          : "<<dr_2.transpose()<<std::endl;
-         }
-        */
         const Eigen::Vector3d d_1_prime     =  R_gc.transpose() * (u_1.segment(0,3) - u_mid.segment(0,3) - dr_1);     //Déplacement du noeud causé pas les déformations dans le repère de l'élément
         const Eigen::Vector3d d_2_prime     =  R_gc.transpose() * (u_2.segment(0,3) - u_mid.segment(0,3) - dr_2);     //Déplacement du noeud causé pas les déformations dans le repère de l'élément
 
-        /*if(N2_ID==12){
-        //std::cout<<"============\n"<<std::endl;
-        //std::cout<<q_mid<<std::endl;
-        }*/
-        Eigen::VectorXd D_local(12);
-        
+        Eigen::VectorXd D_local(12);        
         D_local.segment(0,3) = d_1_prime;
         D_local.segment(3,3) = theta_1_local;
         D_local.segment(6,3) = d_2_prime;
@@ -363,7 +344,7 @@ public:
         return Rot*F_int_elem_local;  
     }
         
-};
+}
 
 }
 

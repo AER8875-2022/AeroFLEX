@@ -263,8 +263,8 @@ public:
 
         for (double Load_Step = 1.; Load_Step <= (double)Max_load_step; Load_Step ++)
         {
-            // std::cout<<"\n=================="<<std::endl;
-            // std::cout<<"Load step: "<< Load_Step <<" / "<< Max_load_step <<std::endl;
+            std::cout<<"\n=================="<<std::endl;
+            std::cout<<"Load step: "<< Load_Step <<" / "<< Max_load_step <<std::endl;
             gui.msg.push("[STRUCT] Load step: " + std::to_string(int(Load_Step))
                          + " / " + std::to_string(Max_load_step));
             Forces_diff = (Load_Step/Max_load_step)*(Forces) - Forces_int;
@@ -279,11 +279,8 @@ public:
             // Main solving loop
             do {
                 while (gui.signal.pause) std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                
-                //Delta déplacements
-                Dep += Delta_dep_amor; 
-                // std::cout<<"=================="<<std::endl;
-                // std::cout<<Dep.tail(3).transpose()<<std::endl;
+    
+                Dep += Delta_dep_amor;
                 set_Quaternion_Map(Delta_dep_amor); 
 
                 #pragma omp parallel for
@@ -329,8 +326,6 @@ public:
                 else Delta_dep_amor = Delta_dep_full;
 
                 if (iters%100 == 0 || Residu < tol){
-                // std::cout << "Iteration " << iters << std::endl;
-                // std::cout << "\t Residual = " << Residu << std::endl;
                 std::stringstream res; res << std::scientific << Residu;
                 gui.msg.push("[STRUCT] Iteration " + std::to_string(iters) + "... "
                              + "Residual =" + res.str());
