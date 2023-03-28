@@ -3,6 +3,7 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
+#include <iomanip> 
 #include "geometrie/structure.hpp"
 #include "geometrie/geometry.hpp"
 
