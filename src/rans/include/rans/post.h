@@ -182,8 +182,6 @@ class CpProfile {
     public:
     double x_moment;
     double y_moment;
-    std::atomic<double> xmax = 1.0;
-    std::atomic<double> xmin = 0.0;
     std::atomic<int> nb_neg = 0;
     std::atomic<int> nb_pos = 0;
 
@@ -230,10 +228,8 @@ class CpProfile {
                 y.push_back(m.edgesCentersY[e]);
             }
         }
-
         xmax = xright;
         xmin = xleft;
-        std::cout << xmax << " " << xmin << std::endl;
 
         y_moment = (yright - yleft)*0.25 + yleft;
         x_moment = (xright - xleft)*0.25 + xleft;
@@ -284,8 +280,6 @@ class CpProfile {
                     cp_airfoil_neg_y[idx_neg] = y + ny*cp_*0.1;
                     idx_neg++;
                 }
-                xmax = xpos > xmax ? xpos : xmax;
-                xmin = xpos < xmin ? xpos : xmin;
                 idx++;
             }
         }
