@@ -27,10 +27,10 @@ void Aero::input() {
     vlm.initialize();
     aero::interpolation pos;
     aero::interpolation_f force;
-    //auto mapStructni= Structure.FEM.indexation_switch;
-    // auto mapStruct= Structure.FEM.Grid_MAP;
-    //aero::DispInterpol(pos, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings, vlm.object.nodes, mapStruct, mapStructni);
-    //aero::LoadInterpol(force, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings, vlm.object.nodes, structure.Solutions);
+    auto mapStructni= Structure.FEM.indexation_switch;
+    auto mapStruct= Structure.FEM.Grid_MAP;
+    aero::DispInterpol(pos, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings, vlm.object.nodes, mapStruct, mapStructni);
+    aero::LoadInterpol(force, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings, vlm.object.nodes, mapStruct, mapStructni);
 
 
 
@@ -46,7 +46,7 @@ void Aero::solve() {
 
     vlm.solve();
 
-    //structure.solve(computeVLMForce(force));
+    structure.solve(computeVLMForce(force));
 
-    //vlm.object.updateGeometry(computeVLMDispalecement(pos,vlm.object.wingStations,vlm.object.wings,vlm.object.vortexRings,vlm.object.nodes ));
+    vlm.object.updateGeometry(computeVLMDispalecement(pos,vlm.object.wingStations,vlm.object.wings,vlm.object.vortexRings,vlm.object.nodes ));
 }
