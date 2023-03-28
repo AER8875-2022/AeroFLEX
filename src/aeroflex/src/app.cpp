@@ -122,6 +122,12 @@ struct RansGraphLayer : public FlexGUI::Layer {
 	RansGraphLayer(App &app) : app(app) {};
 };
 
+struct StructureGraphLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	App &app;
+	StructureGraphLayer(App &app) : app(app) {};
+};
+
 struct VlmGraphLayer : public FlexGUI::Layer {
 	virtual void OnUIRender() override;
 	App &app;
@@ -169,11 +175,8 @@ void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure) {
 	vlm.database.importLocations(vlm.settings.io.locationFile); // Temporary
 	vlm.solve();
 
-	// structure.input();
-	// structure.solve();
-
-	// rans.input();
-	// rans.solve();
+	structure.input();
+	structure.solve();
 }
 
 // =================================================================================================
@@ -318,109 +321,24 @@ inline void Combo(std::vector<std::string> &vec, int &index, const char* label) 
 	}
 }
 
-void GeoLayer::OnUIRender() {
-	static double envergure = 0.00001; 
-	static double cr= 1.0;
-	static double ct= 1.0;
-	//NACA
-	static double m= 1.0;
-	static double p= 1.0;
-	static double t= 1.0;
-
-	static double twist= 1.0;
-	static double fleche= 1.0;
-	static double diedre= 1.0;
-	static double P_beam= 1.0;
-	static double P_aile= 1.0;
-	//cst
-	static double z_te= 1.0;
-	static double r_le= 1.0;
-	static double Beta= 1.0;
-
-	static double E= 1.0;	
-	static double G= 1.0;
-
-	static bool S_type = 1;
-	static bool Winglet = 1;
-
-	
-	ImGui::Begin("Géométrie");
-	
-	if (ImGui::RadioButton("NACA", S_type == 0))
-		S_type = 0;
-	ImGui::SameLine();
-	if (ImGui::RadioButton("CST", S_type == 1))
-		S_type = 1;
-
-	
-	ImGui::Text("Paramètres");
-	if (S_type == 0){
-		ImGui::Separator();
-		ImGui::Text("NACA 4 digits");
-		ImGui::InputDouble("m", &m, 1.0, 1.0, "%.1f");
-		ImGui::InputDouble("p", &p, 1.0, 1.0, "%.1f");
-		ImGui::InputDouble("t", &t, 1.0, 1.0, "%.1f");}
-	
-	if (S_type == 1){
-		ImGui::Separator();
-		ImGui::Text("CST parametres");
-		ImGui::InputDouble("z_te", &z_te, 1.0, 1.0, "%.4f");
-		ImGui::InputDouble("r_le", &r_le, 1.0, 1.0, "%.4f");
-		ImGui::InputDouble("Beta", &Beta, 1.0, 1.0, "%.4f");}
-
-	ImGui::Separator();
-	ImGui::Text("Wing geometry");
-	ImGui::InputDouble("Span", &envergure, 0.001, 1.0, "%.4f");
-	ImGui::InputDouble("Chord root", &cr, 0.001, 1.0, "%.4f");
-	ImGui::InputDouble("Chord tip", &ct, 0.001, 1.0, "%.4f");
-	ImGui::InputDouble("Beam Position", &P_beam, 0.001, 1.0, "%.4f");
-	ImGui::InputDouble("Wing position", &P_aile, 0.001, 1.0, "%.4f");
-
-	ImGui::Separator();
-	ImGui::Text("Wing angles");
-	ImGui::InputDouble("Twist", &twist, 0.001, 1.0, "%.4f");
-	ImGui::InputDouble("Sweep", &fleche, 0.001, 1.0, "%.4f");
-	ImGui::InputDouble("Dihedral", &diedre, 0.001, 1.0, "%.4f");
-	
-	
-	ImGui::Separator();
-	ImGui::Text("Material properties");
-	ImGui::InputDouble("Young modulus", &E, 0.001, 1.0, "%.4f");
-	ImGui::InputDouble("Shear modulus", &G, 0.001, 1.0, "%.4f");
-
-	ImGui::Separator();
-	ImGui::Text("Winglet");
-	if (ImGui::RadioButton("Oui", Winglet == 0))
-		Winglet = 0;
-	ImGui::SameLine();
-	if (ImGui::RadioButton("Non", Winglet == 1))
-		Winglet = 1;
-	ImGui::End();
-}
-
-
 
 void StructureLayer::OnUIRender() {
-	static int myValue = 5;
-	static double doubleValue = static_cast<double>(myValue);
-
 	ImGui::Begin("Structure");
 
 	ImGui::Separator();
-	ImGui::Text("Paramètres");
-	ImGui::InputDouble("Tolerence:", &app.settings.structure.Tolerance, 0.00001, 1.0, "%.5f");
+	ImGui::Text("Parameters");
+	ImGui::InputDouble("Tolerance:", &app.settings.structure.Tolerance, 0.01f, 1.0f, "%.2e");
 
-	ImGui::InputDouble("N_step:", &doubleValue, 1.0, 1.0, "%.0f");
-	app.settings.structure.N_step = static_cast<int>(doubleValue);
+	ImGui::InputInt("N_step:", &app.settings.structure.N_step);
 
-	ImGui::InputDouble("Damping", &app.settings.structure.Damping, 0.001, 1.0, "%.4f");
+	ImGui::InputDouble("Damping", &app.settings.structure.Damping, 0.01f, 1.0f, "%.4f");
 
 	ImGui::Separator();
 	ImGui::Text("Options");
-	if (ImGui::RadioButton("NLS", *&app.settings.structure.Solve_type == 0))
+	if (ImGui::RadioButton("NONLINEAR", *&app.settings.structure.Solve_type == 0))
 		*&app.settings.structure.Solve_type = 0;
 	ImGui::SameLine();
-	if (ImGui::RadioButton("LS", *&app.settings.structure.Solve_type == 1))
+	if (ImGui::RadioButton("LINEAR", *&app.settings.structure.Solve_type == 1))
 		*&app.settings.structure.Solve_type = 1;
 	ImGui::End();
 }
@@ -604,6 +522,30 @@ void RansGraphLayer::OnUIRender() {
 	}
 };
 
+void StructureGraphLayer::OnUIRender() {
+	{
+		ImGui::Begin("Structure-Convergence");
+		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
+		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
+		const double xticks = 1;
+
+		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,400))) {
+			ImPlot::SetupAxes("Iterations","Residual",xflags,yflags);
+			ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, 0, app.structure.iters);
+			ImPlot::SetupAxisZoomConstraints(ImAxis_X1, 11.0, app.structure.iters);
+			ImPlot::SetupAxisScale(ImAxis_Y1, ImPlotScale_Log10);
+
+			if (!app.signal_status_ready) {
+				ImPlot::SetupAxisLimits(ImAxis_X1, 0, app.vlm.iters, ImPlotCond_Always);
+			}
+			ImPlot::PlotLine("L2 residual", app.structure.residuals.data(), app.structure.iters);
+			ImPlot::EndPlot();
+		}
+
+		ImGui::End();
+	}
+}
+
 void VlmGraphLayer::OnUIRender() {
 	{
 		ImGui::Begin("Vlm-Convergence");
@@ -764,8 +706,8 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, App& app)
 	application->PushLayer(std::make_shared<ButtonLayer>(app));
 	application->PushLayer(std::make_shared<RansGraphLayer>(app));
 	application->PushLayer(std::make_shared<VlmGraphLayer>(app));
+	application->PushLayer(std::make_shared<StructureGraphLayer>(app));
 	application->PushLayer(std::make_shared<CpLayer>(app));
-	application->PushLayer(std::make_shared<GeoLayer>(app));
 	application->PushLayer(std::make_shared<StructureLayer>(app));
 	application->PushLayer(std::make_shared<RansLayer>(app));
 	application->PushLayer(std::make_shared<VlmLayer>(app));
