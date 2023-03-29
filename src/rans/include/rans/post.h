@@ -228,8 +228,6 @@ class CpProfile {
                 y.push_back(m.edgesCentersY[e]);
             }
         }
-        xmax = xright;
-        xmin = xleft;
 
         y_moment = (yright - yleft)*0.25 + yleft;
         x_moment = (xright - xleft)*0.25 + xleft;
@@ -268,15 +266,12 @@ class CpProfile {
                 const double cp_ = 2./(sol.gamma()*mach_inf*mach_inf)*(p/p_inf - 1.);
 
                 cp[idx] = cp_;
-                double xpos;
                 if (cp_ > 0.0) {
-                    xpos = x - nx*cp_*0.1;
-                    cp_airfoil_pos_x[idx_pos] = xpos;
+                    cp_airfoil_pos_x[idx_pos] = x - nx*cp_*0.1;
                     cp_airfoil_pos_y[idx_pos] = y - ny*cp_*0.1;
                     idx_pos++;
                 } else {
-                    xpos = x + nx*cp_*0.1;
-                    cp_airfoil_neg_x[idx_neg] = xpos;
+                    cp_airfoil_neg_x[idx_neg] = x + nx*cp_*0.1;
                     cp_airfoil_neg_y[idx_neg] = y + ny*cp_*0.1;
                     idx_neg++;
                 }

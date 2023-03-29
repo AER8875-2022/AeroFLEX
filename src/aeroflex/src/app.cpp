@@ -455,6 +455,7 @@ void ButtonLayer::OnUIRender() {
 void RansGraphLayer::OnUIRender() {
 	{
 		ImGui::Begin("Rans-Convergence");
+		ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0.0f, 0.0f));
 		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
 		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
 		const double xticks = 1;
@@ -479,6 +480,7 @@ void RansGraphLayer::OnUIRender() {
 void VlmGraphLayer::OnUIRender() {
 	{
 		ImGui::Begin("Vlm-Convergence");
+		ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0.0f, 0.0f));
 		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
 		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
 		const double xticks = 1;
@@ -504,22 +506,22 @@ void CpLayer::OnUIRender() {
 	{
 		ImGui::Begin("Rans-Cp");
 		auto size = ImGui::GetWindowSize();
-		static ImPlotAxisFlags xflags = ImPlotAxisFlags_AutoFit;
+		static ImPlotAxisFlags xflag = ImPlotAxisFlags_AutoFit;
 		static ImPlotAxisFlags yflags_1 = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_Invert;
 		static ImPlotAxisFlags yflags_2 = ImPlotAxisFlags_AutoFit;
 		ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0.2f, 0.2f));
 
-		if (ImPlot::BeginPlot("Profil_Cp", ImVec2(-1, (int)(size.y / 2.2f)))) {
-			ImPlot::SetupAxes("x","Cp",xflags,yflags_1);
+		if (ImPlot::BeginPlot("Cp Profile", ImVec2(-1, (int)(size.y / 2.2f)))) {
+			ImPlot::SetupAxes("x","Cp",xflag,yflags_1);
 			ImPlot::PlotLine("Cp", app.rans.profile.x.data(), app.rans.profile.cp.data(), app.rans.profile.x.size());
 			ImPlot::EndPlot();
 		}
 
-		if (ImPlot::BeginPlot("Airfoil_Cp", ImVec2(-1, (int)(size.y / 2.2f)))) {
-			ImPlot::SetupAxes("x","Cp",xflags,yflags_2);
+		if (ImPlot::BeginPlot("Cp Airfoil", ImVec2(-1, (int)(size.y / 2.2f)))) {
+			ImPlot::SetupAxes("x","",xflag,yflags_2);
 			ImPlot::PlotLine("Airfoil", app.rans.profile.x.data(), app.rans.profile.y.data(), app.rans.profile.x.size());
-			ImPlot::PlotScatter("Neg", app.rans.profile.cp_airfoil_neg_x.data(), app.rans.profile.cp_airfoil_neg_y.data(), app.rans.profile.nb_neg);
-			ImPlot::PlotScatter("Pos", app.rans.profile.cp_airfoil_pos_x.data(), app.rans.profile.cp_airfoil_pos_y.data(), app.rans.profile.nb_pos);
+			ImPlot::PlotScatter("-", app.rans.profile.cp_airfoil_neg_x.data(), app.rans.profile.cp_airfoil_neg_y.data(), app.rans.profile.nb_neg);
+			ImPlot::PlotScatter("+", app.rans.profile.cp_airfoil_pos_x.data(), app.rans.profile.cp_airfoil_pos_y.data(), app.rans.profile.nb_pos);
 			ImPlot::EndPlot();
 		}
 

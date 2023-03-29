@@ -25,7 +25,7 @@ namespace rans {
 class Rans {
     public:
     // This is a mess because of no separation of IO and computation...
-    std::vector<double> residuals;
+    std::vector<double> residuals = {1.0};
     std::atomic<int> iters = 0;
 
     CpProfile profile;
@@ -77,7 +77,7 @@ void Rans::run_airfoil(const std::string& airfoil, database::airfoil& db) {
     // For the moment we will only load 1 mesh
     ms.push_back(mesh("../../../../examples/rans/" + airfoil + "_coarse.msh"));
     ms.push_back(mesh("../../../../examples/rans/" + airfoil + "_mid.msh"));
-    ms.push_back(mesh("../../../../examples/rans/" + airfoil + "_fine.msh"));
+    // ms.push_back(mesh("../../../../examples/rans/" + airfoil + "_fine.msh"));
 
     settings.bcs["farfield"].vars_far.angle = db.alpha[0] * 0.01745;
     multigrid<T> multi(ms, settings, gui, residuals, iters, profile);
