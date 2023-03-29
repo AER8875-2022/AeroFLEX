@@ -12,6 +12,7 @@
 #include <cstring>
 #include <future>
 #include <thread>
+#include <mutex>
 #include <ctime>
 
 #include "common_aeroflex.hpp"
@@ -512,16 +513,33 @@ void CpLayer::OnUIRender() {
 		ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0.2f, 0.2f));
 
 		if (ImPlot::BeginPlot("Cp Profile", ImVec2(-1, (int)(size.y / 2.2f)))) {
+			std::lock_guard<std::mutex> lock(app.rans.profile.m_mutex);
 			ImPlot::SetupAxes("x","Cp",xflag,yflags_1);
 			ImPlot::PlotLine("Cp", app.rans.profile.x.data(), app.rans.profile.cp.data(), app.rans.profile.x.size());
 			ImPlot::EndPlot();
 		}
 
 		if (ImPlot::BeginPlot("Cp Airfoil", ImVec2(-1, (int)(size.y / 2.2f)))) {
-			ImPlot::SetupAxes("x","",xflag,yflags_2);
+			const double pad = 1.1;
+			std::lock_guard<std::mutex> lock(app.rans.profile.m_mutex);
+			ImPlot::SetupAxes("x","", ImPlotAxisFlags_None,ImPlotAxisFlags_None);
+			ImPlot::SetupAxisLimits(ImAxis_X1, app.rans.profile.xmin * pad, app.rans.profile.xmax * pad, ImPlotCond_Always);
+			ImPlot::SetupAxisLimits(ImAxis_Y1, app.rans.profile.ymin * pad, app.rans.profile.ymax * pad, ImPlotCond_Always);
 			ImPlot::PlotLine("Airfoil", app.rans.profile.x.data(), app.rans.profile.y.data(), app.rans.profile.x.size());
-			ImPlot::PlotScatter("-", app.rans.profile.cp_airfoil_neg_x.data(), app.rans.profile.cp_airfoil_neg_y.data(), app.rans.profile.nb_neg);
-			ImPlot::PlotScatter("+", app.rans.profile.cp_airfoil_pos_x.data(), app.rans.profile.cp_airfoil_pos_y.data(), app.rans.profile.nb_pos);
+
+			if (app.rans.profile.filled) {
+				ImPlot::PushPlotClipRect();
+				for (int i = 0; i < app.rans.profile.x.size(); i++) {
+					ImVec2 p1 = ImPlot::PlotToPixels(ImPlotPoint(app.rans.profile.x[i], app.rans.profile.y[i]));
+					ImVec2 p2 = ImPlot::PlotToPixels(ImPlotPoint(app.rans.profile.cp_airfoil_x[i], app.rans.profile.cp_airfoil_y[i]));
+					if (app.rans.profile.cp_positive[i] == 1) {
+						ImPlot::GetPlotDrawList()->AddLine(p1, p2, IM_COL32(0,255,0,255));
+					} else {
+						ImPlot::GetPlotDrawList()->AddLine(p1, p2, IM_COL32(255,0,0,255));
+					}
+				}
+				ImPlot::PopPlotClipRect();
+			}
 			ImPlot::EndPlot();
 		}
 

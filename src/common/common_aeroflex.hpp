@@ -44,11 +44,6 @@ class VectorMutex {
 			return &m_vec[0];
 		}
 
-		T& operator[](int i) {
-			std::lock_guard<std::mutex> lock(m_mutex);
-			return m_vec[i];
-		}
-
 		void push_back(const T& val) {
 			std::lock_guard<std::mutex> lock(m_mutex);
 			m_vec.push_back(val);

@@ -18,6 +18,7 @@
 #include <limits>
 #include <iostream>
 #include <atomic>
+#include <mutex>
 
 #include <Eigen/Dense>
 #include <fstream>
@@ -182,26 +183,34 @@ class CpProfile {
     public:
     double x_moment;
     double y_moment;
-    std::atomic<int> nb_neg = 0;
-    std::atomic<int> nb_pos = 0;
+    std::mutex m_mutex;
 
-    VectorMutex<double> x;
-    VectorMutex<double> y;
-    VectorMutex<double> cp;
-    VectorMutex<double> cp_airfoil_pos_x;
-    VectorMutex<double> cp_airfoil_pos_y;
-    VectorMutex<double> cp_airfoil_neg_x;
-    VectorMutex<double> cp_airfoil_neg_y;
+    std::vector<double> x;
+    std::vector<double> y;
+    std::vector<double> cp;
+    std::vector<bool> cp_positive;
+    std::vector<double> cp_airfoil_x;
+    std::vector<double> cp_airfoil_y;
+    double xmax = 0.1;
+    double xmin = -0.1;
+    double ymax = 0.1;
+    double ymin = -0.1;
+    bool filled = false;
 
     void calc_chord_coords(solver &s, std::string& af) {
+        std::lock_guard<std::mutex> lock(m_mutex);
         mesh& m = s.get_mesh();
+        filled = false;
+        xmax = 0.1;
+        xmin = -0.1;
+        ymax = 0.1;
+        ymin = -0.1;
         x.clear();
         y.clear();
         cp.clear();
-        cp_airfoil_neg_x.clear();
-        cp_airfoil_neg_y.clear();
-        cp_airfoil_pos_x.clear();
-        cp_airfoil_pos_y.clear();
+        cp_positive.clear();
+        cp_airfoil_x.clear();
+        cp_airfoil_y.clear();
         double xleft = std::numeric_limits<double>::max();
         double xright = std::numeric_limits<double>::min();
         double yleft;
@@ -219,13 +228,16 @@ class CpProfile {
                     yright = m.edgesCentersY[e];
                 }
                 cp.push_back(0.0);
-                cp_airfoil_neg_x.push_back(0.0);
-                cp_airfoil_neg_y.push_back(0.0);
-                cp_airfoil_pos_x.push_back(0.0);
-                cp_airfoil_pos_y.push_back(0.0);
+                cp_airfoil_x.push_back(0.0);
+                cp_airfoil_y.push_back(0.0);
+                cp_positive.push_back(false);
 
                 x.push_back(m.edgesCentersX[e]);
                 y.push_back(m.edgesCentersY[e]);
+                xmax = std::max(xmax, m.edgesCentersX[e]);
+                ymax = std::max(ymax, m.edgesCentersY[e]);
+                xmin = std::min(xmin, m.edgesCentersX[e]);
+                ymin = std::min(ymin, m.edgesCentersY[e]);
             }
         }
 
@@ -243,6 +255,7 @@ class CpProfile {
         int idx = 0;
         int idx_neg = 0;
         int idx_pos = 0;
+        std::lock_guard<std::mutex> lock(m_mutex);
         for (uint b=0; b<m.boundaryEdges.size(); ++b) {
             if (m.boundaryEdgesPhysicals[b] == af) {
                 const uint e = m.boundaryEdges[b];
@@ -267,19 +280,21 @@ class CpProfile {
 
                 cp[idx] = cp_;
                 if (cp_ > 0.0) {
-                    cp_airfoil_pos_x[idx_pos] = x - nx*cp_*0.1;
-                    cp_airfoil_pos_y[idx_pos] = y - ny*cp_*0.1;
-                    idx_pos++;
+                    cp_airfoil_x[idx] = x - nx*cp_*0.1;
+                    cp_airfoil_y[idx] = y - ny*cp_*0.1;
+                    cp_positive[idx] = true;
                 } else {
-                    cp_airfoil_neg_x[idx_neg] = x + nx*cp_*0.1;
-                    cp_airfoil_neg_y[idx_neg] = y + ny*cp_*0.1;
-                    idx_neg++;
+                    cp_airfoil_x[idx] = x + nx*cp_*0.1;
+                    cp_airfoil_y[idx] = y + ny*cp_*0.1;
                 }
+                xmax = std::max(xmax, cp_airfoil_x[idx]);
+                ymax = std::max(ymax, cp_airfoil_y[idx]);
+                xmin = std::min(xmin, cp_airfoil_x[idx]);
+                ymin = std::min(ymin, cp_airfoil_y[idx]);
                 idx++;
             }
         }
-        nb_neg = idx_neg;
-        nb_pos = idx_pos;
+        filled = true;
     }
 };
 
