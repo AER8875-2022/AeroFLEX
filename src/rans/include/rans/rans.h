@@ -59,13 +59,10 @@ void Rans::input() {
 template<class T>
 void Rans::run() {
     multigrid<T> multi(ms, settings, gui, residuals, iters, profile);
-    gui.event.rans_preprocess = true;
 
     rans::solver& s = multi.run(true);
-    gui.event.rans_solve = true;
 
     save(settings.outfilename, s);
-    gui.event.rans_postprocess = true;
     std::cout << "Saved results to file " << settings.outfilename << "\n" << std::endl;
 }
 

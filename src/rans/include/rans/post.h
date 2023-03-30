@@ -198,7 +198,7 @@ class CpProfile {
     bool filled = false;
 
     void calc_chord_coords(solver &s, std::string& af) {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::scoped_lock lock(m_mutex);
         mesh& m = s.get_mesh();
         filled = false;
         xmax = 0.1;
@@ -255,7 +255,7 @@ class CpProfile {
         int idx = 0;
         int idx_neg = 0;
         int idx_pos = 0;
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::scoped_lock lock(m_mutex);
         for (uint b=0; b<m.boundaryEdges.size(); ++b) {
             if (m.boundaryEdgesPhysicals[b] == af) {
                 const uint e = m.boundaryEdges[b];
