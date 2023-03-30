@@ -500,9 +500,9 @@ void ButtonLayer::OnUIRender() {
 void RansGraphLayer::OnUIRender() {
 	{
 		ImGui::Begin("Rans-Convergence");
+		ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0.0f, 0.0f));
 		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
 		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
-		const double xticks = 1;
 
 		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,-1))) {
 			ImPlot::SetupAxes("Iterations","Residual",xflags,yflags);
@@ -524,11 +524,11 @@ void RansGraphLayer::OnUIRender() {
 void StructureGraphLayer::OnUIRender() {
 	{
 		ImGui::Begin("Structure-Convergence");
+		ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0.0f, 0.0f));
 		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
 		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
-		const double xticks = 1;
 
-		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,400))) {
+		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,-1))) {
 			ImPlot::SetupAxes("Iterations","Residual",xflags,yflags);
 			ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, 0, app.structure.iters);
 			ImPlot::SetupAxisZoomConstraints(ImAxis_X1, 11.0, app.structure.iters);
@@ -548,9 +548,9 @@ void StructureGraphLayer::OnUIRender() {
 void VlmGraphLayer::OnUIRender() {
 	{
 		ImGui::Begin("Vlm-Convergence");
+		ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0.0f, 0.0f));
 		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
 		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
-		const double xticks = 1;
 
 		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,-1))) {
 			ImPlot::SetupAxes("Iterations","Residual",xflags,yflags);
@@ -572,17 +572,18 @@ void VlmGraphLayer::OnUIRender() {
 void CpLayer::OnUIRender() {
 	ImGui::Begin("Rans-Cp");
 	auto size = ImGui::GetWindowSize();
+	ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0.2f, 0.2f));
 	static ImPlotAxisFlags xflag = ImPlotAxisFlags_AutoFit;
 	static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_Invert;
 
-	if (ImPlot::BeginPlot("Cp Profile", ImVec2(-1, (int)(size.y / 2.15f)))) {
+	if (ImPlot::BeginPlot("Cp Profile", ImVec2(-1, (int)(size.y / 2.2f)))) {
 		std::scoped_lock lock(app.rans.profile.m_mutex);
 		ImPlot::SetupAxes("x","Cp",xflag,yflags);
 		ImPlot::PlotLine("Cp", app.rans.profile.x.data(), app.rans.profile.cp.data(), app.rans.profile.x.size());
 		ImPlot::EndPlot();
 	}
 
-	if (ImPlot::BeginPlot("Cp Airfoil", ImVec2(-1, (int)(size.y / 2.15f)))) {
+	if (ImPlot::BeginPlot("Cp Airfoil", ImVec2(-1, (int)(size.y / 2.2f)))) {
 		const double pad = 1.1;
 		std::scoped_lock lock(app.rans.profile.m_mutex);
 		ImPlot::SetupAxes("x","", ImPlotAxisFlags_None,ImPlotAxisFlags_None);
