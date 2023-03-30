@@ -33,8 +33,9 @@ namespace aero{
         for (int k = 0; k <wingStations.size() ; ++k)
         {
             auto wstation= wingStations[wings[0].get_stationIDs()[k]];
+            std::cout << "wstation.get_vortexIDs()[0] " << wstation.get_vortexIDs()[0]<< std::endl;
 
-            for (int i = 0; i <wstation.size() ; ++i)
+            for (int i = 0; i <1 ; ++i)
             {
 
 
@@ -43,7 +44,7 @@ namespace aero{
 
 
 
-                for (int p=0; p<vring.size(); ++p)
+                for (int p=0; p<2; ++p)
                 {
                     auto node=nodes[vring.get_nodeIDs()[p]];
                     double bestDistance[2]={10000,10000};
@@ -99,11 +100,11 @@ namespace aero{
         }
     }
 
-    auto computeVLMDispalecement(interpolation pos,std::vector<vlm::surface::wingStation> wingStations,
+    std::vector<Vector3d> computeVLMDispalecement(interpolation pos,std::vector<vlm::surface::wingStation> wingStations,
                                  std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,std::vector<Eigen::VectorXd> Solutions) {
         for (int k = 0; k<wingStations.size(); ++k) {
             auto wstation= wingStations[wings[0].get_stationIDs()[k]];
-            for (int i = 0; i<wstation.size(); ++i) {
+            for (int i = 0; i<1; ++i) {
 
 
 
@@ -113,7 +114,7 @@ namespace aero{
                 double angle_y;
                 double angle_z;
 
-                for (int p=0; p<vring.size(); ++p)
+                for (int p=0; p<2; ++p)
                 {
                     auto node = nodes[vring.get_nodeIDs()[p]];
                     auto nodeStruct1 = Solutions[pos.node[2*p]];
@@ -187,7 +188,7 @@ namespace aero{
 
        
        
-       for (int j=0; j<m; ++j)
+       for (int j=0; j<1; ++j)
        {
            auto wingstation = wingStations[wings[0].get_stationIDs()[j]];
            
@@ -232,7 +233,7 @@ namespace aero{
        u[2]= force.point_fs[2] - force.point_fs[5];
        double t;
 
-       for (int i=0; i<n; ++i){
+       for (int i=0; i<2; ++i){
 
            t= (u[0]*(force.point_fa[3*i]-force.point_fs[0]) + u[1]*(force.point_fa[3*i+1]-force.point_fs[1]) +
                   u[2]*(force.point_fa[3*i+2]-force.point_fs[2]))/pow(norme(u),2);
@@ -258,7 +259,7 @@ namespace aero{
        
    
        
-       for (int i=0; i<n; ++i){
+       for (int i=0; i<2; ++i){
            
            
            for (int j=0; j<num; ++j){
@@ -299,7 +300,7 @@ namespace aero{
            
        }
    }      
-   std::vector<double> ComputeStructureForces(interpolation_f force,vlm::model object, std::vector<vlm::surface::wingStation> wingStations)
+   std::vector<double> ComputeStructureForces(interpolation_f force, std::vector<vlm::surface::wingStation> wingStations)
 
   {
        int n=force.point_fa.size()/3;
