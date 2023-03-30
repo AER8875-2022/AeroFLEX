@@ -21,6 +21,7 @@
 
 #include <rans/rans.h>
 #include <vlm/vlm.hpp>
+#include <structure/structure.hpp>
 
 template <class T>
 bool is_future_done(std::future<T> const& f) {
@@ -43,6 +44,7 @@ static void HelpMarker(const char* desc)
 struct Settings {
 	rans::Settings rans;
 	vlm::Settings vlm;
+    structure::Settings structure;
 };
 
 enum class AppDialogAction {
@@ -64,6 +66,7 @@ class App {
 		// Modules
 		rans::Rans &rans;
 		vlm::VLM &vlm;
+        structure::Structure &structure;
 
 		Settings settings;
 
@@ -81,7 +84,19 @@ class App {
 		AppDialogAction dialog_action = AppDialogAction::None;
 		FlexGUI::FileDialog dialog;
 		char path_buf[256];
-		App(rans::Rans &rans, vlm::VLM &vlm, GUIHandler &gui);
+		App(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, GUIHandler &gui);
+};
+
+struct GeoLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	App &app;
+	GeoLayer(App &app) : app(app) {};
+};
+
+struct StructureLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	App &app;
+	StructureLayer(App &app) : app(app) {};
 };
 
 struct RansLayer : public FlexGUI::Layer {
@@ -106,6 +121,12 @@ struct RansGraphLayer : public FlexGUI::Layer {
 	virtual void OnUIRender() override;
 	App &app;
 	RansGraphLayer(App &app) : app(app) {};
+};
+
+struct StructureGraphLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	App &app;
+	StructureGraphLayer(App &app) : app(app) {};
 };
 
 struct VlmGraphLayer : public FlexGUI::Layer {
@@ -134,7 +155,7 @@ struct DialogLayer : public FlexGUI::Layer {
 
 // SOLVE =================================================================================================
 
-void solve(rans::Rans &rans, vlm::VLM &vlm) {
+void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure) {
 
 	database::table table;
 
@@ -155,8 +176,8 @@ void solve(rans::Rans &rans, vlm::VLM &vlm) {
 	vlm.database.importLocations(vlm.settings.io.locationFile); // Temporary
 	vlm.solve();
 
-	// rans.input();
-	// rans.solve();
+	structure.input();
+	structure.solve();
 }
 
 // =================================================================================================
@@ -168,9 +189,9 @@ std::optional<Settings> config_open(const std::string &conf_path) {
 	bool success = io.read(conf_path);
 	if (!success) return std::nullopt;
 
-	// Parsing for vlm
 	settings.rans.import_config_file(io);
 	settings.vlm.import_config_file(io);
+	settings.structure.import_config_file(io);
 
 	return settings;
 }
@@ -185,13 +206,13 @@ bool config_save(const std::string &conf_path, Settings &settings) {
 	};
 
 	settings.rans.export_config_file(io);
-	// Exporting for VLM
 	settings.vlm.export_config_file(io);
+	settings.structure.export_config_file(io);
 
 	return io.write(conf_path);
 }
 
-App::App(rans::Rans &rans, vlm::VLM &vlm, GUIHandler &gui) : rans(rans), vlm(vlm), gui(gui) {
+App::App(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, GUIHandler &gui) : rans(rans), vlm(vlm), structure(structure), gui(gui) {
 	settings.rans.bcs["farfield"];
 	settings.rans.bcs["farfield"].bc_type = "farfield";
 	settings.rans.bcs["wall"];
@@ -207,12 +228,15 @@ void App::solve_async() {
 	signal_status_ready = false;
 	signal_status_busy = true;
 	gui.msg.push("-- Starting simulation --");
+
 	rans.settings = settings.rans;
 	vlm.settings = settings.vlm;
+	structure.settings = settings.structure;
+
 	future_solve = std::async(std::launch::async,
 	[&](){
 		try {
-			solve(rans, vlm);
+			solve(rans, vlm, structure);
 		} catch (std::exception &e) {
 			gui.msg.push(e.what());
 		}
@@ -296,6 +320,26 @@ inline void Combo(std::vector<std::string> &vec, int &index, const char* label) 
 		}
 		ImGui::EndCombo();
 	}
+}
+
+
+void StructureLayer::OnUIRender() {
+	ImGui::Begin("Structure");
+
+	ImGui::Separator();
+	ImGui::Text("Parameters");
+	ImGui::InputDouble("Tolerance:", &app.settings.structure.Tolerance, 0.01f, 1.0f, "%.2e");
+
+	ImGui::InputInt("N_step:", &app.settings.structure.N_step);
+
+	ImGui::InputDouble("Damping", &app.settings.structure.Damping, 0.01f, 1.0f, "%.4f");
+
+	ImGui::Separator();
+	ImGui::Text("Options");
+	if (ImGui::RadioButton("NONLINEAR", app.settings.structure.Solve_type == 0)) app.settings.structure.Solve_type = 0;
+	ImGui::SameLine();
+	if (ImGui::RadioButton("LINEAR", app.settings.structure.Solve_type == 1)) app.settings.structure.Solve_type = 1;
+	ImGui::End();
 }
 
 void RansLayer::OnUIRender() {
@@ -477,6 +521,30 @@ void RansGraphLayer::OnUIRender() {
 	}
 };
 
+void StructureGraphLayer::OnUIRender() {
+	{
+		ImGui::Begin("Structure-Convergence");
+		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
+		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
+		const double xticks = 1;
+
+		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,400))) {
+			ImPlot::SetupAxes("Iterations","Residual",xflags,yflags);
+			ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, 0, app.structure.iters);
+			ImPlot::SetupAxisZoomConstraints(ImAxis_X1, 11.0, app.structure.iters);
+			ImPlot::SetupAxisScale(ImAxis_Y1, ImPlotScale_Log10);
+
+			if (!app.signal_status_ready) {
+				ImPlot::SetupAxisLimits(ImAxis_X1, 0, app.vlm.iters, ImPlotCond_Always);
+			}
+			ImPlot::PlotLine("L2 residual", app.structure.residuals.data(), app.structure.iters);
+			ImPlot::EndPlot();
+		}
+
+		ImGui::End();
+	}
+}
+
 void VlmGraphLayer::OnUIRender() {
 	{
 		ImGui::Begin("Vlm-Convergence");
@@ -655,10 +723,13 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, App& app)
 	spec.Height = 900;
 
 	FlexGUI::Application* application = new FlexGUI::Application(spec);
+	application->SetTheme(FlexGUI::Theme::Light);
 	application->PushLayer(std::make_shared<ButtonLayer>(app));
 	application->PushLayer(std::make_shared<RansGraphLayer>(app));
 	application->PushLayer(std::make_shared<VlmGraphLayer>(app));
+	application->PushLayer(std::make_shared<StructureGraphLayer>(app));
 	application->PushLayer(std::make_shared<CpLayer>(app));
+	application->PushLayer(std::make_shared<StructureLayer>(app));
 	application->PushLayer(std::make_shared<RansLayer>(app));
 	application->PushLayer(std::make_shared<VlmLayer>(app));
 	application->PushLayer(std::make_shared<ConsoleLayer>(app));
@@ -714,9 +785,10 @@ namespace FlexGUI {
 		// Initialize modules with signal routing
 		rans::Rans rans(gui);
 		vlm::VLM vlm(gui);
+		structure::Structure structure(gui);
 
 		// Initialize main application with the modules
-		App app(rans, vlm, gui);
+		App app(rans, vlm, structure, gui);
 
 		if (config_file == "") {
 			while (g_ApplicationRunning) {

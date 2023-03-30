@@ -22,6 +22,15 @@ class unsteady;
 } // namespace vlm::solver::nonlinear
 #endif
 
+#ifndef VLM_SURFACE_CLASS
+#define VLM_SURFACE_CLASS
+namespace vlm::surface {
+class wingStation;
+class wing;
+class patch;
+} // namespace vlm::surface
+#endif
+
 namespace vlm {
 
 namespace surface {
@@ -44,20 +53,32 @@ class wingStation {
   /** @brief Local chord of the current wing station */
   double chord;
 
-  /** @brief Local force vector */
-  Matrix<double, 6, 1> forces = Matrix<double, 6, 1>::Zero();
+  /** @brief Force vector */
+  Vector3d force;
 
-  /** @brief Local lift coefficient */
+  /** @rief Moment vector */
+  Vector3d moment;
+
+  /** @brief Lift coefficient */
   double cl = 0.0;
 
-  /** @brief Local drag coefficient */
+  /** @brief Drag coefficient */
   double cd = 0.0;
 
-  /** @brief Local moment coefficients */
+  /** @brief Side force coefficient */
+  double cy = 0.0;
+
+  /** @brief Moment coefficients */
   Vector3d cm = Vector3d::Zero();
+
+  /** @brief Local lift coefficient */
+  double cl_local = 0.0;
 
   /** @brief local angle of attack correction */
   double local_aoa = 0.0;
+
+  /** @brief local flow stream */
+  Vector3d local_stream;
 
   /** @brief Spanwise location of the current wing station */
   double spanLoc;
@@ -92,15 +113,26 @@ public:
   /** @brief Method updating the local angle of attack for the current wing
    * station
    *  @param dalpha Variation of the local angle of attack */
-  void updateLocalAoa(const double dalpha);
+  void updateLocalStream(const double dalpha, const input::simParam &sim);
 
   /** @brief Method to reset the local angle of attack to the geometric one
    *  @param sim Simulation parameters */
-  void resetLocalAoa(const input::simParam &sim);
+  void resetLocalStream(const input::simParam &sim);
+
+  /** @brief Function that returns the local lift axis of the section */
+  Vector3d liftAxis();
 
   /** @brief Method computing the inviscid local forces on the current element
    */
   void computeForces(const input::simParam &sim);
+
+  /** @brief Method to obtain a vector in the local referential of the section
+   */
+  void to_local(Vector3d &vector);
+
+  /** @brief Method to obtain a vector in the global referential of the section
+   */
+  void to_global(Vector3d &vector);
 
   /** @brief Getter method for globalIndex */
   double get_globalIndex() const;
@@ -117,14 +149,14 @@ public:
   /** @brief Getter method for vortexIDS */
   std::vector<int> get_vortexIDs() const;
 
-  /** @brief Getter method for forces */
-  Matrix<double, 6, 1> get_forces() const;
-
   /** @brief Getter method for cl */
   double get_cl() const;
 
   /** @brief Getter method for cd */
   double get_cd() const;
+
+  /** @brief Getter method for cy */
+  double get_cy() const;
 
   /** @brief Getter method for cm */
   Vector3d get_cm() const;
@@ -136,6 +168,7 @@ private:
   /** @brief Method computing the local chord of the current element */
   void computeChordLength();
 
+  friend class wing;
   friend class solver::nonlinear::steady;
   friend class solver::nonlinear::unsteady;
 };
@@ -163,6 +196,9 @@ class wing {
 
   /** @brief Drag coefficient of the current surface */
   double cd = 0.0;
+
+  /** @brief Side force coefficient of the current surface */
+  double cy = 0.0;
 
   /** @brief Moment coefficients of the current surface */
   Vector3d cm = Vector3d::Zero();
@@ -203,11 +239,19 @@ public:
   /** @brief Getter method for cd */
   double get_cd() const;
 
+  /** @brief Getter method for cy */
+  double get_cy() const;
+
   /** @brief Getter method for cm */
   Vector3d get_cm() const;
 
 private:
+  /** @brief Method that computes the area of the wing surface */
   void computeArea();
+
+  /** @brief Method that computes the wing's span as well as the span location
+   * of every of its wing stations */
+  void computeSpan();
 };
 
 class patch {
