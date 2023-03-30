@@ -187,11 +187,11 @@ namespace aero{
 
        
        
-       for (int j=0; j<n; ++j)
+       for (int j=0; j<m; ++j)
        {
            auto wingstation = wingStations[wings[0].get_stationIDs()[j]];
            
-           auto vortexring= vortexRings[wingstation.get_vortexIDs()[i]];
+           auto vortexring= vortexRings[wingstation.get_vortexIDs()[0]];
 
            force.point_fa.push_back(vortexRings[i].forceActingPoint()[0]);
            force.point_fa.push_back(vortexRings[i].forceActingPoint()[1]);
@@ -200,7 +200,7 @@ namespace aero{
            force.point_fa.push_back(vortexRings[i].forceActingPoint()[4]);
            force.point_fa.push_back(vortexRings[i].forceActingPoint()[5]);
            
-           i= i + m;
+           
        }
        
        //    Loading STRUCTURE connectivity
