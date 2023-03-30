@@ -6,7 +6,7 @@
 
 using namespace vlm;
 
-VLM::VLM(GUIHandler &gui) : gui(gui) {};
+VLM::VLM(GUIHandler &gui) : gui(gui){};
 
 void VLM::initialize() {
   if (!is_initialized) {
@@ -18,11 +18,13 @@ void VLM::initialize() {
 
 void VLM::solve() {
 
-  gui.msg.push("[VLM] Solving VLM case " + settings.io.baseName + " with solver " + settings.solver.get_type());
+  gui.msg.push("[VLM] Solving VLM case " + settings.io.baseName +
+               " with solver " + settings.solver.get_type());
 
   // Check for validity of database
   if (!settings.solver.get_type().compare("NONLINEAR") && !database.check()) {
-    gui.msg.push("[VLM] ERROR: One or more airfoils have not been found - Aborting");
+    gui.msg.push(
+        "[VLM] ERROR: One or more airfoils have not been found - Aborting");
     return;
   }
 
@@ -48,7 +50,8 @@ void VLM::solve() {
 
   solver->solve(object);
 
-  gui.msg.push("[VLM] Simulation completed in " + std::to_string(iters) + " iterations");
+  gui.msg.push("[VLM] Simulation completed in " + std::to_string(iters) +
+               " iterations");
   gui.msg.push("[VLM] Exported results to " + settings.io.outDir);
 };
 

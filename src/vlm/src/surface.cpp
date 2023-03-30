@@ -1,5 +1,6 @@
 
 #include "vlm/surface.hpp"
+#include "vlm/input.hpp"
 
 using namespace vlm;
 using namespace surface;
@@ -17,10 +18,8 @@ void wingStation::initialize(const input::simParam &sim) {
   }
   computeArea();
   computeChordLength();
-  // Computing the undeformed spanwise location for interpolation
-  spanLoc = forceActingPoint()(1);
   // Setting the local aoa to the geometric aoa
-  local_aoa = sim.aoa;
+  resetLocalStream(sim);
 }
 
 void wingStation::updateGeometry() {
@@ -62,18 +61,27 @@ Vector3d wingStation::forceActingPoint() const {
   return (vortices[vortexIDs.front()].forceActingPoint());
 }
 
-void wingStation::updateLocalAoa(const double dalpha) {
+void wingStation::updateLocalStream(const double dalpha,
+                                    const input::simParam &sim) {
   local_aoa += dalpha;
+  local_stream = sim.freeStream(local_aoa);
+  to_local(local_stream);
+
   for (auto &vortexID : vortexIDs) {
     vortices[vortexID].local_aoa += dalpha;
+    vortices[vortexID].local_stream = local_stream;
     vortices[vortexID].computeCollocationPoint();
   }
 }
 
-void wingStation::resetLocalAoa(const input::simParam &sim) {
+void wingStation::resetLocalStream(const input::simParam &sim) {
   local_aoa = sim.aoa;
+  local_stream = sim.freeStream();
+  to_local(local_stream);
+
   for (auto &vortexID : vortexIDs) {
     vortices[vortexID].local_aoa = sim.aoa;
+    vortices[vortexID].local_stream = local_stream;
     vortices[vortexID].computeCollocationPoint();
   }
 }
@@ -88,11 +96,11 @@ double wingStation::get_spanLoc() const { return spanLoc; }
 
 std::vector<int> wingStation::get_vortexIDs() const { return vortexIDs; }
 
-Matrix<double, 6, 1> wingStation::get_forces() const { return forces; }
-
 double wingStation::get_cl() const { return cl; }
 
 double wingStation::get_cd() const { return cd; }
+
+double wingStation::get_cy() const { return cy; }
 
 Vector3d wingStation::get_cm() const { return cm; }
 
@@ -115,14 +123,49 @@ void wingStation::computeChordLength() {
   chord = 0.5 * (d1 + d2);
 }
 
+void wingStation::to_local(Vector3d &vector) {
+
+  // Computing local referential
+  Vector3d leadingEdge = vortices[vortexIDs.front()].leadingEdgeDl();
+  Vector3d x_local = Vector3d::UnitX();
+  Vector3d z_local = x_local.cross(leadingEdge).normalized();
+  Vector3d y_local = z_local.cross(x_local).normalized();
+
+  // Rotating freeStream
+  Matrix3d rotationMatrix{{x_local(0), x_local(1), x_local(2)},
+                          {y_local(0), y_local(1), y_local(2)},
+                          {z_local(0), z_local(1), z_local(2)}};
+
+  vector = rotationMatrix * vector;
+}
+void wingStation::to_global(Vector3d &vector) {
+
+  // Computing local referential
+  Vector3d leadingEdge = vortices[vortexIDs.front()].leadingEdgeDl();
+  Vector3d x_local = Vector3d::UnitX();
+  Vector3d z_local = x_local.cross(leadingEdge).normalized();
+  Vector3d y_local = z_local.cross(x_local).normalized();
+
+  // Rotating freeStream
+  Matrix3d rotationMatrix{{x_local(0), x_local(1), x_local(2)},
+                          {y_local(0), y_local(1), y_local(2)},
+                          {z_local(0), z_local(1), z_local(2)}};
+
+  vector = rotationMatrix.inverse() * vector;
+}
+
+Vector3d wingStation::liftAxis() {
+  auto &leadingPanel = vortices[vortexIDs.front()];
+  return (leadingPanel.inertial_stream()
+              .cross(leadingPanel.leadingEdgeDl())
+              .normalized());
+}
+
 void wingStation::computeForces(const input::simParam &sim) {
 
-  Vector3d Qinf = sim.freeStream(local_aoa);
   double previousGamma = 0.0;
-
-  forces = Matrix<double, 6, 1>::Zero();
-  cl = 0.0;
-  cm = Vector3d::Zero();
+  force = Vector3d::Zero();
+  moment = Vector3d::Zero();
 
   for (auto &vortexID : vortexIDs) {
     auto &vortex = vortices[vortexID];
@@ -131,25 +174,30 @@ void wingStation::computeForces(const input::simParam &sim) {
     Vector3d dl = vortex.leadingEdgeDl();
     Vector3d lever = sim.origin() - vortex.forceActingPoint();
 
-    // local vectorial forces
-    vortex.forces({0,1,2}) = Qinf.cross(dl);
-    vortex.forces({0,1,2}) *= sim.rho * (vortex.get_gamma() - previousGamma);
-    vortex.forces({3,4,5}) = forces({0,1,2}).cross(lever);
+    // Local forces
+    Vector3d local_force = vortex.inertial_stream().cross(dl);
+    local_force *= sim.rho * (vortex.get_gamma() - previousGamma);
 
-    // Local coefficients
-    vortex.cl = vortex.forces({0,1,2}).dot(sim.liftAxis()) / (sim.dynamicPressure() * sim.sref);
-    vortex.cm = vortex.forces({3,4,5}) / (sim.dynamicPressure() * sim.sref * sim.cref);
+    Vector3d local_moment = local_force.cross(lever);
 
-    // Incrementing wing station forces
-    forces += vortex.forces;
+    // Incrementing total force
+    force += local_force;
+    moment += local_moment;
 
-    // Incrementing wing station coefficients
-    cl += vortex.cl * sim.sref/area;
-    cm += vortex.cm * sim.sref/area * sim.cref/chord;
+    // Panel coefficient
+    vortex.cf = local_force / (sim.dynamicPressure() * sim.sref);
+    vortex.cm = local_moment / (sim.dynamicPressure() * sim.sref * sim.cref);
 
     // Setting gamma reference for next panel
     previousGamma = vortex.get_gamma();
   }
+
+  // Oriented in section's referential
+  cl_local = force.dot(liftAxis()) / (sim.dynamicPressure() * area);
+  // Oriented in inertial referential
+  cl = force.dot(sim.liftAxis()) / (sim.dynamicPressure() * area);
+  cy = force.dot(Vector3d::UnitY()) / (sim.dynamicPressure() * area);
+  cm = moment / (sim.dynamicPressure() * area * sim.cref);
 }
 
 // ----------------------------
@@ -164,10 +212,7 @@ void wing::initialize(const input::simParam &sim) {
     stations[stationID].initialize(sim);
   }
   computeArea();
-  // Computing span of the wing
-  auto &rootStation = stations[stationIDs.front()];
-  auto &tipStation = stations[stationIDs.back()];
-  span = tipStation.forceActingPoint()(1) - rootStation.forceActingPoint()(1);
+  computeSpan();
 }
 
 void wing::updateGeometry() {
@@ -175,6 +220,7 @@ void wing::updateGeometry() {
     stations[stationID].updateGeometry();
   }
   computeArea();
+  computeSpan();
 }
 
 double wing::get_globalIndex() const { return globalIndex; }
@@ -189,12 +235,25 @@ double wing::get_cl() const { return cl; }
 
 double wing::get_cd() const { return cd; }
 
+double wing::get_cy() const { return cy; }
+
 Vector3d wing::get_cm() const { return cm; }
 
 void wing::computeArea() {
   area = 0.0;
   for (auto &stationID : stationIDs) {
     area += stations[stationID].get_area();
+  }
+}
+
+void wing::computeSpan() {
+  span = 0.0;
+  for (auto &stationID : stationIDs) {
+    auto &station = stations[stationID];
+    Vector3d leadingEdge =
+        station.vortices[station.vortexIDs.front()].leadingEdgeDl();
+    span += leadingEdge.norm();
+    station.spanLoc = span - 0.5 * leadingEdge.norm();
   }
 }
 
@@ -205,9 +264,11 @@ void wing::computeForces(const input::simParam &sim) {
 
   for (auto &stationID : stationIDs) {
     auto &station = stations[stationID];
-    cl += station.get_cl() * station.get_area()/area;
-    cd += station.get_cd() * station.get_area()/area;
-    cm += station.get_cm() * station.get_area()/area * station.get_chord()/sim.cref;
+    cl += station.get_cl() * station.get_area() / area;
+    cy += station.get_cy() * station.get_area() / area;
+    cd += station.get_cd() * station.get_area() / area;
+    cm += station.get_cm() * station.get_area() / area * station.get_chord() /
+          sim.cref;
   }
 }
 

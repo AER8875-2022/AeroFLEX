@@ -41,11 +41,7 @@ void database::table::importAirfoils(const std::string &path) {
 
   std::ifstream database_file(path);
 
-  if (!database_file.is_open()) {
-    std::cerr << "\n\033[1;31m ->VLM ERROR: Error in database file import \033[0m"
-              << std::endl;
-    return;
-  }
+  if (!database_file.is_open()) return;
 
   // Declaring output
   std::vector<std::string> line;
@@ -117,11 +113,7 @@ void database::table::importLocations(const std::string &path) {
 
   std::ifstream location_file(path);
 
-  if (!location_file.is_open()) {
-    std::cerr << "\n\033[1;31m ->VLM ERROR: Error in database file\033[0m"
-              << std::endl;
-    return;
-  }
+  if (!location_file.is_open()) return;
 
   // Declaring output
   std::vector<std::string> line;
