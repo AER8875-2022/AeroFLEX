@@ -35,7 +35,7 @@ namespace aero{
             auto wstation= wingStations[wings[0].get_stationIDs()[k]];
             std::cout << "wstation.get_vortexIDs()[0] " << wstation.get_vortexIDs()[0]<< std::endl;
 
-            for (int i = 0; i <1 ; ++i)
+            for (int i = 0; i <wstation.get_vortexIDs().size() ; ++i)
             {
 
 
@@ -44,7 +44,7 @@ namespace aero{
 
 
 
-                for (int p=0; p<2; ++p)
+                for (int p=0; p<vring.get_nodeIDs().size(); ++p)
                 {
                     auto node=nodes[vring.get_nodeIDs()[p]];
                     double bestDistance[2]={10000,10000};
@@ -104,7 +104,7 @@ namespace aero{
                                  std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,std::vector<Eigen::VectorXd> Solutions) {
         for (int k = 0; k<wingStations.size(); ++k) {
             auto wstation= wingStations[wings[0].get_stationIDs()[k]];
-            for (int i = 0; i<1; ++i) {
+            for (int i = 0; i<wstation.get_vortexIDs().size(); ++i) {
 
 
 
@@ -114,7 +114,7 @@ namespace aero{
                 double angle_y;
                 double angle_z;
 
-                for (int p=0; p<2; ++p)
+                for (int p=0; p<vring.get_nodeIDs().size(); ++p)
                 {
                     auto node = nodes[vring.get_nodeIDs()[p]];
                     auto nodeStruct1 = Solutions[pos.node[2*p]];
@@ -188,7 +188,7 @@ namespace aero{
 
        
        
-       for (int j=0; j<1; ++j)
+       for (int j=0; j<m; ++j)
        {
            auto wingstation = wingStations[wings[0].get_stationIDs()[j]];
            
@@ -259,7 +259,7 @@ namespace aero{
        
    
        
-       for (int i=0; i<2; ++i){
+       for (int i=0; i<m; ++i){
            
            
            for (int j=0; j<num; ++j){
