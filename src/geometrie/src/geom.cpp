@@ -121,6 +121,9 @@ void Settings::import_config_file(tiny::config &io) {
 	r_le = io.get<double>("Geom-CST", "Leading_edge_r");
 	Beta = io.get<double>("Geom-CST", "Trailing_edge_angle");
 
+    E = io.get<double>("Geom-Meca", "E");
+    G = io.get<double>("Geom-Meca", "G");
+
 }
 
 static const std::string bool_to_string(const bool b) {
@@ -148,5 +151,7 @@ void Settings::export_config_file(tiny::config &io) {
 	io.config["Geom-CST"]["Leading_edge_r"] = std::to_string(r_le);
     io.config["Geom-CST"]["Trailing_edge_angle"] = std::to_string(Beta);
 
+    io.config["Geom-Meca"]["E"] = std::to_string(E);
+    io.config["Geom-Meca"]["G"] = std::to_string(G);
 }
 
