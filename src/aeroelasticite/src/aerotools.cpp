@@ -300,13 +300,13 @@ namespace aero{
            
        }
    }      
-   std::vector<double> ComputeStructureForces(interpolation_f force, std::vector<vlm::surface::wingStation> wingStations)
+   Eigen::VectorXd  ComputeStructureForces(interpolation_f force, std::vector<vlm::surface::wingStation> wingStations)
 
   {
        int n=force.point_fa.size()/3;
        int m=force.point_fs.size()/3;
        
-       vector <double> forces_s(6*m,0);
+       Eigen::VectorXd  forces_s(6*m,0);
        vector <double> M(3);
        vector <double> r(3);
       vector <double> M_s(3);

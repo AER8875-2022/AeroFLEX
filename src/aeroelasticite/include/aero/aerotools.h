@@ -29,7 +29,7 @@ namespace aero{
     
     void LoadInterpol(interpolation_f &force, std::vector<vlm::surface::wingStation> wingStations,std::vector<vlm::surface::wing> wings, std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,std::map<int,Vector3d> mapStruct,std::map<int, int> mapStructni);
 
-    std::vector<double> ComputeStructureForces(interpolation_f force, std::vector<vlm::surface::wingStation> wingStations);
+    Eigen::VectorXd ComputeStructureForces(interpolation_f force, std::vector<vlm::surface::wingStation> wingStations);
 
     std::vector<double> crossProduct(const std::vector<double>& i, const std::vector<double>& j);
 
