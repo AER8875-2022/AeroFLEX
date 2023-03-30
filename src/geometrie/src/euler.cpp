@@ -6,6 +6,7 @@
 void generer(std::vector<std::vector<double>> xu, std::vector<std::vector<double>> xl, std::vector<std::vector<double>> y, std::vector<std::vector<double>> su, std::vector<std::vector<double>> sl, double disc, std::string file_name, bool RANS){
 
     gmsh::initialize();
+    gmsh::option::setNumber("General.Terminal",0); //Mute GMSH on terminal
 
   gmsh::model::add("Euler");
 

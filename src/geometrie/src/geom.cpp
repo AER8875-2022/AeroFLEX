@@ -23,8 +23,8 @@ void Geom::Geom_gen() {
         {settings.z_te},                         
         {settings.r_le},                        
         {settings.Beta},                         
-        {0, 2},                         //??, x)le                    
-        {0.05, 0.1, 0.4},               //??, z_n            
+        {0.0},                         //??, x)le                    
+        {0.0},               //??, z_n            
         {settings.twist}                         
         );
         //WL
@@ -37,8 +37,8 @@ void Geom::Geom_gen() {
         {settings.z_te},                         
         {settings.r_le},                        
         {settings.Beta},                         
-        {0, 2},                         //??, x)le                    
-        {0.05, 0.1, 0.4},               //??, z_n            
+        {0.0},                         //??, x)le                    
+        {0.0},               //??, z_n            
         {settings.twist}                         
         );
 
@@ -53,8 +53,8 @@ void Geom::Geom_gen() {
         {settings.m},                   
         {settings.p},                        
         {settings.t},                     
-        {0, 2},                         //??, x)le 
-        {0.05, 0.1, 0.4},               //??, z_n 
+        {0.0},                         //??, x)le 
+        {0.0},               //??, z_n 
         {settings.twist}                      
         );
 
@@ -68,8 +68,8 @@ void Geom::Geom_gen() {
         {settings.m},                   
         {settings.p},                        
         {settings.t},                     
-        {0, 2},                         //??, x)le 
-        {0.05, 0.1, 0.4},               //??, z_n 
+        {0.0},                         //??, x)le 
+        {0.0},               //??, z_n 
         {settings.twist}                      
         );
     }
@@ -102,24 +102,24 @@ void Geom::Geom_gen() {
 void Settings::import_config_file(tiny::config &io) {
 
 
-	cr = io.get<double>("Wing-geometry", "Chord_root");
-	ct = io.get<double>("Wing-geometry", "Chord_tip");
-	envergure = io.get<double>("Wing-geometry", "Span");
-	twist = io.get<double>("Wing-geometry", "Twist_angle");
-	fleche = io.get<double>("Wing-geometry", "Sweep_angle");
-	dihedre = io.get<double>("Wing-geometry", "Diherdral_angle");
-    P_beam = io.get<double>("Wing-geometry", "Beam_position");
-	P_aile = io.get<double>("Wing-geometry", "Wing_position");
-	Winglet = io.get<int>("Wing-geometry", "Winglet");
-	S_type = io.get<int>("Wing-geometry", "Airfoil_type");
+	cr = io.get<double>("Geom-Wing", "Chord_root");
+	ct = io.get<double>("Geom-Wing", "Chord_tip");
+	envergure = io.get<double>("Geom-Wing", "Span");
+	twist = io.get<double>("Geom-Wing", "Twist_angle");
+	fleche = io.get<double>("Geom-Wing", "Sweep_angle");
+	dihedre = io.get<double>("Geom-Wing", "Diherdral_angle");
+    P_beam = io.get<double>("WGeom-Wing", "Beam_position");
+	P_aile = io.get<double>("Geom-Wing", "Wing_position");
+	Winglet = io.get<int>("Geom-Wing", "Winglet");
+	S_type = io.get<int>("Geom-Wing", "Airfoil_type");
 
-    m = io.get<double>("NACA", "m");
-    p = io.get<double>("NACA", "p");
-    t = io.get<double>("NACA", "t");
+    m = io.get<double>("Geom-NACA", "m");
+    p = io.get<double>("Geom-NACA", "p");
+    t = io.get<double>("Geom-NACA", "t");
 
-    z_te = io.get<double>("CST", "Trailing_edge_dist");
-	r_le = io.get<double>("CST", "Leading_edge_r");
-	Beta = io.get<double>("CST", "Trailing_edge_angle");
+    z_te = io.get<double>("Geom-CST", "Trailing_edge_dist");
+	r_le = io.get<double>("Geom-CST", "Leading_edge_r");
+	Beta = io.get<double>("Geom-CST", "Trailing_edge_angle");
 
 }
 
@@ -129,24 +129,24 @@ static const std::string bool_to_string(const bool b) {
 
 void Settings::export_config_file(tiny::config &io) {
 
-	io.config["Wing-geometry"]["Chord_root"] = std::to_string(cr);
-	io.config["Wing-geometry"]["Chord_tip"] = std::to_string(ct);
-	io.config["Wing-geometry"]["Span"] = std::to_string(envergure);
-	io.config["Wing-geometry"]["Twist_angle"] = std::to_string(twist);
-	io.config["Wing-geometry"]["Sweep_angle"] = std::to_string(fleche);
-	io.config["Wing-geometry"]["Diherdral_angle"] = std::to_string(dihedre);
-	io.config["Wing-geometry"]["Beam_position"] = std::to_string(P_beam);
-	io.config["Wing-geometry"]["Wing_position"] = std::to_string(P_aile);
-	io.config["Wing-geometry"]["Winglet"] = std::to_string(Winglet);
-	io.config["Wing-geometry"]["Airfoil_type"] = std::to_string(S_type);
+	io.config["Geom-Wing"]["Chord_root"] = std::to_string(cr);
+	io.config["Geom-Wing"]["Chord_tip"] = std::to_string(ct);
+	io.config["Geom-Wing"]["Span"] = std::to_string(envergure);
+	io.config["Geom-Wing"]["Twist_angle"] = std::to_string(twist);
+	io.config["Geom-Wing"]["Sweep_angle"] = std::to_string(fleche);
+	io.config["Geom-Wing"]["Diherdral_angle"] = std::to_string(dihedre);
+	io.config["Geom-Wing"]["Beam_position"] = std::to_string(P_beam);
+	io.config["Geom-Wing"]["Wing_position"] = std::to_string(P_aile);
+	io.config["Geom-Wing"]["Winglet"] = std::to_string(Winglet);
+	io.config["Geom-Wing"]["Airfoil_type"] = std::to_string(S_type);
 
-	io.config["NACA"]["m"] = std::to_string(m);
-	io.config["NACA"]["p"] = std::to_string(p);
-	io.config["NACA"]["t"] = std::to_string(t);
+	io.config["Geom-NACA"]["m"] = std::to_string(m);
+	io.config["Geom-NACA"]["p"] = std::to_string(p);
+	io.config["Geom-NACA"]["t"] = std::to_string(t);
 
-    io.config["CST"]["Trailing_edge_dist"] = std::to_string(z_te);
-	io.config["CST"]["Leading_edge_r"] = std::to_string(r_le);
-    io.config["CST"]["Trailing_edge_angle"] = std::to_string(Beta);
+    io.config["Geom-CST"]["Trailing_edge_dist"] = std::to_string(z_te);
+	io.config["Geom-CST"]["Leading_edge_r"] = std::to_string(r_le);
+    io.config["Geom-CST"]["Trailing_edge_angle"] = std::to_string(Beta);
 
 }
 
