@@ -105,7 +105,7 @@ void Settings::import_config_file(tiny::config &io) {
 	twist = io.get<double>("Geom-Wing", "Twist_angle");
 	fleche = io.get<double>("Geom-Wing", "Sweep_angle");
 	dihedre = io.get<double>("Geom-Wing", "Diherdral_angle");
-    P_beam = io.get<double>("WGeom-Wing", "Beam_position");
+    P_beam = io.get<double>("Geom-Wing", "Beam_position");
 	P_aile = io.get<double>("Geom-Wing", "Wing_position");
 	Winglet = io.get<int>("Geom-Wing", "Winglet");
 	S_type = io.get<int>("Geom-Wing", "Airfoil_type");

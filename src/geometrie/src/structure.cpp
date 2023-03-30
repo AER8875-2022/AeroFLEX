@@ -5,6 +5,7 @@
 #include <cmath>
 #include <iomanip>
 #include <tuple>
+#include <array>
 #include "geometrie/structure.hpp"
 #include "geometrie/geometry.hpp"
 
@@ -26,15 +27,13 @@ std::vector<std::vector<double>> get_center_point(std::vector<std::vector<double
 
 }
 
-std::vector<double> vecteur_normal(std::vector<double> p1, std::vector<double> p2){
-    std::vector<double> p3 = p1;
-    p3[0]= p3[0]+1;
-    std::vector<double> normal(3,0), v1(3,0), v2(3,0), normal_unitaire(3,0);
+void vecteur_normal(std::array<double, 3> &normal, std::vector<double> p1, std::vector<double> p2){
+    std::vector<double> v1(3,0), v2(3,0.);
     double norme;
     for (int i=0; i<= v1.size(); i++){
         v1[i]=p2[i]-p1[i];
-        v2[i]=p3[i]-p1[i];
     }
+    v2[0]=1;
 
     normal[0]=(v1[1]*v2[2])-(v2[1]*v1[2]);
     normal[1]=-((v1[0]*v2[2])-(v2[0]*v1[2]));
@@ -42,12 +41,10 @@ std::vector<double> vecteur_normal(std::vector<double> p1, std::vector<double> p
 
     norme=sqrt(pow(normal[0],2)+pow(normal[1],2)+pow(normal[2],2));
 
-    normal_unitaire[0]=normal[0]/norme;
-    normal_unitaire[1]=normal[1]/norme;
-    normal_unitaire[2]=normal[2]/norme;
-    return normal_unitaire;
+    normal[0] /= norme;
+    normal[1] /= norme;
+    normal[2] /= norme;
 }
-
 
 std::vector<std::vector<std::vector<std::vector<double>>>> get_geometry(Body wing){
     std::vector<std::vector<std::vector<std::vector<double>>>> surfaces = wing.get_paired_body_surfaces();
@@ -56,7 +53,7 @@ std::vector<std::vector<std::vector<std::vector<double>>>> get_geometry(Body win
 
 std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> maillage_structure(Body wing){
     std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> element;
-    std::vector<double> normal(3,0),pt_normal(3,0);
+    std::vector<double> pt_normal(3,0);
 
     std::vector<std::vector<std::vector<std::vector<double>>>> surfaces = get_geometry(wing);
 
@@ -109,8 +106,9 @@ std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<d
         }
         myfile <<""<<std::endl;
         myfile <<"$##### Connectivity #####"<<std::endl;
+        std::array<double, 3> normal = {0., 0., 0.};
         for(int i=0; i<=(centre.size()-2); i++){
-            normal=vecteur_normal(centre[i+1], centre[i]);
+            vecteur_normal(normal, centre[i+1], centre[i]);
             pt_normal[0]=centre[i][0]+normal[0];
             pt_normal[1]=centre[i][1]+normal[1];
             pt_normal[2]=centre[i][2]+normal[2];
