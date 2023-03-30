@@ -1,5 +1,6 @@
 set_project("AeroFLEX")
 set_version("0.1.0")
+set_license("GPL-2.0")
 
 add_rules("mode.debug", "mode.release", "mode.releasedbg")
 set_warnings("all")
