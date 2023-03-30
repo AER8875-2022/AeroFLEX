@@ -98,10 +98,7 @@ void Geom::Geom_gen() {
     std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> element = maillage_structure(WING_RIGHT);
 }
 
-
 void Settings::import_config_file(tiny::config &io) {
-
-
 	cr = io.get<double>("Geom-Wing", "Chord_root");
 	ct = io.get<double>("Geom-Wing", "Chord_tip");
 	envergure = io.get<double>("Geom-Wing", "Span");
@@ -113,17 +110,18 @@ void Settings::import_config_file(tiny::config &io) {
 	Winglet = io.get<int>("Geom-Wing", "Winglet");
 	S_type = io.get<int>("Geom-Wing", "Airfoil_type");
 
-    m = io.get<double>("Geom-NACA", "m");
-    p = io.get<double>("Geom-NACA", "p");
-    t = io.get<double>("Geom-NACA", "t");
-
-    z_te = io.get<double>("Geom-CST", "Trailing_edge_dist");
-	r_le = io.get<double>("Geom-CST", "Leading_edge_r");
-	Beta = io.get<double>("Geom-CST", "Trailing_edge_angle");
+    if (solver_type() == "NACA") {
+        m = io.get<double>("Geom-NACA", "m");
+        p = io.get<double>("Geom-NACA", "p");
+        t = io.get<double>("Geom-NACA", "t");
+    } else if (solver_type() == "CST") {
+        z_te = io.get<double>("Geom-CST", "Trailing_edge_dist");
+        r_le = io.get<double>("Geom-CST", "Leading_edge_r");
+        Beta = io.get<double>("Geom-CST", "Trailing_edge_angle");
+    }
 
     E = io.get<double>("Geom-Meca", "E");
     G = io.get<double>("Geom-Meca", "G");
-
 }
 
 static const std::string bool_to_string(const bool b) {
@@ -142,14 +140,16 @@ void Settings::export_config_file(tiny::config &io) {
 	io.config["Geom-Wing"]["Wing_position"] = std::to_string(P_aile);
 	io.config["Geom-Wing"]["Winglet"] = std::to_string(Winglet);
 	io.config["Geom-Wing"]["Airfoil_type"] = std::to_string(S_type);
-
-	io.config["Geom-NACA"]["m"] = std::to_string(m);
-	io.config["Geom-NACA"]["p"] = std::to_string(p);
-	io.config["Geom-NACA"]["t"] = std::to_string(t);
-
-    io.config["Geom-CST"]["Trailing_edge_dist"] = std::to_string(z_te);
-	io.config["Geom-CST"]["Leading_edge_r"] = std::to_string(r_le);
-    io.config["Geom-CST"]["Trailing_edge_angle"] = std::to_string(Beta);
+    
+    if (solver_type() == "NACA") {
+        io.config["Geom-NACA"]["m"] = std::to_string(m);
+        io.config["Geom-NACA"]["p"] = std::to_string(p);
+        io.config["Geom-NACA"]["t"] = std::to_string(t);
+    } else if (solver_type() == "CST") {
+        io.config["Geom-CST"]["Trailing_edge_dist"] = std::to_string(z_te);
+        io.config["Geom-CST"]["Leading_edge_r"] = std::to_string(r_le);
+        io.config["Geom-CST"]["Trailing_edge_angle"] = std::to_string(Beta);
+    }
 
     io.config["Geom-Meca"]["E"] = std::to_string(E);
     io.config["Geom-Meca"]["G"] = std::to_string(G);
