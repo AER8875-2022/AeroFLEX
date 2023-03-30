@@ -1,5 +1,8 @@
 
 #include "geometrie/geom.hpp"
+#include "geometrie/euler.hpp"
+#include "geometrie/geometry.hpp"
+#include "geometrie/structure.hpp"
 
 using namespace geom;
 
@@ -9,7 +12,7 @@ void Geom::Geom_gen() {
     std::string body_type = "General";
     Body WING_RIGHT(body_type);
     Body WING_LEFT(body_type);
-    if(settings.S_type){
+    if(settings.S_type == 1){
         //WR
         WING_RIGHT.add_wing_surface_cst(
         100,                            
@@ -107,8 +110,8 @@ void Settings::import_config_file(tiny::config &io) {
 	dihedre = io.get<double>("Wing-geometry", "Diherdral_angle");
     P_beam = io.get<double>("Wing-geometry", "Beam_position");
 	P_aile = io.get<double>("Wing-geometry", "Wing_position");
-	Winglet = io.get<bool>("Wing-geometry", "Winglet");
-	S_type = io.get<bool>("Wing-geometry", "Airfoil_type");
+	Winglet = io.get<int>("Wing-geometry", "Winglet");
+	S_type = io.get<int>("Wing-geometry", "Airfoil_type");
 
     m = io.get<double>("NACA", "m");
     p = io.get<double>("NACA", "p");
@@ -134,8 +137,8 @@ void Settings::export_config_file(tiny::config &io) {
 	io.config["Wing-geometry"]["Diherdral_angle"] = std::to_string(dihedre);
 	io.config["Wing-geometry"]["Beam_position"] = std::to_string(P_beam);
 	io.config["Wing-geometry"]["Wing_position"] = std::to_string(P_aile);
-	io.config["Wing-geometry"]["Winglet"] = bool_to_string(Winglet);
-	io.config["Wing-geometry"]["Airfoil_type"] = bool_to_string(S_type);
+	io.config["Wing-geometry"]["Winglet"] = std::to_string(Winglet);
+	io.config["Wing-geometry"]["Airfoil_type"] = std::to_string(S_type);
 
 	io.config["NACA"]["m"] = std::to_string(m);
 	io.config["NACA"]["p"] = std::to_string(p);

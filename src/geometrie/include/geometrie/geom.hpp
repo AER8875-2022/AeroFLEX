@@ -2,23 +2,44 @@
 #ifndef __GEOM__
 #define __GEOM__
 
-#include <cstddef>
-#include <fstream>
-# include <iostream>
-# include <vector>
-# include <cmath>
-# include <array>
+#include <vector>
+#include <string>
 
 #include "common_aeroflex.hpp"
 //les mettre ici ?
-#include "geometrie/euler.hpp"
-#include "geometrie/geometry.hpp"
-#include "geometrie/structure.hpp"
+
 #include "tinyconfig.hpp"
 
 namespace geom {
 
 struct Settings {
+
+    //Airfoil Type
+    int S_type = 1;         //1-> CST, 0->NACA
+    std::vector<std::string> solver_options = {"NACA", "CST"};
+
+    inline std::string solver_type() {return solver_options.at(S_type);};
+    inline void set_solver_type(const std::string& type_) {
+        if (type_ == "NACA") {
+            S_type = 0;
+        } else if (type_ == "CST") {
+            S_type = 1;
+        }
+    };
+
+    // Winglet
+    int Winglet = 0;       //1-> yes, 0->no
+    std::vector<std::string> Winglet_options = {"OUI", "NON"};
+
+    inline std::string Winglet_type() {return Winglet_options.at(Winglet);};
+    inline void set_Winglet_type(const std::string& Winglet_) {
+        if (Winglet_ == "NON") {
+            Winglet = 0;
+        } else if (Winglet_ == "OUI") {
+            Winglet = 1;
+        }
+    };
+
     //General
     double cr = 1.0;          //Chord Root
     double ct = 1.0;          //Chords Tip
@@ -43,11 +64,9 @@ struct Settings {
     double r_le = 0.05;        //Leading edge radius
     double Beta = 0.2;        //Leading edge angle
 
-    //Winglet;
-    bool Winglet = 0;       //1-> yes, 0->no
-
-    //Airfoil Type
-    bool S_type = 0;        //1-> CST, 0->NACA
+    //Propriétés du matériaux
+    double E = 1000000000.0;
+    double G = 1000000.0;
 
     //import
     void import_config_file(tiny::config &io);

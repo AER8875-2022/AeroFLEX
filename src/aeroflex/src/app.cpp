@@ -20,6 +20,7 @@
 
 #include <rans/rans.h>
 #include <vlm/vlm.hpp>
+#include <geometrie/geom.hpp>
 
 template <class T>
 bool is_future_done(std::future<T> const& f) {
@@ -42,6 +43,7 @@ static void HelpMarker(const char* desc)
 struct Settings {
 	rans::Settings rans;
 	vlm::Settings vlm;
+	geom::Settings geom;
 };
 
 enum class AppDialogAction {
@@ -63,6 +65,7 @@ class App {
 		// Modules
 		rans::Rans &rans;
 		vlm::VLM &vlm;
+		geom::Geom &geom;
 
 		Settings settings;
 
@@ -80,7 +83,13 @@ class App {
 		AppDialogAction dialog_action = AppDialogAction::None;
 		FlexGUI::FileDialog dialog;
 		char path_buf[256];
-		App(rans::Rans &rans, vlm::VLM &vlm, GUIHandler &gui);
+		App(rans::Rans &rans, vlm::VLM &vlm, geom::Geom &geom, GUIHandler &gui);
+};
+
+struct GeomLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	App &app;
+	GeomLayer(App &app) : app(app) {};
 };
 
 struct RansLayer : public FlexGUI::Layer {
@@ -170,6 +179,7 @@ std::optional<Settings> config_open(const std::string &conf_path) {
 	// Parsing for vlm
 	settings.rans.import_config_file(io);
 	settings.vlm.import_config_file(io);
+	settings.geom.import_config_file(io);
 
 	return settings;
 }
@@ -186,11 +196,12 @@ bool config_save(const std::string &conf_path, Settings &settings) {
 	settings.rans.export_config_file(io);
 	// Exporting for VLM
 	settings.vlm.export_config_file(io);
+	settings.geom.export_config_file(io);
 
 	return io.write(conf_path);
 }
 
-App::App(rans::Rans &rans, vlm::VLM &vlm, GUIHandler &gui) : rans(rans), vlm(vlm), gui(gui) {
+App::App(rans::Rans &rans, vlm::VLM &vlm, geom::Geom &geom, GUIHandler &gui) : rans(rans), vlm(vlm), geom(geom), gui(gui) {
 	settings.rans.bcs["farfield"];
 	settings.rans.bcs["farfield"].bc_type = "farfield";
 	settings.rans.bcs["wall"];
@@ -295,6 +306,59 @@ inline void Combo(std::vector<std::string> &vec, int &index, const char* label) 
 		}
 		ImGui::EndCombo();
 	}
+}
+
+void GeomLayer::OnUIRender() {
+	
+	ImGui::Begin("Géométrie");
+
+	Combo(app.settings.geom.solver_options, app.settings.geom.S_type, "Type");
+
+	ImGui::Text("Paramètres");
+	if (app.settings.geom.S_type == 0){
+		ImGui::Separator();
+		ImGui::Text("NACA 4 digits");
+		ImGui::InputDouble("m", &app.settings.geom.m, 0.01f, 0.01f, "%.4f");
+		ImGui::InputDouble("p", &app.settings.geom.p, 0.01f, 0.01f, "%.4f");
+		ImGui::InputDouble("t", &app.settings.geom.t, 0.01f, 0.01f, "%.4f");}
+	
+	if (app.settings.geom.S_type == 1){
+		ImGui::Separator();
+		ImGui::Text("CST parametres");
+		ImGui::InputDouble("z_te", &app.settings.geom.z_te, 0.01f, 0.01f, "%.4f");
+		ImGui::InputDouble("r_le", &app.settings.geom.r_le, 0.01f, 0.01f, "%.4f");
+		ImGui::InputDouble("Beta", &app.settings.geom.Beta, 0.01f, 0.01f, "%.4f");}
+
+	ImGui::Separator();
+	ImGui::Text("Wing geometry");
+	ImGui::InputDouble("Span", &app.settings.geom.envergure, 0.01f, 0.01f, "%.4f");
+	ImGui::InputDouble("Chord root", &app.settings.geom.cr, 0.01f, 0.01f, "%.4f");
+	ImGui::InputDouble("Chord tip", &app.settings.geom.ct, 0.01f, 0.01f, "%.4f");
+	ImGui::InputDouble("Beam Position", &app.settings.geom.P_beam, 0.01f, 0.01f, "%.4f");
+	ImGui::InputDouble("Wing position", &app.settings.geom.P_aile, 0.01f, 0.01f, "%.4f");
+
+	ImGui::Separator();
+	ImGui::Text("Wing angles");
+	ImGui::InputDouble("Twist", &app.settings.geom.twist, 0.01f, 0.01f, "%.4f");
+	ImGui::InputDouble("Sweep", &app.settings.geom.fleche, 0.01f, 0.01f, "%.4f");
+	ImGui::InputDouble("Dihedral", &app.settings.geom.dihedre, 0.01f, 0.01f, "%.4f");
+	
+	
+	ImGui::Separator();
+	ImGui::Text("Material properties");
+	ImGui::InputDouble("Young modulus", &app.settings.geom.E, 0.01f, 0.01f, "%e");
+	ImGui::InputDouble("Shear modulus", &app.settings.geom.G, 0.01f, 0.01f, "%e");
+
+	ImGui::Separator();
+	ImGui::Text("Winglet options");
+	Combo(app.settings.geom.Winglet_options, app.settings.geom.Winglet, "Winglet");
+
+	// if (ImGui::RadioButton("Oui", app.settings.geom.Winglet == 0))
+	// 	app.settings.geom.Winglet = 0;
+	// ImGui::SameLine();
+	// if (ImGui::RadioButton("Non", app.settings.geom.Winglet == 1))
+	// 	app.settings.geom.Winglet = 1;
+	// ImGui::End();
 }
 
 void RansLayer::OnUIRender() {
@@ -636,6 +700,7 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, App& app)
 	application->PushLayer(std::make_shared<RansGraphLayer>(app));
 	application->PushLayer(std::make_shared<VlmGraphLayer>(app));
 	application->PushLayer(std::make_shared<CpLayer>(app));
+	application->PushLayer(std::make_shared<GeomLayer>(app));
 	application->PushLayer(std::make_shared<RansLayer>(app));
 	application->PushLayer(std::make_shared<VlmLayer>(app));
 	application->PushLayer(std::make_shared<ConsoleLayer>(app));
@@ -691,9 +756,10 @@ namespace FlexGUI {
 		// Initialize modules with signal routing
 		rans::Rans rans(gui);
 		vlm::VLM vlm(gui);
+		geom::Geom geom(gui);
 
 		// Initialize main application with the modules
-		App app(rans, vlm, gui);
+		App app(rans, vlm, geom, gui);
 
 		if (config_file == "") {
 			while (g_ApplicationRunning) {
