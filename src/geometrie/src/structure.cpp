@@ -118,7 +118,6 @@ std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<d
             myfile<<"CBAR, "<<i+1<<", "<<"10, "<<i+100<<", "<<i+101<<", "<<normal[0]<<", "<<normal[1]<<", "<<normal[2]<<std::endl;
 
             element.push_back(std::make_tuple(i,centre[i],centre[i+1],pt_normal));
-
         }
 
     myfile<<""<<std::endl;

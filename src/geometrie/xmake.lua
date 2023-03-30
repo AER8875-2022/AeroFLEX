@@ -2,10 +2,9 @@ add_requires("gmsh 4.11.1")
 
 target("geometrie-dev")
     set_kind("binary")
+    set_default(false)
     add_packages("eigen", "gmsh")
-    add_includedirs("../common")
-    add_includedirs("include", {public = true})
-    add_files("src/*.cpp")
+    add_deps("geometrie")
     add_files("dev/*.cpp")
 
 target("geometrie")
