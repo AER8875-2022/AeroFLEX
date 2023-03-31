@@ -68,7 +68,7 @@ class App {
 		rans::Rans &rans;
 		vlm::VLM &vlm;
 		geom::Geom &geom;
-    structure::Structure &structure;
+    	structure::Structure &structure;
 
 		Settings settings;
 
@@ -157,7 +157,7 @@ struct DialogLayer : public FlexGUI::Layer {
 
 // SOLVE =================================================================================================
 
-void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure) {
+void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure& structure, geom::Geom &geom) {
 
 	database::table table;
 
@@ -233,11 +233,12 @@ void App::solve_async() {
 	rans.settings = settings.rans;
 	vlm.settings = settings.vlm;
 	structure.settings = settings.structure;
+	geom.settings = settings.geom;
 
 	future_solve = std::async(std::launch::async,
 	[&](){
 		try {
-			solve(rans, vlm, structure);
+			solve(rans, vlm, structure, geom);
 		} catch (std::exception &e) {
 			gui.msg.push(e.what());
 		}
