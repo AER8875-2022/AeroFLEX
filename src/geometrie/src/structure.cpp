@@ -51,7 +51,7 @@ std::vector<std::vector<std::vector<std::vector<double>>>> get_geometry(Body win
     return surfaces;
 }
 
-std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> maillage_structure(Body wing){
+std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> maillage_structure(Body wing, double E, double G){
     std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> element;
     std::vector<double> pt_normal(3,0);
 
@@ -121,7 +121,7 @@ std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<d
     myfile<<""<<std::endl;
     myfile<<"$##### Propriétés de sections #####"<<std::endl;
     myfile<<"PBAR, "<<"10, "<<"11, "<<"1.0, "<<"0.1, "<<"0.1, "<<"0.1"<<std::endl;
-    myfile<<"MAT1, "<<"11, "<<"140.E9, "<<"70.E9,"<<std::endl;
+    myfile<<"MAT1, "<<"11, "<<E<<", "<<G<<","<<std::endl;
     myfile <<""<<std::endl;
     myfile<<"$##### Contrainte #####"<<std::endl;
     myfile<<"SPC1, "<<"100, "<<"123456, "<<"100,"<<std::endl;
