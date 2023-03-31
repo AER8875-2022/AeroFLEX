@@ -12,6 +12,7 @@
 #include <cstring>
 #include <future>
 #include <thread>
+#include <mutex>
 #include <ctime>
 
 #include "common_aeroflex.hpp"
@@ -163,8 +164,8 @@ void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure& structure, geo
 	
 	geom.Geom_gen(rans.settings.is_viscous());
 	if (!vlm.settings.sim.get_databaseFormat().compare("NONE")) {
-		table.airfoils["airfoil_demo_fine"];
-		table.airfoils["airfoil_demo_fine"].alpha = {0.0, 5.0, 10.0};
+		table.airfoils["naca0012q"];
+		table.airfoils["naca0012q"].alpha = {1.0, 5.0, 10.0};
 
 		for (auto& [airfoil, db] : table.airfoils) {
 			rans.solve_airfoil(airfoil, db);
@@ -551,11 +552,11 @@ void ButtonLayer::OnUIRender() {
 void RansGraphLayer::OnUIRender() {
 	{
 		ImGui::Begin("Rans-Convergence");
+		ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0.0f, 0.0f));
 		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
 		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
-		const double xticks = 1;
 
-		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,400))) {
+		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,-1))) {
 			ImPlot::SetupAxes("Iterations","Residual",xflags,yflags);
 			ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, 0, app.rans.iters);
 			ImPlot::SetupAxisZoomConstraints(ImAxis_X1, 11.0, app.rans.iters);
@@ -575,11 +576,11 @@ void RansGraphLayer::OnUIRender() {
 void StructureGraphLayer::OnUIRender() {
 	{
 		ImGui::Begin("Structure-Convergence");
+		ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0.0f, 0.0f));
 		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
 		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
-		const double xticks = 1;
 
-		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,400))) {
+		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,-1))) {
 			ImPlot::SetupAxes("Iterations","Residual",xflags,yflags);
 			ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, 0, app.structure.iters);
 			ImPlot::SetupAxisZoomConstraints(ImAxis_X1, 11.0, app.structure.iters);
@@ -599,11 +600,11 @@ void StructureGraphLayer::OnUIRender() {
 void VlmGraphLayer::OnUIRender() {
 	{
 		ImGui::Begin("Vlm-Convergence");
+		ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0.0f, 0.0f));
 		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
 		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
-		const double xticks = 1;
 
-		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,400))) {
+		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,-1))) {
 			ImPlot::SetupAxes("Iterations","Residual",xflags,yflags);
 			ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, 0, app.vlm.iters);
 			ImPlot::SetupAxisZoomConstraints(ImAxis_X1, 11.0, app.vlm.iters);
@@ -621,21 +622,44 @@ void VlmGraphLayer::OnUIRender() {
 };
 
 void CpLayer::OnUIRender() {
-	{
-		ImGui::Begin("Rans-Cp");
-		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
-		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit|ImPlotAxisFlags_Invert;
-		const double xticks = 1;
+	ImGui::Begin("Rans-Cp");
+	auto size = ImGui::GetWindowSize();
+	ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0.2f, 0.2f));
+	static ImPlotAxisFlags xflag = ImPlotAxisFlags_AutoFit;
+	static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_Invert;
 
-		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,400))) {
-			ImPlot::SetupAxisLimits(ImAxis_X1, -0.1, 1.1, ImPlotCond_Always);
-			ImPlot::SetupAxes("x","Cp",xflags,yflags);
-			ImPlot::PlotLine("Cp", app.rans.profile.x.data(), app.rans.profile.cp.data(), app.rans.profile.x.size());
-			ImPlot::EndPlot();
-		}
-
-		ImGui::End();
+	if (ImPlot::BeginPlot("Cp Profile", ImVec2(-1, (int)(size.y / 2.2f)))) {
+		std::scoped_lock lock(app.rans.profile.m_mutex);
+		ImPlot::SetupAxes("x","Cp",xflag,yflags);
+		ImPlot::PlotLine("Cp", app.rans.profile.x.data(), app.rans.profile.cp.data(), app.rans.profile.x.size());
+		ImPlot::EndPlot();
 	}
+
+	if (ImPlot::BeginPlot("Cp Airfoil", ImVec2(-1, (int)(size.y / 2.2f)))) {
+		const double pad = 1.1;
+		std::scoped_lock lock(app.rans.profile.m_mutex);
+		ImPlot::SetupAxes("x","", ImPlotAxisFlags_None,ImPlotAxisFlags_None);
+		ImPlot::SetupAxisLimits(ImAxis_X1, app.rans.profile.xmin * pad, app.rans.profile.xmax * pad, ImPlotCond_Always);
+		ImPlot::SetupAxisLimits(ImAxis_Y1, app.rans.profile.ymin * pad, app.rans.profile.ymax * pad, ImPlotCond_Always);
+		ImPlot::PlotLine("Airfoil", app.rans.profile.x.data(), app.rans.profile.y.data(), app.rans.profile.x.size());
+
+		if (app.rans.profile.filled) {
+			ImPlot::PushPlotClipRect();
+			for (int i = 0; i < app.rans.profile.x.size(); i++) {
+				ImVec2 p1 = ImPlot::PlotToPixels(ImPlotPoint(app.rans.profile.x[i], app.rans.profile.y[i]));
+				ImVec2 p2 = ImPlot::PlotToPixels(ImPlotPoint(app.rans.profile.cp_airfoil_x[i], app.rans.profile.cp_airfoil_y[i]));
+				if (app.rans.profile.cp_positive[i] == 1) {
+					ImPlot::GetPlotDrawList()->AddLine(p1, p2, IM_COL32(0,255,0,255));
+				} else {
+					ImPlot::GetPlotDrawList()->AddLine(p1, p2, IM_COL32(255,0,0,255));
+				}
+			}
+			ImPlot::PopPlotClipRect();
+		}
+		ImPlot::EndPlot();
+	}
+
+	ImGui::End();
 };
 
 class ConsoleLog
@@ -788,6 +812,8 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, App& app)
 			}
 			ImGui::EndMenu();
 		}
+		ImGui::SameLine(ImGui::GetWindowWidth() - 70);
+		ImGui::Text("FPS: %.1f", 1.0f / ImGui::GetIO().DeltaTime);
 	});
 	return application;
 }

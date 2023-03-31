@@ -25,7 +25,7 @@ namespace rans {
 class Rans {
     public:
     // This is a mess because of no separation of IO and computation...
-    std::vector<double> residuals;
+    std::vector<double> residuals = {1.0};
     std::atomic<int> iters = 0;
 
     CpProfile profile;
@@ -59,13 +59,10 @@ void Rans::input() {
 template<class T>
 void Rans::run() {
     multigrid<T> multi(ms, settings, gui, residuals, iters, profile);
-    gui.event.rans_preprocess = true;
 
     rans::solver& s = multi.run(true);
-    gui.event.rans_solve = true;
 
     save(settings.outfilename, s);
-    gui.event.rans_postprocess = true;
     std::cout << "Saved results to file " << settings.outfilename << "\n" << std::endl;
 }
 
@@ -75,7 +72,10 @@ void Rans::run_airfoil(const std::string& airfoil, database::airfoil& db) {
     ms.clear();
     // TODO: check with geom for the naming convention
     // For the moment we will only load 1 mesh
-    ms.push_back(mesh("../../../../examples/rans/" + airfoil + ".msh"));
+    ms.push_back(mesh("../../../../examples/rans/" + airfoil + "_coarse.msh"));
+    ms.push_back(mesh("../../../../examples/rans/" + airfoil + "_mid.msh"));
+    // ms.push_back(mesh("../../../../examples/rans/" + airfoil + "_fine.msh"));
+
     settings.bcs["farfield"].vars_far.angle = db.alpha[0] * 0.01745;
     multigrid<T> multi(ms, settings, gui, residuals, iters, profile);
     multi.solvers[0].init();
