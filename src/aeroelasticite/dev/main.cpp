@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
 
 
     elast.input();
-    std::cout << "cl: "  << std::endl;
+
     elast.solve();
 
     return 0;

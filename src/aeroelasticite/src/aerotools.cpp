@@ -30,11 +30,17 @@ namespace aero{
     void DispInterpol( interpolation &pos,std::vector<vlm::surface::wingStation> wingStations,
                        std::vector<vlm::surface::wing> wings,std::vector<element::vortexRing> vortexRings,
                       std::vector<Vector3d> nodes,std::map<int, Vector3d> mapStruct,std::map<int, int> mapStructni) {
-        for (int k = 0; k <wingStations.size() ; ++k)
+        //std::cout << "DispInterpol beg" << std::endl;
+        //wingstation size
+        //std::cout << "wingStations.size() " << wings[0].get_stationIDs().size() << std::endl;
+        for (int k = 0; k <wings[0].get_stationIDs().size() ; ++k)
         {
+
+
             auto wstation= wingStations[wings[0].get_stationIDs()[k]];
             //std::cout << "wstation.get_vortexIDs()[0] " << wstation.get_vortexIDs()[0]<< std::endl;
-            std::cout << "wstation.get_vortexIDs().size() " << wstation.get_vortexIDs().size()<< std::endl;
+            //std::cout << "wstation.get_vortexIDs().size() " << wstation.get_vortexIDs().size()<< std::endl;
+
 
             for (int i = 0; i <wstation.get_vortexIDs().size() ; ++i)
             {
@@ -104,7 +110,7 @@ namespace aero{
 
     std::vector<Vector3d> computeVLMDispalecement(interpolation pos,std::vector<vlm::surface::wingStation> wingStations,
                                  std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,std::vector<Eigen::VectorXd> Solutions) {
-        for (int k = 0; k<wingStations.size(); ++k) {
+        for (int k = 0; k<wings[0].get_stationIDs().size(); ++k) {
             auto wstation= wingStations[wings[0].get_stationIDs()[k]];
             for (int i = 0; i<wstation.get_vortexIDs().size(); ++i) {
 
@@ -185,7 +191,7 @@ namespace aero{
        // Loading VLM forceacting Point
        
        int n=wings.size(); // nombre de wingstations=size (wings)
-       int m=wingStations.size(); // nombre de vortexRings sur une wingstation
+       int m=wings[0].get_stationIDs().size(); // nombre de vortexRings sur une wingstation
        int i=0; // numéro du premier vortexring d une wingstation
 
        
