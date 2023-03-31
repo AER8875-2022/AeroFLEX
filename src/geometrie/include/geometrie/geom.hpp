@@ -81,7 +81,8 @@ public:
 
 public:
     Geom(GUIHandler &gui);
-    void Geom_gen();
+    //bool viscous = rans.settings.is_viscous();
+    void Geom_gen(bool viscous);
 };
 
 }

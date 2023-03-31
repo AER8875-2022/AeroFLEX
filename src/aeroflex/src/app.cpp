@@ -160,7 +160,8 @@ struct DialogLayer : public FlexGUI::Layer {
 void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure& structure, geom::Geom &geom) {
 
 	database::table table;
-
+	
+	geom.Geom_gen(rans.settings.is_viscous());
 	if (!vlm.settings.sim.get_databaseFormat().compare("NONE")) {
 		table.airfoils["airfoil_demo_fine"];
 		table.airfoils["airfoil_demo_fine"].alpha = {0.0, 5.0, 10.0};

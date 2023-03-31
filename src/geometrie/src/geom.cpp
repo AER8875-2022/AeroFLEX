@@ -8,7 +8,7 @@ using namespace geom;
 
 Geom::Geom(GUIHandler &gui): gui(gui) {}
 
-void Geom::Geom_gen() {
+void Geom::Geom_gen(bool viscous) {
     std::string body_type = "General";
     Body WING_RIGHT(body_type);
     Body WING_LEFT(body_type);
@@ -78,7 +78,7 @@ void Geom::Geom_gen() {
     WING_RIGHT.change_all_distributions("partial", "cartesian");
     std::vector<std::vector<std::vector<std::vector<double>>>> WR_surfaces = WING_RIGHT.get_paired_body_surfaces();    
     std::vector<std::vector<std::vector<std::vector<double>>>> WL_surfaces = WING_LEFT.get_paired_body_surfaces();
-    
+    gui.msg.push("[GEOM] Geometry generated");
     //Eventuellement changer de fonction
 
     //RANS
@@ -87,15 +87,17 @@ void Geom::Geom_gen() {
     std::vector<std::string> file_name{"Airfoil_coarse.msh","Airfoil_normal.msh","Airfoil_fine.msh"};
     //std::cout<<file_name[0]<<endl;
     std::vector<std::vector<std::vector<std::vector<double>>>> surfaces = WR_surfaces;
-    bool RANS = false; // True = solver RANS, False = solver Euler
+    //bool RANS = false; // True = solver RANS, False = solver Euler
     for (int i=0; i < surfaces.size(); i++){
         for (int j=0; j<3; j++){
-            generer(surfaces[i][0], surfaces[i][1], surfaces[i][2], surfaces[i][4], surfaces[i][5], disc[j], file_name[j], RANS);
+            generer(surfaces[i][0], surfaces[i][1], surfaces[i][2], surfaces[i][4], surfaces[i][5], disc[j], file_name[j], viscous);
         }
     }  
+    gui.msg.push("[GEOM] Mesh for Euler/RANS solver generated");
 
     // Structure
     std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> element = maillage_structure(WING_RIGHT, settings.E, settings.G);
+    gui.msg.push("[GEOM] Mesh for structure solver generated");
 }
 
 void Settings::import_config_file(tiny::config &io) {
