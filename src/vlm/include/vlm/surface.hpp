@@ -149,6 +149,9 @@ public:
   /** @brief Getter method for vortexIDS */
   std::vector<int> get_vortexIDs() const;
 
+  /** @briedf Getter method for force and moment */
+  Matrix<double, 6, 1> get_forces() const;
+
   /** @brief Getter method for cl */
   double get_cl() const;
 
