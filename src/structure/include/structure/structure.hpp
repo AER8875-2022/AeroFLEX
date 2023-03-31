@@ -87,6 +87,7 @@ public:
     FEM.set_K_global();
     FEM.set_Load_Vector_From_Load_Objects();      
     FEM.set_K_Final_sparse();
+    FEM.set_Force_Follower(settings.Force_follower);
   }
    
   void solve() {

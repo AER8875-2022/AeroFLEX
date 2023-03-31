@@ -41,6 +41,8 @@ public:
     Eigen::SparseMatrix<double>      K_Final_sparse;
     Eigen::VectorXd                    Displacement;
 
+    bool                             Force_follower;
+
     // GUI Handlers
     GUIHandler &gui;
     std::atomic<int> &iters;
@@ -49,13 +51,14 @@ public:
     MODEL(GUIHandler &gui, std::atomic<int> &iters, std::vector<double> &residuals)
         : gui(gui), iters(iters), residuals(residuals) {};
 
-    MODEL(std::string namefile, GUIHandler &gui, std::atomic<int> &iters, std::vector<double> &residuals)
+    MODEL(std::string namefile, GUIHandler &gui, std::atomic<int> &iters, std::vector<double> &residuals, bool f_f)
         : gui(gui), iters(iters), residuals(residuals) {
         
         read_data_file(namefile);
         set_K_global();
         set_Load_Vector_From_Load_Objects();    
         set_K_Final_sparse();
+        set_Force_Follower(f_f);
     };
 
     struct PBAR_param{
@@ -91,6 +94,11 @@ public:
         Eigen::Vector3d Direction;
     };
 
+    void set_Force_Follower(bool f_f){
+        Force_follower = f_f;
+    }
+    
+
     void set_Load_Vector_From_Vector(Eigen::VectorXd New_F)
     {
         if(Forces.size() == New_F.size())
@@ -98,10 +106,8 @@ public:
             Forces = New_F;
         }
     }
-
     
     void set_K_global(){
-
         K_Global_sparse = Eigen::SparseMatrix<double>( Nbr_Noeud * 6, Nbr_Noeud * 6 );
         for( auto& [cbar_id, elem] : CBAR_MAP)
         {
@@ -200,8 +206,7 @@ public:
             Eigen::MatrixXd Rot   = Eigen::MatrixXd::Zero(6,6);
             Rot.block(0,0,3,3)    = diag;
             Rot.block(3,3,3,3)    = diag;
-            
-            Forces.segment(i*6,6) = Rot * Forces.segment(i*6,6);            
+            Forces.segment(i*6,6) = Rot * Forces.segment(i*6,6);    
         }
     }
 
@@ -282,6 +287,9 @@ public:
     
                 Dep += Delta_dep_amor;
                 set_Quaternion_Map(Delta_dep_amor); 
+                if(Force_follower){
+                    Rotate_Ext_Loads();
+                }
 
                 #pragma omp parallel for
                 for (int i = 0; i < CBAR_keys.size(); ++i)
@@ -309,9 +317,8 @@ public:
                     #pragma omp critical
                     Forces_int.segment(6*n2,6)       += F_elem_global_ref.segment(6,6);   
                 }
-                
                 Forces_int = apply_SPC1_Forces(Forces_int);
-                Rotate_Ext_Loads();
+
                 Forces_diff = (Load_Step/Max_load_step)*(Forces) - Forces_int;
                 
                 set_K_global();
