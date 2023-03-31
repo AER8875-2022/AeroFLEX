@@ -47,7 +47,8 @@ void Aero::solve() {
     vlm.solve();
     interpolation_f force;
     interpolation pos;
-    structure.solve(ComputeStructureForces(force,vlm.object.wingStations));
+    structure.FEM.set_Load_Vector_From_Vector(ComputeStructureForces(force,vlm.object.wingStations));
+    structure.solve();
 
     vlm.object.updateGeometry(computeVLMDispalecement(pos,vlm.object.wingStations,vlm.object.wings,vlm.object.vortexRings,vlm.object.nodes,structure.Solutions ));
 }
