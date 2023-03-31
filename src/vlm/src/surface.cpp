@@ -96,6 +96,10 @@ double wingStation::get_spanLoc() const { return spanLoc; }
 
 std::vector<int> wingStation::get_vortexIDs() const { return vortexIDs; }
 
+Matrix<double, 6, 1> wingStation::get_forces() const {
+  return {force(0), force(1), force(2), moment(0), moment(1), moment(2)};
+}
+
 double wingStation::get_cl() const { return cl; }
 
 double wingStation::get_cd() const { return cd; }
