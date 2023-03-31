@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
   std::cout << "==>Loading simulation parameters...";
   vlm::Settings settings;
   tiny::config config;
-	config.read(argv[1]);
+  config.read(argv[1]);
   settings.import_config_file(config);
   std::cout << "\033[1;36mDone\033[0m" << std::endl;
 
@@ -61,7 +61,9 @@ int main(int argc, char **argv) {
     database.importAirfoils(settings.io.databaseFile);
     database.importLocations(settings.io.locationFile);
     if (!database.check()) {
-      std::cout << "\033[1;31m==>ERROR: One or more airfoils were not found! - Aborting \033[0m" << std::endl;
+      std::cout << "\033[1;31m==>ERROR: One or more airfoils were not found! - "
+                   "Aborting \033[0m"
+                << std::endl;
     }
     std::cout << "\033[1;36mDone\033[0m" << std::endl;
   }
@@ -79,7 +81,8 @@ int main(int argc, char **argv) {
 
   vlm::solver::base *solver;
   vlm::solver::linear::steady linear(settings.solver, iters, residuals, gui);
-  vlm::solver::nonlinear::steady nonlinear(settings.solver, iters, residuals, gui);
+  vlm::solver::nonlinear::steady nonlinear(settings.solver, iters, residuals,
+                                           gui);
 
   if (!settings.solver.get_type().compare("LINEAR")) {
     linear.initialize(object, database::table());

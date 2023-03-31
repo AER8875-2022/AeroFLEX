@@ -122,14 +122,8 @@ class vortexRing {
   /** @brief Strength of the vortices of the current element */
   double gamma;
 
-  /** @brief Local force vector */
-  Matrix<double, 6, 1> forces = Matrix<double, 6, 1>::Zero();
-
-  /** @brief Local lift coefficient */
-  double cl;
-
-  /** @brief Local drag coefficient */
-  double cd;
+  /** @brief Local force coefficient */
+  Vector3d cf;
 
   /** @brief Local moment coefficients */
   Vector3d cm;
@@ -143,8 +137,11 @@ class vortexRing {
   /** @brief Vortex filaments bounding the vortex ring */
   std::vector<fil::vortexLine> vortices;
 
-  /** @brief local angle of attack correction */
+  /** @brief Local angle of attack correction */
   double local_aoa;
+
+  /** @brief Local flow stream vector */
+  Vector3d local_stream;
 
 public:
   /** @param globalIndex Unique global index of the current element
@@ -164,7 +161,11 @@ public:
 
   /** @brief Method computing the length of the trailing edge of the ring
    *  @return Vector defining the trailing edge of the ring */
-  Vector3d leadingEdgeDl();
+  Vector3d leadingEdgeDl() const;
+
+  /** @brief Method to transform stream to global inertial referential from
+   * panel's local referential */
+  Vector3d inertial_stream() const;
 
   /** @brief Method computing the influence of the current vortex ring on a
    * collocation point
@@ -208,14 +209,8 @@ public:
   /** @brief Getter method for gamma */
   double get_gamma() const;
 
-  /** @brief Gettter method for forces */
-  Matrix<double, 6, 1> get_forces() const;
-
-  /** @brief Getter method for cl */
-  double get_cl() const;
-
-  /** @brief Getter method for cd */
-  double get_cd() const;
+  /** @brief Getter method for cf */
+  Vector3d get_cf() const;
 
   /** @brief Getter method for cm */
   Vector3d get_cm() const;
