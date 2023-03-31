@@ -13,6 +13,12 @@
 
 
 int main(int argc, char **argv) {
+
+    GUIHandler gui;
+    vlm::VLM vlm(gui);
+    structure::Structure structure(gui);
+    aero::Aero elast(gui, vlm, structure);
+
     // Verifying and handling input arguments
     if (argc < 2) {
         std::cerr << "\033[1;31m==>ERROR: expected config file as argument \033[0m"
@@ -31,33 +37,27 @@ int main(int argc, char **argv) {
     // LOADING SIMULATION PARAMETERS
     // #############################
     std::cout << "==>Loading simulation parameters...";
-    vlm::Settings settings;
+
     tiny::config config;
     config.read(argv[1]);
-    settings.import_config_file(config);
+    elast.vlm.settings.import_config_file(config);
     std::cout << "\033[1;36mDone\033[0m" << std::endl;
 
-    vlm::info::printCaseInfo(settings);
+    vlm::info::printCaseInfo(elast.vlm.settings);
 
 // #############################
-
-
-    std::cout << "argv[1]: " << argv[1] << std::endl;
 
     tiny::config configs;
     configs.read(argv[1]);
 
-    structure::Settings setting;
-    setting.import_config_file(config);
+    elast.structure.settings.import_config_file(config);
 
 
 
 
-    GUIHandler gui;
-    vlm::VLM vlm(gui);
-    structure::Structure structure(gui);
 
-    aero::Aero elast(gui, vlm, structure);
+
+
     elast.input();
     std::cout << "cl: "  << std::endl;
     elast.solve();

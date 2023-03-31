@@ -24,7 +24,7 @@ Aero::Aero(GUIHandler &gui, vlm::VLM &vlm, structure::Structure &structure)
 void Aero::input() {
     // TODO
     structure.input();
-    vlm.initialize();
+    //vlm.initialize();
     aero::interpolation pos;
     aero::interpolation_f force;
     auto mapStructni= structure.FEM.indexation_switch;
