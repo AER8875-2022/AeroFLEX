@@ -32,6 +32,9 @@ int main(int argc, const char * argv[]) {
         {0.0},               // z_n
         {0.0}                     // delta_alpha_t, twist
     );
+    
+    double E = 140.0*pow(10,9);
+    double G =70.0*pow(10,9);
     // WING_RIGHT.add_wing_surface_naca(
     //     100,                             // nx
     //     10,                            // ny
@@ -107,7 +110,7 @@ int main(int argc, const char * argv[]) {
         }
     }
 
-    std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> element = maillage_structure(WING_RIGHT);
+    std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> element = maillage_structure(WING_RIGHT, E, G);
 
 
 

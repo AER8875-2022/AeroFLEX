@@ -95,7 +95,7 @@ void Geom::Geom_gen() {
     }  
 
     // Structure
-    std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> element = maillage_structure(WING_RIGHT);
+    std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> element = maillage_structure(WING_RIGHT, settings.E, settings.G);
 }
 
 void Settings::import_config_file(tiny::config &io) {
