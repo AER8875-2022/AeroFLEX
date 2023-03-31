@@ -759,6 +759,8 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, App& app)
 			}
 			ImGui::EndMenu();
 		}
+		ImGui::SameLine(ImGui::GetWindowWidth() - 70);
+		ImGui::Text("FPS: %.1f", 1.0f / ImGui::GetIO().DeltaTime);
 	});
 	return application;
 }
