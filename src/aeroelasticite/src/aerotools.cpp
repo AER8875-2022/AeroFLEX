@@ -34,12 +34,14 @@ namespace aero{
         {
             auto wstation= wingStations[wings[0].get_stationIDs()[k]];
             //std::cout << "wstation.get_vortexIDs()[0] " << wstation.get_vortexIDs()[0]<< std::endl;
+            std::cout << "wstation.get_vortexIDs().size() " << wstation.get_vortexIDs().size()<< std::endl;
 
             for (int i = 0; i <wstation.get_vortexIDs().size() ; ++i)
             {
 
 
                 auto vring = vortexRings[wstation.get_vortexIDs()[i]];
+                //std::cout << "wstation.get_vortexIDs()[i]" << wstation.get_vortexIDs()[i]<< std::endl;
 
 
 

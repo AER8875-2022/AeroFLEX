@@ -14,8 +14,8 @@ using namespace structure;
 int main(int argc, char **argv){
 
     // Reading config file
-    tiny::config config;
-    config.read(argv[1]);
+    tiny::config configs;
+    configs.read(argv[1]);
 
     // Importing settings
     Settings settings;

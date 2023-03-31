@@ -17,7 +17,7 @@ namespace structure {
 
 struct Settings {
 
-  std::string Mesh_file_path = "../../../../examples/structure/Moment.txt";
+  std::string Mesh_file_path = "../../../../examples/structure/smith.txt";
   double Tolerance = 1e-6;
   int N_step = 10;
   double Damping = 1.0;
