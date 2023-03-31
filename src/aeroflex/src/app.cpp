@@ -324,7 +324,7 @@ inline void Combo(std::vector<std::string> &vec, int &index, const char* label) 
 }
 
 void GeomLayer::OnUIRender() {
-	
+
 	ImGui::Begin("Géométrie");
 
 	Combo(app.settings.geom.solver_options, app.settings.geom.S_type, "Type");
@@ -336,7 +336,7 @@ void GeomLayer::OnUIRender() {
 		ImGui::InputDouble("m", &app.settings.geom.m, 0.01f, 0.01f, "%.4f");
 		ImGui::InputDouble("p", &app.settings.geom.p, 0.01f, 0.01f, "%.4f");
 		ImGui::InputDouble("t", &app.settings.geom.t, 0.01f, 0.01f, "%.4f");}
-	
+
 	if (app.settings.geom.S_type == 1){
 		ImGui::Separator();
 		ImGui::Text("CST parametres");
@@ -357,8 +357,8 @@ void GeomLayer::OnUIRender() {
 	ImGui::InputDouble("Twist", &app.settings.geom.twist, 0.01f, 0.01f, "%.4f");
 	ImGui::InputDouble("Sweep", &app.settings.geom.fleche, 0.01f, 0.01f, "%.4f");
 	ImGui::InputDouble("Dihedral", &app.settings.geom.dihedre, 0.01f, 0.01f, "%.4f");
-	
-	
+
+
 	ImGui::Separator();
 	ImGui::Text("Material properties");
 	ImGui::InputDouble("Young modulus", &app.settings.geom.E, 0.01f, 0.01f, "%e");
@@ -394,7 +394,9 @@ void RansLayer::OnUIRender() {
 	ImGui::Separator();
 	ImGui::Text("Gas");
 	ImGui::InputDouble("gamma", &app.settings.rans.g.gamma, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Facteur d'expansion isentropique");
 	ImGui::InputDouble("R", &app.settings.rans.g.R, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Constante du gaz");
 
 	ImGui::Separator();
 	ImGui::Text("Farfield");
@@ -413,6 +415,7 @@ void RansLayer::OnUIRender() {
 	Combo(app.settings.rans.viscosity_options, app.settings.rans.viscosity, "Viscosity");
 
 	ImGui::InputDouble("Relaxation", &app.settings.rans.relaxation, 0.1f, 1.0f, "%.2f");
+	ImGui::SameLine(); HelpMarker("Facteur de relaxation");
 	ImGui::InputDouble("Tolerance", &app.settings.rans.tolerance, 0.0f, 0.0f, "%e");
 	ImGui::InputDouble("Start CFL", &app.settings.rans.start_cfl, 0.1f, 1.0f, "%.1f");
 	ImGui::InputDouble("Slope CFL", &app.settings.rans.slope_cfl, 0.1f, 1.0f, "%.1f");
