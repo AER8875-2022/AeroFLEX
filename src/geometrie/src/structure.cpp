@@ -27,19 +27,19 @@ std::vector<std::vector<double>> get_center_point(std::vector<std::vector<double
 
 }
 
-void vecteur_normal(std::array<double, 3> &normal, std::vector<double> p1, std::vector<double> p2){
-    std::vector<double> v1(3,0), v2(3,0.);
-    double norme;
-    for (int i=0; i<= v1.size(); i++){
+void vecteur_normal(std::array<double, 3> &normal, std::vector<double> &p1, std::vector<double> &p2){
+    double v1[3] = {0.};
+    double v2[3] = {0.};
+    for (int i=0; i < 3; i++) {
         v1[i]=p2[i]-p1[i];
     }
-    v2[0]=1;
+    v2[0]=1.;
 
     normal[0]=(v1[1]*v2[2])-(v2[1]*v1[2]);
     normal[1]=-((v1[0]*v2[2])-(v2[0]*v1[2]));
     normal[2]=-(v1[0]*v2[1])-(v2[0]*v1[1]);
 
-    norme=sqrt(pow(normal[0],2)+pow(normal[1],2)+pow(normal[2],2));
+    double norme = sqrt(pow(normal[0],2)+pow(normal[1],2)+pow(normal[2],2));
 
     normal[0] /= norme;
     normal[1] /= norme;
