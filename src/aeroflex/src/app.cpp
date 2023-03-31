@@ -4,9 +4,6 @@
 #include "implot.h"
 #include "tinyconfig.hpp"
 #include "parser.hpp"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
-#include <GLFW/glfw3.h>
 
 #include "Application.h"
 #include "FileDialog.hpp"
@@ -41,15 +38,6 @@ static void HelpMarker(const char* desc)
         ImGui::PopTextWrapPos();
         ImGui::EndTooltip();
     }
-}
-
-static void Show_Fps() {
-	static float lastFrameTime = 0;
-	float currentTime = glfwGetTime(); // Use your preferred method to get the current time
-	float deltaTime = currentTime - lastFrameTime;
-	float fps = 1.0f / deltaTime;
-	lastFrameTime = currentTime;
-	ImGui::Text("FPS: %.1f", fps);
 }
 
 struct Settings {
@@ -748,7 +736,7 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, App& app)
 			ImGui::EndMenu();
 		}
 		ImGui::SameLine(ImGui::GetWindowWidth() - 70);
-		Show_Fps();
+		ImGui::Text("FPS: %.1f", 1.0f / ImGui::GetIO().DeltaTime);
 	});
 	return application;
 }
