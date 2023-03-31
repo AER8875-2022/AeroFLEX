@@ -212,6 +212,7 @@ struct Settings {
             gradient = 1;
         }
     };
+    bool is_viscous() {return viscosity != 0;};
     inline std::string viscosity_model() {return viscosity_options.at(viscosity);};
     inline void set_viscosity_model(const std::string& viscosity_) {
         if (viscosity_ == "inviscid") {
