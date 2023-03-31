@@ -16,6 +16,9 @@
 #include <iomanip>
 #include <sstream>
 #include <limits>
+#include <iostream>
+#include <atomic>
+#include <mutex>
 
 #include <Eigen/Dense>
 #include <fstream>
@@ -180,35 +183,66 @@ class CpProfile {
     public:
     double x_moment;
     double y_moment;
+    std::mutex m_mutex;
 
-    VectorMutex<double> x;
-    VectorMutex<double> cp;
+    std::vector<double> x;
+    std::vector<double> y;
+    std::vector<double> cp;
+    std::vector<bool> cp_positive;
+    std::vector<double> cp_airfoil_x;
+    std::vector<double> cp_airfoil_y;
+    double xmax = 0.1;
+    double xmin = -0.1;
+    double ymax = 0.1;
+    double ymin = -0.1;
+    bool filled = false;
 
     void calc_chord_coords(solver &s, std::string& af) {
+        std::scoped_lock lock(m_mutex);
         mesh& m = s.get_mesh();
+        filled = false;
+        xmax = 0.1;
+        xmin = -0.1;
+        ymax = 0.1;
+        ymin = -0.1;
         x.clear();
+        y.clear();
         cp.clear();
-        double xmin = std::numeric_limits<double>::max();
-        double xmax = std::numeric_limits<double>::min();
-        y_moment = 0.;
-        uint n_added = 0;
+        cp_positive.clear();
+        cp_airfoil_x.clear();
+        cp_airfoil_y.clear();
+        double xleft = std::numeric_limits<double>::max();
+        double xright = std::numeric_limits<double>::min();
+        double yleft;
+        double yright;
 
         for (uint b=0; b<m.boundaryEdges.size(); ++b) {
             if (m.boundaryEdgesPhysicals[b] == af) {
                 const uint e = m.boundaryEdges[b];
-                xmin = std::min(xmin, m.edgesCentersX[e]);
-                xmax = std::max(xmax, m.edgesCentersX[e]);
-                y_moment += m.edgesCentersY[e];
+                if (m.edgesCentersX[e] < xleft) {
+                    xleft = m.edgesCentersX[e];
+                    yleft = m.edgesCentersY[e];
+                }
+                if (m.edgesCentersX[e] > xright) {
+                    xright = m.edgesCentersX[e];
+                    yright = m.edgesCentersY[e];
+                }
                 cp.push_back(0.0);
+                cp_airfoil_x.push_back(0.0);
+                cp_airfoil_y.push_back(0.0);
+                cp_positive.push_back(false);
+
                 x.push_back(m.edgesCentersX[e]);
-                n_added += 1;
+                y.push_back(m.edgesCentersY[e]);
+                xmax = std::max(xmax, m.edgesCentersX[e]);
+                ymax = std::max(ymax, m.edgesCentersY[e]);
+                xmin = std::min(xmin, m.edgesCentersX[e]);
+                ymin = std::min(ymin, m.edgesCentersY[e]);
             }
         }
-        // y_moment is wrong as it should be derived from the projection 
-        // of 0.25x the vector going from left to the right extremity
-        // Will work for neutral airfoils tho.
-        y_moment /= (double) n_added;
-        x_moment = (xmax - xmin)*0.25 + xmin;
+
+        y_moment = (yright - yleft)*0.25 + yleft;
+        x_moment = (xright - xleft)*0.25 + xleft;
     }
 
     void calc_cp(solver &s, std::string& af) {
@@ -219,9 +253,16 @@ class CpProfile {
         solution sol = s.get_solution();
 
         int idx = 0;
+        int idx_neg = 0;
+        int idx_pos = 0;
+        std::scoped_lock lock(m_mutex);
         for (uint b=0; b<m.boundaryEdges.size(); ++b) {
             if (m.boundaryEdgesPhysicals[b] == af) {
                 const uint e = m.boundaryEdges[b];
+                const double x = m.edgesCentersX[e];
+                const double y = m.edgesCentersY[e];
+                const double nx = m.edgesNormalsX[e];
+                const double ny = m.edgesNormalsY[e];
                 const uint n0 = m.edgesNodes(e, 0);
                 const uint n1 = m.edgesNodes(e, 1);
 
@@ -238,9 +279,22 @@ class CpProfile {
                 const double cp_ = 2./(sol.gamma()*mach_inf*mach_inf)*(p/p_inf - 1.);
 
                 cp[idx] = cp_;
+                if (cp_ > 0.0) {
+                    cp_airfoil_x[idx] = x - nx*cp_*0.1;
+                    cp_airfoil_y[idx] = y - ny*cp_*0.1;
+                    cp_positive[idx] = true;
+                } else {
+                    cp_airfoil_x[idx] = x + nx*cp_*0.1;
+                    cp_airfoil_y[idx] = y + ny*cp_*0.1;
+                }
+                xmax = std::max(xmax, cp_airfoil_x[idx]);
+                ymax = std::max(ymax, cp_airfoil_y[idx]);
+                xmin = std::min(xmin, cp_airfoil_x[idx]);
+                ymin = std::min(ymin, cp_airfoil_y[idx]);
                 idx++;
             }
         }
+        filled = true;
     }
 };
 
