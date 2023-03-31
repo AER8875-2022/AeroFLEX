@@ -33,7 +33,7 @@ namespace aero{
         for (int k = 0; k <wingStations.size() ; ++k)
         {
             auto wstation= wingStations[wings[0].get_stationIDs()[k]];
-            std::cout << "wstation.get_vortexIDs()[0] " << wstation.get_vortexIDs()[0]<< std::endl;
+            //std::cout << "wstation.get_vortexIDs()[0] " << wstation.get_vortexIDs()[0]<< std::endl;
 
             for (int i = 0; i <wstation.get_vortexIDs().size() ; ++i)
             {

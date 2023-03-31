@@ -43,12 +43,26 @@ void Aero::input() {
 
 void Aero::solve() {
     // TODO
-
-    vlm.solve();
     interpolation_f force;
     interpolation pos;
-    structure.FEM.set_Load_Vector_From_Vector(ComputeStructureForces(force,vlm.object.wingStations));
+    //first one to initilaize cl
+    vlm.solve();
+    std::cout << "cl: "  << std::endl;
+
+    structure.FEM.set_Load_Vector_From_Vector(ComputeStructureForces(force, vlm.object.wingStations));
+    structure.solve();
+    auto cl= vlm.object.wings[0].get_cl();
+
+
+    vlm.object.updateGeometry(computeVLMDispalecement(pos, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings,vlm.object.nodes, structure.Solutions));
+do {
+    std::cout << "cl: " << cl << std::endl;
+    vlm.solve();
+
+    structure.FEM.set_Load_Vector_From_Vector(ComputeStructureForces(force, vlm.object.wingStations));
     structure.solve();
 
-    vlm.object.updateGeometry(computeVLMDispalecement(pos,vlm.object.wingStations,vlm.object.wings,vlm.object.vortexRings,vlm.object.nodes,structure.Solutions ));
+
+    vlm.object.updateGeometry(computeVLMDispalecement(pos, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings,vlm.object.nodes, structure.Solutions));
+}while (vlm.object.wings[0].get_cl()-cl > 0.01);
 }

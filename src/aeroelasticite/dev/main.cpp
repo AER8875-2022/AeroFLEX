@@ -23,6 +23,7 @@ int main() {
 
     aero::Aero elast(gui, vlm, structure);
     elast.input();
+    std::cout << "cl: "  << std::endl;
     elast.solve();
 
     return 0;
