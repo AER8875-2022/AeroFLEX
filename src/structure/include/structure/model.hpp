@@ -271,7 +271,7 @@ public:
             
             set_K_global();
             set_K_Final_sparse();
-            Eigen::VectorXd Delta_dep_full; 
+            Eigen::VectorXd Delta_dep_full;
             Eigen::VectorXd Delta_dep_amor = get_Solve(Forces_diff); 
               
             double Residu = 1.0;    

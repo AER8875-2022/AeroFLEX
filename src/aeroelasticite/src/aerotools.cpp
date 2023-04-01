@@ -324,15 +324,16 @@ namespace aero{
        
        for (int i=0; i<n; ++i)
        {
-           std::cout << "i to n " << i << std::endl;
+           //std::cout << "i to n " << i << std::endl;
 
            auto forces = wingStations[i].get_forces();
-              //std::cout << "forces " << forces[0] << std::endl;
+
+
            int j=force.poids[3*i];
            if (j!=m-1)
            {
 
-               std::cout << "for "  << std::endl;
+               //std::cout << "for "  << std::endl;
                //std::cout << "forces_s[6*j] " << forces_s[6*j] << std::endl;
                forces_s[6*j]   += force.poids[3*i+1] * forces[0];
                forces_s[6*j+1] += force.poids[3*i+1] * forces[1];

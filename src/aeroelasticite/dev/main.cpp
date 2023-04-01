@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
     tiny::config configs;
     configs.read(argv[1]);
 
-    elast.structure.settings.import_config_file(config);
+    elast.structure.settings.import_config_file(configs);
 
 
 

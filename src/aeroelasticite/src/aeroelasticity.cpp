@@ -29,6 +29,7 @@ void Aero::input() {
     aero::interpolation_f force;
     auto mapStructni= structure.FEM.indexation_switch;
     auto mapStruct= structure.FEM.Grid_MAP;
+
     std::cout << "vlm and structure ini check"  << std::endl;
     aero::DispInterpol(pos, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings, vlm.object.nodes, mapStruct, mapStructni);
     std::cout << "dispInt check"  << std::endl;
@@ -50,9 +51,9 @@ void Aero::input() {
 
     structure.FEM.set_Load_Vector_From_Vector(forcestruct);
     //print force
-    for (int i=0; i<forcestruct.size(); i++){
-        std::cout << "force: " << forcestruct[i] << std::endl;
-    }
+    //for (int i=0; i<forcestruct.size(); i++){
+        //std::cout << "force: " << forcestruct[i] << std::endl;
+   // }
 
     std::cout << "structure forces computed"  << std::endl;
     structure.solve();
