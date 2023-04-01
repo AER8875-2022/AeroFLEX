@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
 
     elast.input();
 
-    elast.solve();
+    //elast.solve();
 
     return 0;
 }

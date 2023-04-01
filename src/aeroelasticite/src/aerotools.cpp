@@ -313,24 +313,34 @@ namespace aero{
   {
        int n=force.point_fa.size()/3;
        int m=force.point_fs.size()/3;
+       std::cout << "m " << m << std::endl;
+       std::cout << "n " << n << std::endl;
        
-       Eigen::VectorXd  forces_s(6*m,0);
+       Eigen::VectorXd  forces_s(6*m);
+       forces_s.setZero();
        vector <double> M(3);
        vector <double> r(3);
       vector <double> M_s(3);
        
        for (int i=0; i<n; ++i)
        {
+           std::cout << "i to n " << i << std::endl;
 
            auto forces = wingStations[i].get_forces();
+              //std::cout << "forces " << forces[0] << std::endl;
            int j=force.poids[3*i];
            if (j!=m-1)
            {
-           
+
+               std::cout << "for "  << std::endl;
+               //std::cout << "forces_s[6*j] " << forces_s[6*j] << std::endl;
                forces_s[6*j]   += force.poids[3*i+1] * forces[0];
                forces_s[6*j+1] += force.poids[3*i+1] * forces[1];
                forces_s[6*j+2] += force.poids[3*i+1] * forces[2];
-               
+
+               //std::cout << "forces_s[6*j] " << forces_s[6*j] << std::endl;
+
+
                forces_s[6*(j+1)]   += force.poids[3*i+2] * forces[0];
                forces_s[6*(j+1)+1] += force.poids[3*i+2] * forces[1];
                forces_s[6*(j+1)+2] += force.poids[3*i+2] * forces[2];

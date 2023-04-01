@@ -37,18 +37,8 @@ void Aero::input() {
 
 
 
-
-
-
-
-
-}
-
-void Aero::solve() {
-    // TODO
     std::cout << "beg first iter"  << std::endl;
-    interpolation_f force;
-    interpolation pos;
+
     //first one to initilaize cl
     vlm.solve();
     std::cout << "vlm solved"  << std::endl;
@@ -82,5 +72,20 @@ void Aero::solve() {
 
         vlm.object.updateGeometry(computeVLMDispalecement(pos, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings,vlm.object.nodes, structure.Solutions));
     }while (vlm.object.wings[0].get_cl()-cl > 0.01);
+
+
+
+
+
+
+
+
+}
+
+void Aero::solve() {
+    // TODO
+    std::cout << "aersolve"  << std::endl;
+
+
 
 }
