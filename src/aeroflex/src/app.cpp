@@ -242,6 +242,7 @@ void App::solve_async() {
 	rans.settings = settings.rans;
 	vlm.settings = settings.vlm;
 	structure.settings = settings.structure;
+	aero.settings = settings.aero;
 
 	future_solve = std::async(std::launch::async,
 	[&](){
@@ -750,6 +751,7 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, App& app)
 	application->PushLayer(std::make_shared<StructureLayer>(app));
 	application->PushLayer(std::make_shared<RansLayer>(app));
 	application->PushLayer(std::make_shared<VlmLayer>(app));
+	application->PushLayer(std::make_shared<AeroLayer>(app));
 	application->PushLayer(std::make_shared<ConsoleLayer>(app));
 	application->PushLayer(std::make_shared<DialogLayer>(app));
 
@@ -806,7 +808,6 @@ namespace FlexGUI {
 		rans::Rans rans(gui);
 		vlm::VLM vlm(gui);
 		structure::Structure structure(gui);
-
 		aero::Aero aero(gui, vlm, structure);
 
 		// Initialize main application with the modules

@@ -1,5 +1,6 @@
  target("aero-dev")
     set_kind("binary")
+    set_default(false)
     -- set_runargs("../../../../examples/conf.ini")
     add_packages("eigen", "openmp")
     add_includedirs("../common")
