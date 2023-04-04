@@ -1,7 +1,6 @@
 
 #include "common_aeroflex.hpp"
 #include <aero/aeroelasticity.hpp>
-#include "aero/aerotools.h"
 #include <iostream>
 #include <algorithm>
 #include <array>
@@ -17,7 +16,6 @@ using namespace structure;
 using namespace aero;
 using namespace vlm;
 
-
 Aero::Aero(GUIHandler &gui, vlm::VLM &vlm, structure::Structure &structure)
     : gui(gui), vlm(vlm), structure(structure) {};
 
@@ -25,10 +23,9 @@ void Aero::input() {
     // TODO
     structure.input();
     vlm.initialize();
-    aero::interpolation pos;
-    aero::interpolation_f force;
-    auto mapStructni= structure.FEM.indexation_switch;
-    auto mapStruct= structure.FEM.Grid_MAP;
+
+    auto& mapStructni= structure.FEM.indexation_switch;
+    auto& mapStruct= structure.FEM.Grid_MAP;
 
     std::cout << "vlm and structure ini check"  << std::endl;
     aero::DispInterpol(pos, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings, vlm.object.nodes, mapStruct, mapStructni);
@@ -38,16 +35,20 @@ void Aero::input() {
 
 
 
-    std::cout << "beg first iter"  << std::endl;
+
+}
+
+void Aero::solve() {
+    std::cout << "begin first iter"  << std::endl;
 
     //first one to initilaize cl
     vlm.solve();
     std::cout << "vlm solved"  << std::endl;
 
-    auto forcestruct= ComputeStructureForces(force, vlm.object.wingStations);
+    Eigen::VectorXd forcestruct= ComputeStructureForces(force, vlm.object.wingStations);
     //forcestructsize
     std::cout << "forcestructsize: " << forcestruct.size() << std::endl;
-
+    
 
     structure.FEM.set_Load_Vector_From_Vector(forcestruct);
     //print force
@@ -64,6 +65,7 @@ void Aero::input() {
     vlm.object.updateGeometry(computeVLMDispalecement(pos, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings,vlm.object.nodes, structure.Solutions));
     std::cout << "end first iter " << std::endl;
     do {
+        while (gui.signal.pause) std::this_thread::sleep_for(std::chrono::milliseconds(100));
         std::cout << "cl: " << cl << std::endl;
         vlm.solve();
 
@@ -72,21 +74,5 @@ void Aero::input() {
 
 
         vlm.object.updateGeometry(computeVLMDispalecement(pos, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings,vlm.object.nodes, structure.Solutions));
-    }while (vlm.object.wings[0].get_cl()-cl > 0.01);
-
-
-
-
-
-
-
-
-}
-
-void Aero::solve() {
-    // TODO
-    std::cout << "aersolve"  << std::endl;
-
-
-
+    }while (std::abs(vlm.object.wings[0].get_cl()-cl) > settings.tolerance && !gui.signal.stop);
 }

@@ -29,7 +29,7 @@ namespace aero{
 
     void DispInterpol( interpolation &pos,std::vector<vlm::surface::wingStation> wingStations,
                        std::vector<vlm::surface::wing> wings,std::vector<element::vortexRing> vortexRings,
-                      std::vector<Vector3d> nodes,std::map<int, Vector3d> mapStruct,std::map<int, int> mapStructni) {
+                      std::vector<Vector3d> nodes,std::map<int, Vector3d>& mapStruct,std::map<int, int>& mapStructni) {
         //std::cout << "DispInterpol beg" << std::endl;
         //wingstation size
         //std::cout << "wingStations.size() " << wings[0].get_stationIDs().size() << std::endl;
@@ -174,7 +174,7 @@ namespace aero{
 
 
 
-                    
+
 
                     node[0]=rotated_z[0];
                     node[1]=rotated_z[1];
@@ -185,38 +185,36 @@ namespace aero{
         }
         return nodes ;
     }
-   
-  void LoadInterpol(interpolation_f &force, std::vector<vlm::surface::wingStation> wingStations, std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,std::map<int,Vector3d> mapStruct,std::map<int, int> mapStructni)
+
+  void LoadInterpol(interpolation_f &force, std::vector<vlm::surface::wingStation> wingStations, std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,std::map<int,Vector3d>& mapStruct,std::map<int, int>& mapStructni)
   {
        // Loading VLM forceacting Point
-       
+
        int n=wings.size(); // nombre de wingstations=size (wings)
        int m=wings[0].get_stationIDs().size(); // nombre de vortexRings sur une wingstation
        int i=0; // numéro du premier vortexring d une wingstation
 
-       
-       
+
+
        for (int j=0; j<m; ++j)
        {
            auto wingstation = wingStations[wings[0].get_stationIDs()[j]];
-           
+
            auto vortexring= vortexRings[wingstation.get_vortexIDs()[0]];
 
            force.point_fa.push_back(vortexRings[i].forceActingPoint()[0]);
            force.point_fa.push_back(vortexRings[i].forceActingPoint()[1]);
            force.point_fa.push_back(vortexRings[i].forceActingPoint()[2]);
-           force.point_fa.push_back(vortexRings[i].forceActingPoint()[3]);
-           force.point_fa.push_back(vortexRings[i].forceActingPoint()[4]);
-           force.point_fa.push_back(vortexRings[i].forceActingPoint()[5]);
-           
-           
+        //    force.point_fa.push_back(vortexRings[i].forceActingPoint()[3]);
+        //    force.point_fa.push_back(vortexRings[i].forceActingPoint()[4]);
+        //    force.point_fa.push_back(vortexRings[i].forceActingPoint()[5]);
        }
-       
+
        //    Loading STRUCTURE connectivity
 
-      
 
-      
+
+
        int num=0;
 
        for (auto s : mapStructni)
@@ -227,14 +225,14 @@ namespace aero{
             force.point_fs.push_back(nodeStruct[2]);
             num+=1;
        }
-       
-       
-       
+
+
+
        // Projeter le point_fa sur la droite et calcul de la distance
        vector <double> point_fp;
        vector <double> dist(n);
        vector <double> v(3);
-       
+
        vector <double> u(3); // vecteur directeur de la poutre
        u[0]= force.point_fs[0] - force.point_fs[3];
        u[1]= force.point_fs[1] - force.point_fs[4];
@@ -245,18 +243,18 @@ namespace aero{
 
            t= (u[0]*(force.point_fa[3*i]-force.point_fs[0]) + u[1]*(force.point_fa[3*i+1]-force.point_fs[1]) +
                   u[2]*(force.point_fa[3*i+2]-force.point_fs[2]))/pow(norme(u),2);
-           
+
            point_fp.push_back(force.point_fs[0] + t*u[0]);
            point_fp.push_back(force.point_fs[1] + t*u[1]);
            point_fp.push_back(force.point_fs[2] + t*u[2]);
-           
+
            v[0]= force.point_fa[3*i]   -   point_fp[3*i];
            v[1]= force.point_fa[3*i+1] -   point_fp[3*i+1];
            v[2]= force.point_fa[3*i+2] -   point_fp[3*i+2];
            dist[i]=norme(v);
-           
+
        }
-       
+
        // Calcul des coefficients d'interpolation
        ///vector <vector> forces_s[m][6];
        double dist_0;
@@ -264,23 +262,23 @@ namespace aero{
        double dist_2;
        double epsilon_l;
        double epsilon_r;
-       
-   
-       
+
+
+
        for (int i=0; i<m; ++i){
-           
-           
+
+
            for (int j=0; j<num; ++j){
                v[0]= force.point_fs[3*j]   - force.point_fs[3*(j+1)];
                v[1]= force.point_fs[3*j+1] - force.point_fs[3*(j+1)+1];
                v[2]= force.point_fs[3*j+2] - force.point_fs[3*(j+1)+2];
                dist_0=norme(v);
-               
+
                v[0]= force.point_fs[3*j]   - point_fp[3*i];
                v[1]= force.point_fs[3*j+1] - point_fp[3*i+1];
                v[2]= force.point_fs[3*j+2] - point_fp[3*i+2];
                dist_1=norme(v);
-               
+
 
 
                v[0]= force.point_fs[3*(j+1)]   - point_fp[3*i];
@@ -288,7 +286,7 @@ namespace aero{
                v[2]= force.point_fs[3*(j+1)+2] - point_fp[3*i+2];
 
                dist_2=norme(v);
-               
+
                if (dist_1<=dist_0 && j != num-1)
                {
                    epsilon_l= dist_2/dist_0;
@@ -296,18 +294,18 @@ namespace aero{
                    force.poids.push_back(j);
                    force.poids.push_back(epsilon_l);
                    force.poids.push_back(epsilon_r);
-                   
+
                }
                else if (j==num-1){
                    force.poids.push_back(j);
                    force.poids.push_back(1);
                    force.poids.push_back(0);
-                   
+
                }
            }
-           
+
        }
-   }      
+   }
    Eigen::VectorXd  ComputeStructureForces(interpolation_f force, std::vector<vlm::surface::wingStation> wingStations)
 
   {
@@ -315,13 +313,13 @@ namespace aero{
        int m=force.point_fs.size()/3;
        std::cout << "m " << m << std::endl;
        std::cout << "n " << n << std::endl;
-       
+
        Eigen::VectorXd  forces_s(6*m);
        forces_s.setZero();
        vector <double> M(3);
        vector <double> r(3);
       vector <double> M_s(3);
-       
+
        for (int i=0; i<n; ++i)
        {
            //std::cout << "i to n " << i << std::endl;
@@ -345,31 +343,31 @@ namespace aero{
                forces_s[6*(j+1)]   += force.poids[3*i+2] * forces[0];
                forces_s[6*(j+1)+1] += force.poids[3*i+2] * forces[1];
                forces_s[6*(j+1)+2] += force.poids[3*i+2] * forces[2];
-               
+
                M[0]=forces[3];
                M[1]=forces[4];
                M[2]=forces[5];
-               
+
                r[0]=force.point_fa[3*i] -   force.point_fs[3*j];
                r[1]=force.point_fa[3*i+1] - force.point_fs[3*j+1];
                r[2]=force.point_fa[3*i+2] - force.point_fs[3*j+2];
-               
+
                M_s=crossProduct (r,M);
-               
+
                forces_s[6*j+3]   += force.poids[3*i+1] * (M_s[0] + forces[3]);
                forces_s[6*j+4]   += force.poids[3*i+1] * (M_s[1] + forces[4]);
                forces_s[6*j+5]   += force.poids[3*i+1] * (M_s[2] + forces[5]);
-               
+
                r[0]=force.point_fa[3*i] -   force.point_fs[3*(j+1)];
                r[1]=force.point_fa[3*i+1] - force.point_fs[3*(j+1)+1];
                r[2]=force.point_fa[3*i+2] - force.point_fs[3*(j+1)+2];
-               
+
                M_s=crossProduct (r,M);
-               
+
                forces_s[6*(j+1)+3]   += force.poids[3*i+2] * (M_s[0] + forces[3]);
                forces_s[6*(j+1)+4]   += force.poids[3*i+2] * (M_s[1] + forces[4]);
                forces_s[6*(j+1)+5]   += force.poids[3*i+2] * (M_s[2] + forces[5]);
-           
+
            }
 
            else if (j==m-1)
@@ -381,24 +379,24 @@ namespace aero{
                M[0]=forces[3];
                M[1]=forces[4];
                M[2]=forces[5];
-               
+
                r[0]=force.point_fa[3*i] -   force.point_fs[3*j];
                r[1]=force.point_fa[3*i+1] - force.point_fs[3*j+1];
                r[2]=force.point_fa[3*i+2] - force.point_fs[3*j+2];
-               
+
                M_s=crossProduct (r,M);
-               
+
                forces_s[6*j+3]   += force.poids[3*i+1] * (M_s[0] + forces[3]);
                forces_s[6*j+4]   += force.poids[3*i+1] * (M_s[1] + forces[4]);
                forces_s[6*j+5]   += force.poids[3*i+1] * (M_s[2] + forces[5]);
-               
+
            }
-           
-           
+
+
        }
        return forces_s;
    }
-   
+
 
     vector<double> crossProduct(const vector<double>& i, const vector<double>& j)
     {
@@ -411,8 +409,8 @@ namespace aero{
              result[2] = i[0]*j[1] - i[1]*j[0];
              return result;
     }
-         
-         
+
+
     double norme(vector<double> v)
     {
         double sum = 0;

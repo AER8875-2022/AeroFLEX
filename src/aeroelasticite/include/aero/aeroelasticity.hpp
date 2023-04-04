@@ -1,22 +1,20 @@
-
-#ifndef __AEROELASTICITY__
-#define __AEROELASTICITY__
+#pragma once
 
 #include "common_aeroflex.hpp"
 #include "vlm/vlm.hpp"
 #include "structure/structure.hpp"
+#include "aerotools.h"
 #include <vector>
 
 namespace aero {
 
 struct Settings {
-    // TODO:
+    double tolerance = 1e-3;
 };
 
 class Aero {
 
 public:
-    // TODO: STORE SOLUTION
     Settings settings;
 
     std::vector<double> residuals;
@@ -28,13 +26,13 @@ public:
     vlm::VLM &vlm;
     structure::Structure &structure;
 
-public:
     Aero(GUIHandler &gui, vlm::VLM &vlm, structure::Structure &structure);
     void input();
     void solve();
 
+private:
+    interpolation pos;
+    interpolation_f force;
 };
 
 }
-
-#endif
