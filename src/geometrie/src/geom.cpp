@@ -4,6 +4,7 @@
 #include "geometrie/geometry.hpp"
 #include "geometrie/structure.hpp"
 
+
 using namespace geom;
 
 Geom::Geom(GUIHandler &gui): gui(gui) {}
@@ -85,6 +86,8 @@ void Geom::Geom_gen(bool viscous) {
     std::vector<double> disc{100,150,200};
     //cout<<disc[0]<<endl;
     std::vector<std::string> file_name{"Airfoil_coarse.msh","Airfoil_normal.msh","Airfoil_fine.msh"};
+        //file_name = {"Airfoil_coarse.msh","Airfoil_normal.msh","Airfoil_fine.msh"};
+
     //std::cout<<file_name[0]<<endl;
     std::vector<std::vector<std::vector<std::vector<double>>>> surfaces = WR_surfaces;
     //bool RANS = false; // True = solver RANS, False = solver Euler
@@ -94,6 +97,18 @@ void Geom::Geom_gen(bool viscous) {
         }
     }  
     gui.msg.push("[GEOM] Mesh for Euler/RANS solver generated");
+
+    // void fill_database(database::table &table){
+    //     table.airfoils["mame_airfoil"]; // Créer le airfoil
+    //     table.airfoils["mame_airfoil"].alpha = [0.0,5.0,10.0];    //Remplir le champs alpha 
+    //     //file_name[] je peux l'appeler
+
+    //     table.sectionAirfoils[0];       //0 aile droit, 1 aile gauche
+    //     table.sectionAirfoils[0] = ["mame_airfoil", "mame_airfoil"];   
+
+    //     table.sectionSpanLocs[0];
+    //     table.sectionSpanLocs[0] = [0.0,1.0] //doit aller de 0 à 1
+    // }
 
     // Structure
     std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> element = maillage_structure(WING_RIGHT, settings.E, settings.G);

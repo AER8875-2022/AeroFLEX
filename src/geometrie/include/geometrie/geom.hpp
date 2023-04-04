@@ -6,9 +6,12 @@
 #include <string>
 
 #include "common_aeroflex.hpp"
-//les mettre ici ?
-
+#include "database/database.hpp"
 #include "tinyconfig.hpp"
+#include "geometrie/euler.hpp"
+#include "geometrie/geometry.hpp"
+#include "geometrie/structure.hpp"
+
 
 namespace geom {
 
@@ -83,6 +86,7 @@ public:
     Geom(GUIHandler &gui);
     //bool viscous = rans.settings.is_viscous();
     void Geom_gen(bool viscous);
+    void fill_database(database::table &table);
 };
 
 }

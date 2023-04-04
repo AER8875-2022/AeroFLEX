@@ -166,8 +166,9 @@ void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure& structure, geo
 
 	geom.Geom_gen(rans.settings.is_viscous());
 	if (!vlm.settings.sim.get_databaseFormat().compare("NONE")) {
-		table.airfoils["naca0012q"];
-		table.airfoils["naca0012q"].alpha = {1.0, 5.0, 10.0};
+		//geom.fill_database(table);
+		table.airfoils["naca0012q"]; //delete
+		table.airfoils["naca0012q"].alpha = {1.0, 5.0, 10.0}; //delete
 
 		for (auto& [airfoil, db] : table.airfoils) {
 			rans.solve_airfoil(airfoil, db);
