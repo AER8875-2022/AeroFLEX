@@ -60,11 +60,12 @@ void Aero::solve() {
 
     vlm.object.updateGeometry(computeVLMDispalecement(pos, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings,vlm.object.nodes, structure.Solutions));
     std::cout << "end first iter " << std::endl;
-    double tol = 1;
+    double tol = 0.01;
     do {
 
         while (gui.signal.pause) std::this_thread::sleep_for(std::chrono::milliseconds(100));
         std::cout << "cl: " << cl << std::endl;
+        auto cl= vlm.object.wings[0].get_cl();
         vlm.solve();
 
         structure.FEM.set_Load_Vector_From_Vector(ComputeStructureForces(force, vlm.object.wingStations));
