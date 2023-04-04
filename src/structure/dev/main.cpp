@@ -25,8 +25,9 @@ int main(int argc, char **argv){
     GUIHandler gui;
     std::atomic<int> iters = 0;
     std::vector<double> residuals;
+    std::cout<<settings.Force_follower+0<<std::endl;
 
-    MODEL M1(settings.Mesh_file_path, gui, iters, residuals);
+    MODEL M1(settings.Mesh_file_path, gui, iters, residuals, settings.Force_follower);
     Eigen::VectorXd dep;
 
     if(!settings.get_solve_type().compare("NONLINEAR"))
@@ -52,8 +53,7 @@ int main(int argc, char **argv){
     std::string File_name = "Result"+end;
 
     std::cout<<"Résultats écrit dans le fichier : "<< File_name<<std::endl; 
-
-
+    
     double L_elem = 300./M1.Nbr_Element;
     std::ofstream out;
     out.open(File_name);

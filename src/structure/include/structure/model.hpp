@@ -230,9 +230,7 @@ public:
     Eigen::VectorXd get_Solve(Eigen::VectorXd f)
     {   
         Eigen::SparseLU<Eigen::SparseMatrix<double>> Solver;
-        Eigen::SparseMatrix<double> Tempo = K_Final_sparse; 
-        Solver.compute(Tempo);
-        
+        Solver.compute(K_Final_sparse);
         return Solver.solve(f); 
     }
 
@@ -249,7 +247,6 @@ public:
         Eigen::VectorXd Forces_diff(6 * Nbr_Noeud );
 
         //Dep.setZero();
-        Forces_int.setZero();
         Forces_int.setZero();
 
         std::vector<int> CBAR_keys;
@@ -303,7 +300,6 @@ public:
                     
                     Eigen::VectorXd delta_dep1 = Delta_dep_amor.segment(n1*6,6);
                     Eigen::VectorXd delta_dep2 = Delta_dep_amor.segment(n2*6,6);  
-                     
                                    
                     value.set_u_i(delta_dep1,delta_dep2);                                      //Set u_1 and u_2
                     value.set_q1_And_q2(QUATERNION_MAP[n1],QUATERNION_MAP[n2]);                //Set q_1 and q_2                    
