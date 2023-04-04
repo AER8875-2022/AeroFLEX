@@ -16,6 +16,11 @@ namespace output {
  *  @param it Current iteration number. Useful for unsteady simulations */
 void exportForces(const model &object, const int it);
 
+/** @brief Function that exports the spanload for each surface to a .dat file
+ *  @param object Model holding all the VLM elements
+ *  @param it Current itration number. Useful for unsteady simulations */
+void exportSpanLoad(const model &object, const int it);
+
 /** @brief Function that exports the surface solution to .vtu format
  *  @param object Model holding all the VLM elements
  *  @param it Current iteration number. Useful for unsteady simulations */

@@ -132,6 +132,7 @@ void linear::steady::computeForces(model &object) {
 
 void linear::steady::exportSolution(const model &object) {
   output::exportForces(object, 0);
+  output::exportSpanLoad(object, 0);
   output::exportSurfacesVTU(object, 0);
   output::exportWakeVTU(object, 0);
 }
