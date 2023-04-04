@@ -32,10 +32,6 @@ void Aero::input() {
     std::cout << "dispInt check"  << std::endl;
     aero::LoadInterpol(force, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings, vlm.object.nodes, mapStruct, mapStructni);
     std::cout << "loadInt check"  << std::endl;
-
-
-
-
 }
 
 void Aero::solve() {
@@ -48,7 +44,7 @@ void Aero::solve() {
     Eigen::VectorXd forcestruct= ComputeStructureForces(force, vlm.object.wingStations);
     //forcestructsize
     std::cout << "forcestructsize: " << forcestruct.size() << std::endl;
-    
+
 
     structure.FEM.set_Load_Vector_From_Vector(forcestruct);
     //print force
@@ -64,7 +60,9 @@ void Aero::solve() {
 
     vlm.object.updateGeometry(computeVLMDispalecement(pos, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings,vlm.object.nodes, structure.Solutions));
     std::cout << "end first iter " << std::endl;
+    double tol = 1;
     do {
+
         while (gui.signal.pause) std::this_thread::sleep_for(std::chrono::milliseconds(100));
         std::cout << "cl: " << cl << std::endl;
         vlm.solve();
@@ -72,7 +70,8 @@ void Aero::solve() {
         structure.FEM.set_Load_Vector_From_Vector(ComputeStructureForces(force, vlm.object.wingStations));
         structure.solve();
 
-
         vlm.object.updateGeometry(computeVLMDispalecement(pos, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings,vlm.object.nodes, structure.Solutions));
-    }while (std::abs(vlm.object.wings[0].get_cl()-cl) > settings.tolerance && !gui.signal.stop);
+        tol = std::abs(vlm.object.wings[0].get_cl()-cl);
+        std::cout << "Aero tol: " << tol << std::endl;
+    }while ( tol > settings.tolerance && !gui.signal.stop);
 }

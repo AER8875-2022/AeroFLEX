@@ -125,8 +125,9 @@ namespace aero{
                 for (int p=0; p<vring.get_nodeIDs().size(); ++p)
                 {
                     auto node = nodes[vring.get_nodeIDs()[p]];
-                    auto nodeStruct1 = Solutions[pos.node[2*p]];
-                    auto nodeStruct2 = Solutions[pos.node[2*p+1]];
+                    auto& last_sol = Solutions.back();
+                    const vector<double> nodeStruct1(last_sol.begin() + pos.node[2*p]*6, last_sol.begin() + pos.node[2*p]*6 + 6);
+                    const vector<double> nodeStruct2(last_sol.begin() + pos.node[2*p+1]*6, last_sol.begin() + pos.node[2*p+1]*6 + 6);
                     auto weight1 = pos.weight[2*p];
                     auto weight2 = pos.weight[2*p+1];
 

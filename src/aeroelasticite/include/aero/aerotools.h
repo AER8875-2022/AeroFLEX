@@ -27,7 +27,7 @@ namespace aero{
     struct interpolation_f {std::vector<double> point_fa; std::vector<double> point_fs;
                         std::vector<double> poids;};
 
-    void LoadInterpol(interpolation_f &force, std::vector<vlm::surface::wingStation> wingStations,std::vector<vlm::surface::wing> wings, std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,std::map<int,Vector3d>& mapStruct,std::map<int, int>& mapStructni);
+void LoadInterpol(interpolation_f &force, std::vector<vlm::surface::wingStation> wingStations,std::vector<vlm::surface::wing> wings, std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,std::map<int,Vector3d>& mapStruct,std::map<int, int>& mapStructni);
 
     Eigen::VectorXd ComputeStructureForces(interpolation_f force, std::vector<vlm::surface::wingStation> wingStations);
 

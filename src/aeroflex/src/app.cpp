@@ -47,6 +47,7 @@ struct Settings {
 	rans::Settings rans;
 	vlm::Settings vlm;
     structure::Settings structure;
+	aero::Settings aero;
 };
 
 enum class AppDialogAction {
@@ -137,6 +138,12 @@ struct VlmGraphLayer : public FlexGUI::Layer {
 	VlmGraphLayer(App &app) : app(app) {};
 };
 
+struct AeroLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	App &app;
+	AeroLayer(App &app) : app(app) {};
+};
+
 struct CpLayer : public FlexGUI::Layer {
 	virtual void OnUIRender() override;
 	App &app;
@@ -157,7 +164,7 @@ struct DialogLayer : public FlexGUI::Layer {
 
 // SOLVE =================================================================================================
 
-void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure) {
+void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, aero::Aero &aero) {
 
 	database::table table;
 
@@ -238,7 +245,7 @@ void App::solve_async() {
 	future_solve = std::async(std::launch::async,
 	[&](){
 		try {
-			solve(rans, vlm, structure);
+			solve(rans, vlm, structure, aero);
 		} catch (std::exception &e) {
 			gui.msg.push(e.what());
 		}
@@ -427,7 +434,14 @@ void VlmLayer::OnUIRender() {
 	ImGui::InputInt("Max Iterations", &app.settings.vlm.solver.max_iter);
 
 	ImGui::End();
-}
+};
+
+void AeroLayer::OnUIRender() {
+	ImGui::Begin("Aero");
+	ImGui::Separator();
+	ImGui::InputDouble("Tolerance", &app.settings.aero.tolerance, 0.01f, 1.0f, "%e");
+	ImGui::End();
+};
 
 void DialogLayer::OnUIRender() {
 	app.dialog.Show(app.path_buf);
