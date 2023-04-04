@@ -70,6 +70,7 @@ class App {
 		rans::Rans &rans;
 		vlm::VLM &vlm;
         structure::Structure &structure;
+		aero::Aero &aero;
 
 		Settings settings;
 
@@ -87,7 +88,7 @@ class App {
 		AppDialogAction dialog_action = AppDialogAction::None;
 		FlexGUI::FileDialog dialog;
 		char path_buf[256];
-		App(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, GUIHandler &gui);
+		App(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, aero::Aero &aero, GUIHandler &gui);
 };
 
 struct GeoLayer : public FlexGUI::Layer {
@@ -221,7 +222,7 @@ bool config_save(const std::string &conf_path, Settings &settings) {
 	return io.write(conf_path);
 }
 
-App::App(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, GUIHandler &gui) : rans(rans), vlm(vlm), structure(structure), gui(gui) {
+App::App(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, aero::Aero &aero, GUIHandler &gui) : rans(rans), vlm(vlm), structure(structure), aero(aero), gui(gui) {
 	settings.rans.bcs["farfield"];
 	settings.rans.bcs["farfield"].bc_type = "farfield";
 	settings.rans.bcs["wall"];
@@ -806,12 +807,11 @@ namespace FlexGUI {
 		vlm::VLM vlm(gui);
 		structure::Structure structure(gui);
 
-		aero::Aero aeroelasticity(gui, vlm, structure);
+		aero::Aero aero(gui, vlm, structure);
 
 		// Initialize main application with the modules
 
-		App app(rans, vlm, structure, gui);
-
+		App app(rans, vlm, structure, aero, gui);
 
 		if (config_file == "") {
 			while (g_ApplicationRunning) {
