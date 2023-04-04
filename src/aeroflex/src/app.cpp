@@ -177,7 +177,6 @@ void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure& structure, geo
 		table.importAirfoils(vlm.settings.io.databaseFile);
 	}
 
-	vlm.database = table;
 	vlm.database.importLocations(vlm.settings.io.locationFile); // Temporary
 	vlm.solve();
 
