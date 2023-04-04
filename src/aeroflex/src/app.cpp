@@ -160,8 +160,10 @@ struct DialogLayer : public FlexGUI::Layer {
 
 void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure& structure, geom::Geom &geom) {
 
-	database::table table;
-	
+	vlm.initialize();
+	vlm.database.clear();
+	auto &table = vlm.database;
+
 	geom.Geom_gen(rans.settings.is_viscous());
 	if (!vlm.settings.sim.get_databaseFormat().compare("NONE")) {
 		table.airfoils["naca0012q"];
@@ -175,7 +177,6 @@ void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure& structure, geo
 		table.importAirfoils(vlm.settings.io.databaseFile);
 	}
 
-	vlm.initialize();
 	vlm.database = table;
 	vlm.database.importLocations(vlm.settings.io.locationFile); // Temporary
 	vlm.solve();
