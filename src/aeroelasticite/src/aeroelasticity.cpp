@@ -21,8 +21,7 @@ Aero::Aero(GUIHandler &gui, vlm::VLM &vlm, structure::Structure &structure)
 
 void Aero::input() {
     // TODO
-    structure.input();
-    vlm.initialize();
+
 
     auto& mapStructni= structure.FEM.indexation_switch;
     auto& mapStruct= structure.FEM.Grid_MAP;
@@ -40,7 +39,11 @@ void Aero::solve() {
     //first one to initilaize cl
     vlm.solve();
     std::cout << "vlm solved"  << std::endl;
-
+    for(int i=0; i<vlm.object.wingStations.size(); i++){
+        std::cout << "station: " << i << std::endl;
+        for(int j=0; j<vlm.object.wingStations[i].get_forces().size(); j++) {
+            std::cout << vlm.object.wingStations[i].get_forces()[j] << std::endl;
+        }}
     Eigen::VectorXd forcestruct= ComputeStructureForces(force, vlm.object.wingStations);
     //forcestructsize
     std::cout << "forcestructsize: " << forcestruct.size() << std::endl;

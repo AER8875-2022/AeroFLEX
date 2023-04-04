@@ -55,6 +55,8 @@ int main(int argc, char **argv) {
     }
 
 
+    elast.structure.input();
+    elast.vlm.initialize();
     elast.input();
     elast.solve();
 

@@ -328,6 +328,7 @@ namespace aero{
            auto forces = wingStations[i].get_forces();
 
 
+
            int j=force.poids[3*i];
            if (j!=m-1)
            {
