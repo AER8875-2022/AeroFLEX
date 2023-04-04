@@ -55,7 +55,7 @@ void Aero::solve() {
     std::cout << "structure forces computed"  << std::endl;
     structure.solve();
     std::cout << "structure solved"  << std::endl;
-    auto cl= vlm.object.wings[0].get_cl();
+    double old_cl= vlm.object.wings[0].get_cl();
 
 
     vlm.object.updateGeometry(computeVLMDispalecement(pos, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings,vlm.object.nodes, structure.Solutions));
@@ -64,14 +64,15 @@ void Aero::solve() {
     do {
 
         while (gui.signal.pause) std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        std::cout << "cl: " << cl << std::endl;
         vlm.solve();
 
         structure.FEM.set_Load_Vector_From_Vector(ComputeStructureForces(force, vlm.object.wingStations));
         structure.solve();
 
         vlm.object.updateGeometry(computeVLMDispalecement(pos, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings,vlm.object.nodes, structure.Solutions));
-        tol = std::abs(vlm.object.wings[0].get_cl()-cl);
+        double new_cl = vlm.object.wings[0].get_cl();
+        tol = std::abs(new_cl-old_cl);
         std::cout << "Aero tol: " << tol << std::endl;
+        old_cl = new_cl;
     }while ( tol > settings.tolerance && !gui.signal.stop);
 }
