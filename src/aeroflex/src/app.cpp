@@ -52,6 +52,7 @@ enum class AppDialogAction {
 	ConfigOpen,
 	ConfigSave,
 	DatabaseOpen,
+	VlmMeshOpen,
 };
 
 class App {
@@ -403,8 +404,8 @@ void VlmLayer::OnUIRender() {
 	ImGui::SameLine(); HelpMarker("Y component of origin to which the x and z moment are computed");
 	ImGui::InputDouble("Z ref", &app.settings.vlm.sim.z0, 0.01f, 1.0f, "%.4f");
 	ImGui::SameLine(); HelpMarker("Z component of origin to which the x and z moment are computed");
-	Combo(app.settings.vlm.sim.databaseFormat_options, app.settings.vlm.sim.databaseFormat, "Db Format");
 
+	Combo(app.settings.vlm.sim.databaseFormat_options, app.settings.vlm.sim.databaseFormat, "Db Format");
 	if (app.settings.vlm.sim.get_databaseFormat() == "FILE") {
 		ImGui::InputText("", app.settings.vlm.io.databaseFile.data(), app.settings.vlm.io.databaseFile.size(), ImGuiInputTextFlags_ReadOnly);
 		ImGui::SameLine();
@@ -413,6 +414,16 @@ void VlmLayer::OnUIRender() {
 			app.dialog.type = FlexGUI::FileDialogType::OpenFile;
 			app.dialog_action = AppDialogAction::DatabaseOpen;
 		}
+	}
+
+	ImGui::Separator();
+	ImGui::Text("Mesh");
+	ImGui::InputText("", app.settings.vlm.io.meshFile.data(), app.settings.vlm.io.meshFile.size(), ImGuiInputTextFlags_ReadOnly);
+	ImGui::SameLine();
+	if (ImGui::Button("...")) {
+		app.dialog.file_dialog_open = true;
+		app.dialog.type = FlexGUI::FileDialogType::OpenFile;
+		app.dialog_action = AppDialogAction::VlmMeshOpen;
 	}
 
 	ImGui::Separator();
@@ -438,6 +449,8 @@ void DialogLayer::OnUIRender() {
 			app.config_save_async(path);
 		} else if (app.dialog_action == AppDialogAction::DatabaseOpen) {
 			app.settings.vlm.io.databaseFile = path;
+		} else if (app.dialog_action == AppDialogAction::VlmMeshOpen) {
+			app.settings.vlm.io.meshFile = path;
 		}
 		strcpy(app.path_buf, "");
 	}
