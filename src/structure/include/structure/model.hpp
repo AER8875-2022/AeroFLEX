@@ -74,7 +74,6 @@ public:
         int             N1_user_ID;
         int             N2_user_ID;
         Eigen::Vector3d V;
-
     };
 
     struct SPC1_param{
@@ -97,13 +96,16 @@ public:
     void set_Force_Follower(bool f_f){
         Force_follower = f_f;
     }
-    
 
     void set_Load_Vector_From_Vector(Eigen::VectorXd New_F)
-    {
+    {   
+        Forces.setZero(6*Nbr_Noeud);
         if(Forces.size() == New_F.size())
         {
             Forces = New_F;
+        }
+        else{
+            throw std::runtime_error("Input force vector is not the right size.");
         }
     }
     
@@ -139,14 +141,12 @@ public:
     void set_Load_Vector_From_Load_Objects()
     {      
         Forces.setZero(6*Nbr_Noeud);
-        // #pragma omp parallel for
         for(int i=0 ; i < FORCE_LIST.size();i++)
         { 
             FORCE f_obj       = FORCE_LIST[i];
             Eigen::Vector3d f = f_obj.get_xyz_force();
             Forces.segment(f_obj.Node_ID *6,3) += f;
         };
-        // #pragma omp parallel for
         for(int i=0 ; i<MOMENT_LIST.size();i++)
         {
             MOMENT m_obj       = MOMENT_LIST[i];
