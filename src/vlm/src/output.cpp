@@ -202,6 +202,101 @@ void output::exportSurfacesVTU(const model &object, const int it) {
     local_velocity.push_back(doublet.get_local_velocity()(1));
     local_velocity.push_back(doublet.get_local_velocity()(2));
   }
+  // panel's normal 
+  std::vector<double> normal;
+  normal.reserve(3 * nPanels);
+  for (auto &vortex : object.vortexRings) {
+    normal.push_back(vortex.get_normal()(0));
+    normal.push_back(vortex.get_normal()(1));
+    normal.push_back(vortex.get_normal()(2));
+  }
+  for (auto &doublet : object.doubletPanels) {
+    normal.push_back(doublet.get_normal()(0));
+    normal.push_back(doublet.get_normal()(1));
+    normal.push_back(doublet.get_normal()(2));
+  }
+  // first panel edge normal (for green-gauss gradient)
+  std::vector<double> FENormal;
+  FENormal.reserve(3 * nPanels);
+  for (auto &vortex : object.vortexRings) {
+    FENormal.push_back(0.0);
+    FENormal.push_back(0.0);
+    FENormal.push_back(0.0);
+  }
+  for (auto &doublet : object.doubletPanels) {
+    FENormal.push_back(doublet.get_segment_normal()(0));
+    FENormal.push_back(doublet.get_segment_normal()(1));
+    FENormal.push_back(doublet.get_segment_normal()(2));
+  }
+  // first edge vector between the nodes
+  std::vector<double> edge_dl1;
+  edge_dl1.reserve(3 * nPanels);
+  for (auto &vortex : object.vortexRings) {
+    edge_dl1.push_back(0.0);
+    edge_dl1.push_back(0.0);
+    edge_dl1.push_back(0.0);
+  }
+  for (auto &doublet : object.doubletPanels) {
+    edge_dl1.push_back(doublet.get_edges()[0].get_dl()(0));
+    edge_dl1.push_back(doublet.get_edges()[0].get_dl()(1));
+    edge_dl1.push_back(doublet.get_edges()[0].get_dl()(2));
+  }
+  // Local reference m axis
+  std::vector<double> Localreference_m;
+  Localreference_m.reserve(3 * nPanels);
+  for (auto &vortex : object.vortexRings) {
+    Localreference_m.push_back(0.0);
+    Localreference_m.push_back(0.0);
+    Localreference_m.push_back(0.0);
+  }
+  for (auto &doublet : object.doubletPanels) {
+    Localreference_m.push_back(doublet.get_LocalCoordinate()[1][0]);
+    Localreference_m.push_back(doublet.get_LocalCoordinate()[1][1]);
+    Localreference_m.push_back(doublet.get_LocalCoordinate()[1][2]);
+  }
+  // Local reference l axis
+  std::vector<double> Localreference_l;
+  Localreference_l.reserve(3 * nPanels);
+  for (auto &vortex : object.vortexRings) {
+    Localreference_l.push_back(0.0);
+    Localreference_l.push_back(0.0);
+    Localreference_l.push_back(0.0);
+  }
+  for (auto &doublet : object.doubletPanels) {
+    Localreference_l.push_back(doublet.get_LocalCoordinate()[0][0]);
+    Localreference_l.push_back(doublet.get_LocalCoordinate()[0][1]);
+    Localreference_l.push_back(doublet.get_LocalCoordinate()[0][2]);
+  }
+  // freestream vector
+  std::vector<double> freestream;
+  freestream.reserve(3 * nPanels);
+  for (auto &vortex : object.vortexRings) {
+    freestream.push_back(0.0);
+    freestream.push_back(0.0);
+    freestream.push_back(0.0);
+  }
+  for (auto &doublet : object.doubletPanels) {
+    freestream.push_back(doublet.get_localstream()[0]);
+    freestream.push_back(doublet.get_localstream()[1]);
+    freestream.push_back(doublet.get_localstream()[2]);
+  }
+  std::vector<double> sources;
+  sources.reserve(nPanels);
+  for (auto &vortex : object.vortexRings) {
+    sources.push_back(0.0);
+  }
+  for (auto &doublet : object.doubletPanels) {
+    sources.push_back(doublet.get_sigma());
+  }
+  std::vector<double> velocity_div_vinf;
+  velocity_div_vinf.reserve(nPanels);
+  for (auto &vortex : object.vortexRings) {
+    velocity_div_vinf.push_back(0.0);
+  }
+  for (auto &doublet : object.doubletPanels) {
+    velocity_div_vinf.push_back(doublet.get_velocity_div_vinf());
+  }
+  
   // Creating data object
   std::vector<vtu11::DataSetInfo> dataSetInfo{
       {"strength", vtu11::DataSetType::CellData, 1},
@@ -209,14 +304,23 @@ void output::exportSurfacesVTU(const model &object, const int it) {
       {"cl", vtu11::DataSetType::CellData, 1},
       {"cd", vtu11::DataSetType::CellData, 1}, 
       {"cp", vtu11::DataSetType::CellData, 1},
+      {"sources", vtu11::DataSetType::CellData, 1},
+      {"velocity_div_vinf", vtu11::DataSetType::CellData, 1},
       {"Local_velocity", vtu11::DataSetType::CellData, 3},
+      {"normal", vtu11::DataSetType::CellData, 3},
+      {"FENormal", vtu11::DataSetType::CellData, 3},
+      {"edge_dl1", vtu11::DataSetType::CellData, 3},
+      {"Localreference_m", vtu11::DataSetType::CellData, 3},
+      {"Localreference_l", vtu11::DataSetType::CellData, 3},
+      {"freestream", vtu11::DataSetType::CellData, 3},
       {"cm", vtu11::DataSetType::CellData, 3}};
   // Creating mesh object
   vtu11::Vtu11UnstructuredMesh mesh{points, connectivity, offsets, types};
   // Writing file
   vtu11::writeVtu(
       io.outDir + io.baseName + "_surface_" + itStream.str() + ".vtu", mesh,
-      dataSetInfo, {strengths, areas, cl, cd, cp, local_velocity, cm}, "RawBinary");
+      dataSetInfo, {strengths, areas, cl, cd, cp, sources, velocity_div_vinf, local_velocity, normal, FENormal, 
+                    edge_dl1, Localreference_m, Localreference_l, freestream, cm}, "RawBinary");
 }
 
 void output::exportWakeVTU(const model &object, const int it) {

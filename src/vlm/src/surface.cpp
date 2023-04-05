@@ -247,7 +247,7 @@ void patch::ScanNeighbor(std::vector<element::doubletPanel> &doublets) {
   //for the target panel
   for(auto &doub_target : doublets) {
     auto nodes_target = doub_target.get_nodeIDs();
-    std::cout<< "new panel "<< doub_target.get_globalIndex() << " : " << std::endl;
+    //std::cout<< "new panel "<< doub_target.get_globalIndex() << " : " << std::endl;
     for (auto &doub_compared : doublets){
       if (doub_target.get_globalIndex() != doub_compared.get_globalIndex()){
         auto nodes_compared = doub_compared.get_nodeIDs();
@@ -259,7 +259,7 @@ void patch::ScanNeighbor(std::vector<element::doubletPanel> &doublets) {
           //if value found search for the second
           if( it1 != nodes_compared.end() && it2 != nodes_compared.end()) {
             doub_target.NeighborPanel_IDs[i] = doub_compared.get_globalIndex();
-             std::cout<< doub_target.NeighborPanel_IDs[i]<< std::endl;
+            //std::cout<< doub_target.NeighborPanel_IDs[i]<< std::endl;
           } else {
 
           } //******NEED TO CORRECT FOR WHEN POINTS ARE COINCIDED******
@@ -270,17 +270,16 @@ void patch::ScanNeighbor(std::vector<element::doubletPanel> &doublets) {
         auto it2 = std::find(nodes_compared.begin(), nodes_compared.end(), nodes_target.front());
         if( it1 != nodes_compared.end() && it2 != nodes_compared.end()) {
            doub_target.NeighborPanel_IDs[nodes_target.size()-1] = doub_compared.get_globalIndex();
-          std::cout<< doub_target.NeighborPanel_IDs[nodes_target.size()-1]<< std::endl;
+          //std::cout<< doub_target.NeighborPanel_IDs[nodes_target.size()-1]<< std::endl;
         } else {
             
         }
       }
     }
-    //std::cout<< "end of panel"<< std::endl;
   }
 }
 
-//getting non direct neighbor where needed
+//*******not used removed during clean up *********
 void patch::Storing_nondirectPanel(std::vector<element::doubletPanel> &doublets) {
   //int count=0;
   for (auto &doub : doublets){
@@ -304,9 +303,9 @@ void patch::computePressure(const input::simParam &sim,
                std::vector<element::doubletPanel> &doublets) {
   cp = 0.0; //remove in clean up
   const auto &vinf = sim.vinf;
+  const Vector3d freestream = sim.freeStream();
   for (auto &doublet : doublets) {
     Vector3d sum = Vector3d::Zero();
-    //ask if the the coordonnate and segment normal have to be in the local reference system
     auto neighbor = doublet.get_neighbor();
     auto edge_center = doublet.get_edge_center();
     auto edge = doublet.get_edges(); // getting the length of the edge from the mesh (not the co-planair panel) [possible mistake]
@@ -317,9 +316,26 @@ void patch::computePressure(const input::simParam &sim,
       if (neighbor[i]!=-1){
         double f = (doublets[neighbor[i]].get_center() - edge_center[i]).norm() / (doublets[neighbor[i]].get_center() - doublet.get_center()).norm(); 
         double phi_f = (doublet.mu * f) + (doublets[neighbor[i]].mu * (1 - f));
-        Vector3d segment_normal = doublet.ProjectingCollocation((-edge[i].get_dl()).cross(doublet.get_normal())); //normal projeter dans le systeme local
+        //double phi_f = (12 * f) + (7 * (1 - f)); //for debugging
+        //doublet.get_normal()
         
-        //displaying all the value for troobleshooting
+        Vector3d local_panel_normal = {0, 0, 1};
+        Vector3d edge_vector_local = doublet.ProjectingToLocal(edge[i].get_dl());
+        //edge_vector_local[2] = 0;
+        Vector3d segment_normal = (local_panel_normal).cross(edge_vector_local);
+        
+        /*
+        std::cout << "segment_normal :" << std::endl;
+            for (int w=0 ; w<3; w++){
+            std::cout << segment_normal[w] << std::endl;
+          } 
+          std::cout << "phi_f :" << std::endl;
+          std::cout << phi_f << std::endl;
+        */
+
+        if (i==0){
+          doublet.segment_normal = segment_normal.normalized();
+        }
         /*
         std::cout << "edge numero " << i << " :  " << std::endl;
         std::cout << "center of the edge " << ":  " << std::endl;
@@ -335,21 +351,31 @@ void patch::computePressure(const input::simParam &sim,
       
     //La mauvaise aire est utilisé ici. Il faut plutôt prendre l'aire du panneau co-planaire
     Vector3d gradMU = (1 / area) * sum;
-    Vector3d localstream = doublet.ProjectingCollocation(sim.freeStream()); //can be optimized
+    Vector3d localstream = doublet.ProjectingToLocal(freestream); //
     localstream[2]=0;
+    doublet.localstream = localstream; //for troubleshooting
     gradMU+=localstream;
-    doublet.storing_velocity(gradMU);
+
     /*
     std::cout << "velocity :" << std::endl;
-            for (int w=0 ; w<3; w++){
-            std::cout << gradMU[w] << std::endl;
-          } 
-     */
-    double V_k = sqrt(doublet.local_velocity[0]*doublet.local_velocity[0] + doublet.local_velocity[1]*doublet.local_velocity[1]);
+      for (int w=0 ; w<3; w++){
+        std::cout << gradMU[w] << std::endl;
+      } 
+    */
+    double V_k = sqrt(gradMU[0]*gradMU[0] + gradMU[1]*gradMU[1]);
+    if (doublet.get_globalIndex()>=110 && doublet.get_globalIndex()<=119){
+
+      //std::cout<< doublet.get_globalIndex() << std::endl;
+      std::cout<< V_k/vinf << std::endl;
+      //std::cout << doublet.get_center()[0] << std::endl;
+             
+    }
+
+    doublet.storing_velocity(gradMU, V_k/vinf);
     //std::cout << "vitesse K :  " << V_k << std::endl; 
     doublet.cp = 1 - (V_k*V_k)/(vinf*vinf);
     //std::cout << "coefficient de pression (Cp)  : ";
-    //std::cout << doublet.cp << std::endl; 
+    //std::cout << doublet.cp << std::endl;
   }      
 }
 

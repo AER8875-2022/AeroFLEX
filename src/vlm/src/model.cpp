@@ -81,7 +81,7 @@ void model::build(const input::meshData &mesh) {
   }
   // Building doublet panels
   for (auto &[key, ids] : mesh.doubletIDs) {
-    doubletPanels.push_back(element::doubletPanel(key, ids, 1.0));
+    doubletPanels.push_back(element::doubletPanel(key, ids));
   }
 }
 

@@ -58,7 +58,7 @@ protected:
 
   /** @brief Pure virtual function to build the right hand side
    *  @param object Model holding the VLM elements */
-  virtual void buildRHS(const model &object) = 0;
+  virtual void buildRHS(model &object) = 0;
 
   /** @brief Pure virtual function to save solution into the model
    *  @param object Model holding the VLM elements
@@ -112,7 +112,7 @@ protected:
 
   /** @brief Method to build the right hand side of the linear system
    *  @param object Model holding the VLM elements */
-  virtual void buildRHS(const model &object) override;
+  virtual void buildRHS(model &object) override;
 
   /** @brief Method to save solution into the model
    *  @param object Model holding the VLM elements
@@ -164,7 +164,7 @@ public:
 protected:
   /** @brief Method to build the right hand side of the linear system
    *  @param object Model holding the VLM elements */
-  virtual void buildRHS(const model &object) override;
+  virtual void buildRHS(model &object) override;
 
   /** @brief Method executing one iteration of angle of attack correction
    *  @param object Model holding the VLM elements

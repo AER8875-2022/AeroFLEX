@@ -104,8 +104,7 @@ public:
   void updateLocalAoa(const double dalpha, const std::vector<Vector3d> &nodes,
                       std::vector<element::vortexRing> &vortices);
 
-  /** @brief Method computing the inviscid local forces on the current element
-   */
+  /** @brief Method computing the inviscid local forces on the current element */
   void computeForces(const input::simParam &sim,
                      const std::vector<Vector3d> &nodes,
                      std::vector<element::vortexRing> &vortices);
@@ -228,33 +227,62 @@ private:
   void computeArea(const std::vector<wingStation> &stationIDs);
 };
 
+/** @brief Object that holds the characteristics of a patch/non-lifting surface */
 class patch {
+  
+  /** @brief Unique global index for the current element */
   int globalIndex;
+
+  /** @brief IDs of the doublet's panel forming to the current element */
   std::vector<int> doubletIDs;
+
+  /** @brief Area of the current element */
   double area;
 
   /** @brief Drag coefficient of the current surface */
   double cp = 0.0;
 
 public:
+  /** @param globalIndex Unique global index for the current element
+   *  @param doubletIDs IDs of the wing stations forming the current element */
   patch(const int globalIndex, const std::vector<int> &doubletIDs);
+
+  /** @brief Method initializing the geometry of the current element
+   *  @param nodes Nodes of the mesh
+   *  @param doublets doubletPanel of the element
+   *  @param sim Simulation parameters */
   void initialize(const std::vector<Vector3d> &nodes,
                   std::vector<element::doubletPanel> &doublets,
                   const input::simParam &sim);
+
+  /** @brief Method updating the geometry of the current element base on new
+   * moved nodes (not used for future release)
+   *  @param doublets doubletPanel of the element */
   void updateGeometry(const std::vector<Vector3d> &nodes,
                       std::vector<element::doubletPanel> &doublets);
   
+  /** @brief Method searching the each panel neighbor 
+   *  @param doublets doubletPanel of the element */
   void ScanNeighbor(std::vector<element::doubletPanel> &doublets);
   
-  void Storing_nondirectPanel(std::vector<element::doubletPanel> &doublets);
+  void Storing_nondirectPanel(std::vector<element::doubletPanel> &doublets); //not used to be removed during clean up
+
   /** @brief Method computing the local pressure on the current non lifting surface
-   */
+   * @param doublets doubletPanel of the element
+   * @param sim Simulation parameters */
   void computePressure(const input::simParam &sim,
               std::vector<element::doubletPanel> &doublets);
-
+  
+  /** @brief Getter method for the globalIndex */
   double get_globalIndex() const;
+
+  /** @brief Getter method for the area */
   double get_area() const;
+
+  /** @brief Getter method for the pressure coefficient */
   double get_cp() const;
+
+  /** @brief Getter method for the doubletsIDs */
   std::vector<int> get_doubletIDs() const;
 
 private:

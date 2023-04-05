@@ -87,10 +87,17 @@ public:
                      const std::vector<Vector3d> &nodes,
                      const geom::edgeLine &edge) const;
 
-  double influence_patch(const Vector3d &collocationPoint,
+  
+  std::tuple<double, bool, int> influence_patch(const Vector3d &collocationPoint,
                      const std::vector<Vector3d> &nodes,
                      const geom::edgeLine &edge, const std::array<Vector3d, 3> &Localreference,
-                     const Vector3d &center_point) const;
+                     const Vector3d &center_point, const double &rlim, const int &globalIndex) const;
+  
+  double influence_sources(const Vector3d &collocationPoint,
+                     const std::vector<Vector3d> &nodes,
+                     const geom::edgeLine &edge, 
+                     const std::array<Vector3d, 3> &Localreference,
+                     const Vector3d &center_point, const double &rlim) const;
 
   /** @brief Getter method for gamma */
   double get_gamma() const;

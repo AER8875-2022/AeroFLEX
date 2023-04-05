@@ -151,7 +151,7 @@ void linear::steady::buildLHS(const model &object) {
       }
       // influence Doublets -> Vortex
       for (auto &influencingDoublets : object.doubletPanels) {
-        auto v2 = influencingDoublets.influence_wing(influencingDoublets.ProjectingCollocation(influencedVortex.get_collocationPoint()),
+        auto v2 = influencingDoublets.influence_wing(influencingDoublets.ProjectingToLocal(influencedVortex.get_collocationPoint()),
             object.nodes); // modifier la fonction doublets.influence dans
                            // panel.cpp
         lhs(influencedVortex.get_globalIndex(),
@@ -176,17 +176,13 @@ void linear::steady::buildLHS(const model &object) {
       // influence Doublets -> Doublets
       for (auto &influencingDoublets : object.doubletPanels) {
         auto v4 = influencingDoublets.influence_patch(
-        influencingDoublets.ProjectingCollocation(influencedDoublets.get_center()),
+        influencingDoublets.ProjectingToLocal(influencedDoublets.get_center()),
             object.nodes);
-
 
         lhs(size_Vortex + influencedDoublets.get_globalIndex(),
             size_Vortex + influencingDoublets.get_globalIndex()) =
             v4;//.dot(influencedDoublets.get_normal());
-        DoubletMatrixINF(influencedDoublets.get_globalIndex(),
-                         influencingDoublets.get_globalIndex()) =
-            v4;//.dot(influencedDoublets.get_normal());
-        //std::cout<< v4<< std::endl;
+        
       }
     }
 
@@ -214,7 +210,7 @@ void linear::steady::buildLHS(const model &object) {
   }
 }
 
-void linear::steady::buildRHS(const model &object) {
+void linear::steady::buildRHS(model &object) {
   VectorXd rhs_VLM = VectorXd::Zero(object.vortexRings.size());
   VectorXd sources = VectorXd::Zero(object.doubletPanels.size());
 #pragma omp parallel
@@ -228,8 +224,16 @@ void linear::steady::buildRHS(const model &object) {
 #pragma omp for
     for (auto &doubs : object.doubletPanels) {
       sources(doubs.get_globalIndex()) =
-          -object.sim.freeStream().dot(doubs.get_normal());
+          -doubs.get_normal().dot(object.sim.freeStream());
     }
+  }
+  //Creating influence matrix for the sources
+  for (auto &influencedDoublets : object.doubletPanels) {
+    for (auto &influencingDoublets : object.doubletPanels) {
+        auto B = influencingDoublets.influence_sources(
+        influencingDoublets.ProjectingToLocal(influencedDoublets.get_center()), object.nodes);
+        DoubletMatrixINF(influencedDoublets.get_globalIndex(), influencingDoublets.get_globalIndex()) = B;
+      }
   }
   //Adding the sources influence to the VLM 
   rhs_VLM += lhs.block(0, object.vortexRings.size(), object.vortexRings.size(), object.doubletPanels.size()) * sources;
@@ -260,7 +264,7 @@ void nonlinear::steady::initialize(const input::solverParam &solvP,
   this->database = database;
 }
 
-void nonlinear::steady::buildRHS(const model &object) {
+void nonlinear::steady::buildRHS(model &object) {
   VectorXd rhs_VLM = VectorXd::Zero(object.vortexRings.size());
   VectorXd sources = VectorXd::Zero(object.doubletPanels.size());
 #pragma omp parallel
@@ -274,11 +278,21 @@ void nonlinear::steady::buildRHS(const model &object) {
 #pragma omp for
     for (auto &doubs : object.doubletPanels) {
       sources(doubs.get_globalIndex()) =
-          -object.sim.freeStream().dot(doubs.get_normal());
+          -doubs.get_normal().dot(object.sim.freeStream());
+      doubs.storing_sigma(-object.sim.freeStream().dot(doubs.get_normal()));
     }
   }
-  //Adding the sources influence to the VLM 
-  rhs_VLM += lhs.block(0, object.vortexRings.size(), object.vortexRings.size(),object.doubletPanels.size()) * sources;
+  //Creating influence matrix for the sources
+  for (auto &influencedDoublets : object.doubletPanels) {
+    for (auto &influencingDoublets : object.doubletPanels) {
+        auto B = influencingDoublets.influence_sources(
+        influencingDoublets.ProjectingToLocal(influencedDoublets.get_center()), object.nodes);
+        DoubletMatrixINF(influencedDoublets.get_globalIndex(), influencingDoublets.get_globalIndex()) = B;
+      }
+  }
+  //Adding the sources influence to the VLM
+  rhs_VLM += lhs.block(0, object.vortexRings.size(), object.vortexRings.size(), object.doubletPanels.size()) * sources;
+  //potentiellement un erreur sur la matrice influence
 
   VectorXd rhs_PanMethod = DoubletMatrixINF * sources;
   // concatenate rhs vectors

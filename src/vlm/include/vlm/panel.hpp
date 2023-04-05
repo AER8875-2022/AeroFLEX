@@ -58,6 +58,10 @@ class panel {
   /** @brief Coordinates of the panel's center */
   Vector3d center;
 
+  /** @brief Vector holding the local reference system of the panel (l,m,normal) */
+  std::array<Vector3d, 3> Localreference;
+
+  /** @brief Vector holding the global coordonates of each edge's center */
   std::vector<Vector3d> edge_center;
 
   /** @brief Vector holding the geometry of the panel's edges */
@@ -74,6 +78,9 @@ public:
   /** @brief Method that initializes the geometry of the panel
    *  @param nodes Nodes of the mesh */
   void initialize(const std::vector<Vector3d> &nodes);
+
+  /** @brief Method that compute the local reference system of the panel (l,m,normal) */
+  void LocalCoordinate(const std::vector<Vector3d> &nodes); 
 
   /** @brief Getter method for nodeIDs */
   std::vector<int> get_nodeIDs() const;
@@ -102,6 +109,9 @@ private:
   /** @brief Method that computes the area of the panel
    *  @param nodes Nodes of the mesh */
   void computeArea(const std::vector<Vector3d> &nodes);
+
+  /** @brief Getter method for the local coordinates */
+  std::array<Vector3d, 3> get_LocalCoordinate() const;
 
   friend class element::vortexRing;
   friend class element::doubletPanel;
@@ -141,8 +151,6 @@ class vortexRing {
   /** @brief local angle of attack correction */
   double local_aoa;
 
-  std::array<Vector3d, 3> Localreference;
-
 public:
   /** @param globalIndex Unique global index of the current element
    *  @param nodeIDs Nodes defining the element
@@ -166,8 +174,6 @@ public:
    *  @return Vector defining the trailing edge of the ring */
   Vector3d leadingEdgeDl(const std::vector<Vector3d> &nodes);
 
-  void LocalCoordinate(const std::vector<Vector3d> &nodes);  // (l,m,normal)
-
   /** @brief Method computing the influence of the current vortex ring on a
    * collocation point
    *  @param collocationPoint Point in tridimensional space
@@ -175,6 +181,7 @@ public:
    *  @return Induced velocity vector at collocation point */
   Vector3d influence_wing(const Vector3d &collocationPoint,
                      const std::vector<Vector3d> &nodes) const;
+
 
   double influence_patch(const Vector3d &collocationPoint,
                      const std::vector<Vector3d> &nodes) const;
@@ -196,7 +203,7 @@ public:
    *  @param gamma Strength to be saved to the current element */
   void updateGamma(const double gamma);
 
-  /** @brief Method computing the collocation point corrected for high anlges of
+  /** @brief Method computing the collocation point corrected for high angles of
    * attack
    *  @param nodes Nodes of the mesh */
   void computeCollocationPoint(const std::vector<Vector3d> &nodes);
@@ -231,6 +238,9 @@ public:
   /** @brief Getter method for collocationPoint */
   Vector3d get_collocationPoint() const;
 
+  /** @brief Getter method for the local coordinates */
+  std::array<Vector3d, 3> get_LocalCoordinate() const;
+
   friend class surface::wingStation;
   friend class solver::linear::steady;
   friend class solver::linear::unsteady;
@@ -238,41 +248,85 @@ public:
   friend class solver::nonlinear::unsteady;
 };
 
+/** @brief Object representing a doublet panel element */
 class doubletPanel {
+  
+  /** @brief Unique global index of the current element */
   int globalIndex;
-  double sigma; //remove during clean up
+
+  /** @brief Strength of the doublet of the current element */
   double mu;
-  std::array<Vector3d, 3> Localreference; // (l,m,normal)
-  std::vector<Vector3d> ProjectedNodes;   // temporary label (to be removed)
+
+  /** @brief Vector containing the ID of each neighbor the current element */
   std::vector<int> NeighborPanel_IDs;
-  std::vector<int> nondirectNeighbor_IDs;
+
+  /** @brief local velocity of the current element */
   Vector3d local_velocity;
-  Vector3d T; //not sure what this is used for
-  double SMP;                             
-  double SMQ;                             
+
   /** @brief Local pressure coefficient */
   double cp;
+
   std::vector<fil::vortexLine> Doublets_vortices;
+
+  /** @brief Wrapper for geometric computations */
   geom::panel panel;
 
+  std::vector<Vector3d> ProjectedNodes;   // NOT USED (to be removed)
+  std::vector<int> nondirectNeighbor_IDs; //not used  (to be removed)
+  double sigma; //remove during clean up
+  Vector3d segment_normal; // only for toubleshooting
+  Vector3d localstream;  // only for toubleshooting
+  double velocity_div_vinf; //only for troobleshooting
+  Vector3d T; //to be removed
+  double SMP; //to be removed                          
+  double SMQ; //to be removed
+
 public:
-  doubletPanel(const int globalIndex, const std::vector<int> &nodeIDs,
-               const double sigma);
+  /** @param globalIndex Unique global index of the current element
+   *  @param nodeIDs Nodes defining the element */
+  doubletPanel(const int globalIndex, const std::vector<int> &nodeIDs);
+
+  /** @brief Method initializing the element's geometry
+   *  @param nodes Nodes of the mesh
+   *  @param sim Simulation parameters */
   void initialize(const std::vector<Vector3d> &nodes,
                   const input::simParam &sim);
+
+  /** @brief Method computing the influence of the current vortex ring on a
+   * collocation point
+   *  @param collocationPoint Point in tridimensional space
+   *  @param nodes Nodes of the mesh
+   *  @return Induced velocity vector at collocation point */
   Vector3d influence_wing(const Vector3d &collocationPoint,
                      const std::vector<Vector3d> &nodes) const;
-  double influence_patch(const Vector3d &collocationPoint,
-                     const std::vector<Vector3d> &nodes) const;                   
-  void updateGeometry(const std::vector<Vector3d> &nodes);
-  void LocalCoordinate(const std::vector<Vector3d> &nodes);
-  void updateNodes(const std::vector<Vector3d>
-                  &nodes); // to create later updating/projecting the position
-                           // of the node onto the mean of the panel (co-planor
-                           // panel in the localcoordinates)
-  Vector3d ProjectingCollocation(const Vector3d &collocationPoint) const;
 
-  void storing_velocity(Vector3d velocity);
+  /** @brief Method computing the influence of the potentiel at a
+   * collocation point
+   *  @param collocationPoint Point in tridimensional space
+   *  @param nodes Nodes of the mesh
+   *  @return influence of the potentiel at a collocation point */
+  double influence_patch(const Vector3d &collocationPoint,
+                     const std::vector<Vector3d> &nodes) const;
+
+  
+  double influence_sources(const Vector3d &collocationPoint,
+                                 const std::vector<Vector3d> &nodes) const;
+
+  /** @brief Method updating the geometry of the current element based on new
+   * moved nodes (not used yet to be added for future release)
+   *  @param nodes Nodes of the mesh */              
+  void updateGeometry(const std::vector<Vector3d> &nodes);
+
+
+  void updateNodes(const std::vector<Vector3d>
+                  &nodes); //not done
+
+  /** @brief Project the vector to the local reference system
+   *  @param vector projected to the current element */
+  Vector3d ProjectingToLocal(const Vector3d &vector) const;
+
+  void storing_velocity(Vector3d velocity, double normalvelocity); // for troobleshooting
+  void storing_sigma(double sigma1); //for troobleshooting
 
   /** @brief Saves and updates the strength of the current doublets
    *  @param mu Strength to be saved to the current element */
@@ -281,18 +335,43 @@ public:
   /** @brief Getter method for edges */
   std::vector<geom::edgeLine> get_edges() const;
   
+  /** @brief Getter method for the area */
   double get_area() const;
+
+  /** @brief Getter method for the normal vector */
   Vector3d get_normal() const;
+
+  /** @brief Getter method for the pressure coefficient */
   double get_cp() const;
+
+  /** @brief Getter method for the normal */
   Vector3d get_center() const;
-  std::vector<int> get_neighbor()const;
+
+  /** @brief Getter method for the panel neighbor ID */
+  std::vector<int> get_neighbor() const;
+
+  /** @brief Getter method for the nodeIDs */
   std::vector<int> get_nodeIDs() const;
+
+  /** @brief Getter method for each edge center point */
   std::vector<Vector3d> get_edge_center() const;
+
+  /** @brief Getter method for globalIndex */
   int get_globalIndex() const;
+
+  /** @brief Getter method for the local coordinates */
   std::array<Vector3d, 3> get_LocalCoordinate() const;
+
+  /** @brief Getter method for the local velocity */
   Vector3d get_local_velocity() const;
-  double get_sigma() const;
+  
+  /** @brief Getter method for mu */
   double get_mu() const;
+
+Vector3d get_segment_normal() const; //only for troubleshooting
+Vector3d get_localstream() const; //only for troubleshooting
+double get_sigma() const; //only for troubleshooting
+double get_velocity_div_vinf() const; //only for troubleshooting
 
   friend class surface::patch;
   friend class solver::linear::steady;
