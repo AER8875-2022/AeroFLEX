@@ -28,8 +28,8 @@ int main(int argc, const char * argv[]) {
         {0.001},                        // z_te_half propre cst
         {0.05},             // r_le propre cst
         {0.2},                     // beta propre cst, angle bord de fuite
-        {0.0},                         // x_le
-        {0.0},               // z_n
+        {0.0,0.2},                         // x_le
+        {0.0,0.2},               // z_n
         {0.0}                     // delta_alpha_t, twist
     );
     

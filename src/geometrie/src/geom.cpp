@@ -1,15 +1,28 @@
-
 #include "geometrie/geom.hpp"
-#include "geometrie/euler.hpp"
-#include "geometrie/geometry.hpp"
-#include "geometrie/structure.hpp"
+#include <cmath>
+#include <iostream>
+#include <string.h>
 
+#ifndef M_PI
+#define M_PI 3.141592653589793115997963468544185161590576171875
+#endif
 
 using namespace geom;
 
 Geom::Geom(GUIHandler &gui): gui(gui) {}
 
-void Geom::Geom_gen(bool viscous) {
+void Geom::Geom_gen() {
+    // convertion angles - distances
+    double xle;
+    if (settings.fleche==0.0){
+        xle = 0.0;
+    } else {
+        xle = settings.envergure/(2*tan(settings.fleche*(M_PI/180)));
+    }
+    double zn =settings.envergure*(sin(settings.dihedre*(M_PI/180))/2);
+    double d_alpha = settings.twist*(M_PI/180);
+
+    //Define Geometry
     std::string body_type = "General";
     Body WING_RIGHT(body_type);
     Body WING_LEFT(body_type);
@@ -24,9 +37,9 @@ void Geom::Geom_gen(bool viscous) {
         {settings.z_te},                         
         {settings.r_le},                        
         {settings.Beta},                         
-        {0.0},                         //??, x)le                    
-        {0.0},               //??, z_n            
-        {settings.twist}                         
+        {0.0,xle},                                           
+        {0.0,zn},                          
+        {0.0,d_alpha}                       
         );
         //WL
         WING_LEFT.add_wing_surface_cst(
@@ -38,11 +51,11 @@ void Geom::Geom_gen(bool viscous) {
         {settings.z_te},                         
         {settings.r_le},                        
         {settings.Beta},                         
-        {0.0},                         //??, x)le                    
-        {0.0},               //??, z_n            
-        {settings.twist}                         
+        {0.0,xle},                                           
+        {0.0,zn},                          
+        {0.0,d_alpha}                        
         );
-
+        profile_name = "CST";
     } else {
         //WR
         WING_RIGHT.add_wing_surface_naca(
@@ -54,9 +67,9 @@ void Geom::Geom_gen(bool viscous) {
         {settings.m},                   
         {settings.p},                        
         {settings.t},                     
-        {0.0},                         //??, x)le 
-        {0.0},               //??, z_n 
-        {settings.twist}                      
+        {0.0,xle},                                           
+        {0.0,zn},                          
+        {0.0,d_alpha}                      
         );
 
         //WL
@@ -69,51 +82,48 @@ void Geom::Geom_gen(bool viscous) {
         {settings.m},                   
         {settings.p},                        
         {settings.t},                     
-        {0.0},                         //??, x)le 
-        {0.0},               //??, z_n 
-        {settings.twist}                      
+        {0.0,xle},                                           
+        {0.0,zn},                          
+        {0.0,d_alpha}                     
         );
+        profile_name = "NACA";
     }
 
     WING_LEFT.mirror_body(); 
     WING_RIGHT.change_all_distributions("partial", "cartesian");
-    std::vector<std::vector<std::vector<std::vector<double>>>> WR_surfaces = WING_RIGHT.get_paired_body_surfaces();    
+    WR_surfaces = WING_RIGHT.get_paired_body_surfaces();    
     std::vector<std::vector<std::vector<std::vector<double>>>> WL_surfaces = WING_LEFT.get_paired_body_surfaces();
     gui.msg.push("[GEOM] Geometry generated");
-    //Eventuellement changer de fonction
 
-    //RANS
+
+    // Structure
+    std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> element = maillage_structure(WING_RIGHT, settings.E, settings.G);
+    gui.msg.push("[GEOM] Mesh for structure solver generated");
+}
+
+//RANS
+void Geom::Geom_mesh(bool viscous) {
     std::vector<double> disc{100,150,200};
-    //cout<<disc[0]<<endl;
-    std::vector<std::string> file_name{"Airfoil_coarse.msh","Airfoil_normal.msh","Airfoil_fine.msh"};
-        //file_name = {"Airfoil_coarse.msh","Airfoil_normal.msh","Airfoil_fine.msh"};
-
-    //std::cout<<file_name[0]<<endl;
     std::vector<std::vector<std::vector<std::vector<double>>>> surfaces = WR_surfaces;
-    //bool RANS = false; // True = solver RANS, False = solver Euler
+    file_name = {profile_name+"_coarse.msh",profile_name+"_normal.msh",profile_name+"_fine.msh"};
     for (int i=0; i < surfaces.size(); i++){
         for (int j=0; j<3; j++){
             generer(surfaces[i][0], surfaces[i][1], surfaces[i][2], surfaces[i][4], surfaces[i][5], disc[j], file_name[j], viscous);
         }
     }  
     gui.msg.push("[GEOM] Mesh for Euler/RANS solver generated");
-
-    // void fill_database(database::table &table){
-    //     table.airfoils["mame_airfoil"]; // Créer le airfoil
-    //     table.airfoils["mame_airfoil"].alpha = [0.0,5.0,10.0];    //Remplir le champs alpha 
-    //     //file_name[] je peux l'appeler
-
-    //     table.sectionAirfoils[0];       //0 aile droit, 1 aile gauche
-    //     table.sectionAirfoils[0] = ["mame_airfoil", "mame_airfoil"];   
-
-    //     table.sectionSpanLocs[0];
-    //     table.sectionSpanLocs[0] = [0.0,1.0] //doit aller de 0 à 1
-    // }
-
-    // Structure
-    std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> element = maillage_structure(WING_RIGHT, settings.E, settings.G);
-    gui.msg.push("[GEOM] Mesh for structure solver generated");
 }
+
+// void Geom::fill_database(database::table &table){
+//         table.airfoils[profile_name]; // Créer le airfoil
+//         table.airfoils[profile_name].alpha = [0.0,5.0,10.0];    //Remplir le champs alpha 
+
+//         table.sectionAirfoils[0];       //0 aile droit, 1 aile gauche
+//         table.sectionAirfoils[0] = [profile_name, profile_name];   
+
+//         table.sectionSpanLocs[0];
+//         table.sectionSpanLocs[0] = [0.0,1.0] //doit aller de 0 à 1
+// }
 
 void Settings::import_config_file(tiny::config &io) {
 	cr = io.get<double>("Geom-Wing", "Chord_root");

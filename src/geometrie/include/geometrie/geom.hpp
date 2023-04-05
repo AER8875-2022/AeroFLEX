@@ -11,6 +11,7 @@
 #include "geometrie/euler.hpp"
 #include "geometrie/geometry.hpp"
 #include "geometrie/structure.hpp"
+//#include "src/rans/include/rans/core.h", useless : delete
 
 
 namespace geom {
@@ -84,9 +85,13 @@ public:
 
 public:
     Geom(GUIHandler &gui);
-    //bool viscous = rans.settings.is_viscous();
-    void Geom_gen(bool viscous);
-    void fill_database(database::table &table);
+    void Geom_gen();
+    void Geom_mesh(bool viscous);
+    //void fill_database(database::table &table);     //uncomment when problem resolved
+
+    std::vector<std::string> file_name;
+    std::string profile_name;
+    std::vector<std::vector<std::vector<std::vector<double>>>> WR_surfaces;
 };
 
 }
