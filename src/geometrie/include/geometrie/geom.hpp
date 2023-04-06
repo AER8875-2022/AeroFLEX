@@ -90,8 +90,9 @@ public:
     void fill_database(database::table &table);     //uncomment when problem resolved
 
     std::vector<std::string> file_name;
-    std::string profile_name;
+    std::vector<std::string> profile_name;
     std::vector<std::vector<std::vector<std::vector<double>>>> WR_surfaces;
+    std::vector<std::vector<std::vector<std::vector<double>>>> WL_surfaces;
 };
 
 }

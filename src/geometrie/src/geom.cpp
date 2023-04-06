@@ -2,6 +2,8 @@
 #include <cmath>
 #include <iostream>
 #include <string.h>
+#include <vector>
+#include <sstream>
 
 #ifndef M_PI
 #define M_PI 3.141592653589793115997963468544185161590576171875
@@ -26,7 +28,7 @@ void Geom::Geom_gen() {
     std::string body_type = "General";
     Body WING_RIGHT(body_type);
     Body WING_LEFT(body_type);
-    int nb_profils = 1;
+    int nb_profils = 1; //hardcoder
     //double perc_span = 1.0;
     for (int k=0; k<nb_profils; k++){
         if(settings.S_type == 1){
@@ -89,7 +91,7 @@ void Geom::Geom_gen() {
             // {0.0,zn},                          
             // {0.0,d_alpha}                        
             // );
-            profile_name = "CST";
+            profile_name.push_back("CST");
         } else {
             //WR
             WING_RIGHT.add_wing_surface_naca(
@@ -120,16 +122,26 @@ void Geom::Geom_gen() {
             {0.0,zn},                          
             {0.0,d_alpha}                     
             );
-            profile_name = "NACA";
+
+            std::ostringstream ss1,ss2,ss3;
+            ss1 << settings.m;
+            ss2 << settings.p;
+            ss3 << settings.t;
+            ss1.precision(0);
+            ss2.precision(0);
+            ss3.precision(0);
+            profile_name.push_back("NACA"+ss1.str()+ss2.str()+ss3.str());
+            std::cout<<"NACA Name generated"<<std::endl;
+
         }
     }
 
     WING_LEFT.mirror_body(); 
     WING_RIGHT.change_all_distributions("partial", "cartesian");
     WR_surfaces = WING_RIGHT.get_paired_body_surfaces();    
-    std::vector<std::vector<std::vector<std::vector<double>>>> WL_surfaces = WING_LEFT.get_paired_body_surfaces();
+    WL_surfaces = WING_LEFT.get_paired_body_surfaces();
     gui.msg.push("[GEOM] Geometry generated");
-
+    std::cout<<"Geometry generated"<<std::endl;
 
     // Structure
     std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> element = maillage_structure(WING_RIGHT, settings.E, settings.G);
@@ -140,12 +152,12 @@ void Geom::Geom_gen() {
 void Geom::Geom_mesh(bool viscous) {
     std::vector<double> disc{100,150,200};
     std::vector<std::vector<std::vector<std::vector<double>>>> surfaces = WR_surfaces;
-    file_name = {profile_name+"_coarse.msh",profile_name+"_normal.msh",profile_name+"_fine.msh"};
 
-    //std::cout<<"Surface size"<<std::endl;
+    std::cout<<"Surface size"<<std::endl;
     std::cout<<"start mesh rans"<<std::endl;
 
     for (int i=0; i < surfaces.size(); i++){
+        file_name = {profile_name[i]+"_coarse.msh",profile_name[i]+"_normal.msh",profile_name[i]+"_fine.msh"};
         gui.msg.push("[GEOM] test");
         for (int j=0; j<3; j++){
             generer(surfaces[i][0], surfaces[i][1], surfaces[i][2], surfaces[i][4], surfaces[i][5], disc[j], file_name[j], viscous);
@@ -156,22 +168,24 @@ void Geom::Geom_mesh(bool viscous) {
 }
 
 void Geom::fill_database(database::table &table){
-        std::cout<<"Nom du profil database :";
-        std::cout<<profile_name<<std::endl;
-        table.airfoils[profile_name]; // Créer le airfoil
-        table.airfoils[profile_name].alpha = {0.0,2.0,5.0};    //Remplir le champs alpha 
+        std::cout<<"Nom du profil database : ";
+        std::cout<<profile_name[0]<<std::endl;
+        for (int i=0; i<profile_name.size(); i++) {
+            table.airfoils[profile_name[i]];                            // Créer le airfoil
+            table.airfoils[profile_name[i]].alpha = {0.0,2.0,5.0};      //Remplir le champs alpha 
 
-        table.sectionAirfoils[0];       //0 aile droit, 1 aile gauche
-        table.sectionAirfoils[0] = {profile_name, profile_name};   
+            table.sectionAirfoils[i];                                   //WR
+            table.sectionAirfoils[i] = {profile_name[i], profile_name[i]};   
 
-        table.sectionSpanLocs[0];
-        table.sectionSpanLocs[0] = {0.0,1.0}; //doit aller de 0 à 1
+            table.sectionSpanLocs[i];
+            table.sectionSpanLocs[i] = {0.0,1.0};                       //doit aller de 0 à 1
 
-        table.sectionAirfoils[1];       //0 aile droit, 1 aile gauche
-        table.sectionAirfoils[1] = {profile_name, profile_name};   
+            table.sectionAirfoils[i+1];                                 //WL
+            table.sectionAirfoils[i+1] = {profile_name[i], profile_name[i]};   
 
-        table.sectionSpanLocs[1];
-        table.sectionSpanLocs[1] = {0.0,1.0}; //doit aller de 0 à 1
+            table.sectionSpanLocs[i+1];
+            table.sectionSpanLocs[i+1] = {0.0,1.0}; 
+        }
 }
 
 void Settings::import_config_file(tiny::config &io) {

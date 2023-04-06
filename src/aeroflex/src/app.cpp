@@ -171,18 +171,18 @@ void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure& structure, geo
 		geom.fill_database(table);	//uncomment when problem resolved
 		//table.airfoils["naca0012q"]; //delete
 		//table.airfoils["naca0012q"].alpha = {1.0, 5.0, 10.0}; //delete
-		std::cout<<"Database check start"<<std::endl;
-		std::cout<<"Angles : "<<std::endl;
-		std::cout<<table.airfoils["CST"].alpha[0]<<std::endl;
-		std::cout<<table.airfoils["CST"].alpha[1]<<std::endl;
-		std::cout<<table.airfoils["CST"].alpha[2]<<std::endl;
-		std::cout<<"Profile Name : "<<std::endl;
-		std::cout<<table.sectionAirfoils[0][0]<<std::endl;
-		std::cout<<table.sectionAirfoils[0][1]<<std::endl;
-		std::cout<<"Span locs : "<<std::endl;
-		std::cout<<table.sectionSpanLocs[0][0]<<std::endl;
-		std::cout<<table.sectionSpanLocs[0][1]<<std::endl;
-		std::cout<<"Database check end"<<std::endl;
+		// std::cout<<"Database check start"<<std::endl;
+		// std::cout<<"Angles : "<<std::endl;
+		// std::cout<<table.airfoils["CST"].alpha[0]<<std::endl;
+		// std::cout<<table.airfoils["CST"].alpha[1]<<std::endl;
+		// std::cout<<table.airfoils["CST"].alpha[2]<<std::endl;
+		// std::cout<<"Profile Name : "<<std::endl;
+		// std::cout<<table.sectionAirfoils[0][0]<<std::endl;
+		// std::cout<<table.sectionAirfoils[0][1]<<std::endl;
+		// std::cout<<"Span locs : "<<std::endl;
+		// std::cout<<table.sectionSpanLocs[0][0]<<std::endl;
+		// std::cout<<table.sectionSpanLocs[0][1]<<std::endl;
+		// std::cout<<"Database check end"<<std::endl;
 		for (auto& [airfoil, db] : table.airfoils) {
 			rans.solve_airfoil(airfoil, db);
 		}
