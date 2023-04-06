@@ -72,6 +72,8 @@ void Rans::run_airfoil(const std::string& airfoil, database::airfoil& db) {
     ms.clear();
     // TODO: check with geom for the naming convention
     // For the moment we will only load 1 mesh
+    std::cout<<"Nom du profil RANS :";
+    std::cout<<airfoil<<std::endl;
     ms.push_back(mesh("../../../../examples/rans/" + airfoil + "_coarse.msh"));
     ms.push_back(mesh("../../../../examples/rans/" + airfoil + "_mid.msh"));
     // ms.push_back(mesh("../../../../examples/rans/" + airfoil + "_fine.msh"));

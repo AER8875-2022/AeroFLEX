@@ -26,67 +26,102 @@ void Geom::Geom_gen() {
     std::string body_type = "General";
     Body WING_RIGHT(body_type);
     Body WING_LEFT(body_type);
-    if(settings.S_type == 1){
-        //WR
-        WING_RIGHT.add_wing_surface_cst(
-        100,                            
-        5,
-        settings.envergure,             
-        0,                              
-        {settings.cr,settings.ct},      
-        {settings.z_te},                         
-        {settings.r_le},                        
-        {settings.Beta},                         
-        {0.0,xle},                                           
-        {0.0,zn},                          
-        {0.0,d_alpha}                       
-        );
-        //WL
-        WING_LEFT.add_wing_surface_cst(
-        100,                            
-        5,
-        settings.envergure,             
-        0,                              
-        {settings.cr,settings.ct},      
-        {settings.z_te},                         
-        {settings.r_le},                        
-        {settings.Beta},                         
-        {0.0,xle},                                           
-        {0.0,zn},                          
-        {0.0,d_alpha}                        
-        );
-        profile_name = "CST";
-    } else {
-        //WR
-        WING_RIGHT.add_wing_surface_naca(
-        100,                            
-        5,                              
-        settings.envergure,             
-        0, 
-        {settings.cr,settings.ct}, 
-        {settings.m},                   
-        {settings.p},                        
-        {settings.t},                     
-        {0.0,xle},                                           
-        {0.0,zn},                          
-        {0.0,d_alpha}                      
-        );
+    int nb_profils = 1;
+    //double perc_span = 1.0;
+    for (int k=0; k<nb_profils; k++){
+        if(settings.S_type == 1){
+            //WR
+            //#1
+            WING_RIGHT.add_wing_surface_cst(
+            100,                            
+            5,
+            settings.envergure,             
+            0,                              
+            {settings.cr,settings.ct},      
+            {settings.z_te},                         
+            {settings.r_le},                        
+            {settings.Beta},                         
+            {0.0,xle},                                           
+            {0.0,zn},                          
+            {0.0,d_alpha}                       
+            );
+            // //#2
+            // WING_RIGHT.add_wing_surface_cst(
+            // 100,                            
+            // 5,
+            // settings.envergure,             
+            // settings.envergure,                              
+            // {settings.cr,settings.ct},      
+            // {settings.z_te},                         
+            // {settings.r_le},                        
+            // {settings.Beta},                         
+            // {0.0,xle},                                           
+            // {0.0,zn},                          
+            // {0.0,d_alpha}                       
+            // );
 
-        //WL
-        WING_LEFT.add_wing_surface_naca(
-        100,                            
-        5,                              
-        settings.envergure,             
-        0, 
-        {settings.cr,settings.ct}, 
-        {settings.m},                   
-        {settings.p},                        
-        {settings.t},                     
-        {0.0,xle},                                           
-        {0.0,zn},                          
-        {0.0,d_alpha}                     
-        );
-        profile_name = "NACA";
+            //WL
+            //#1
+            WING_LEFT.add_wing_surface_cst(
+            100,                            
+            5,
+            settings.envergure,             
+            0,                              
+            {settings.cr,settings.ct},      
+            {settings.z_te},                         
+            {settings.r_le},                        
+            {settings.Beta},                         
+            {0.0,xle},                                           
+            {0.0,zn},                          
+            {0.0,d_alpha}                        
+            );
+            // //#2
+            // WING_LEFT.add_wing_surface_cst(
+            // 100,                            
+            // 5,
+            // settings.envergure,             
+            // settings.envergure,                              
+            // {settings.cr,settings.ct},      
+            // {settings.z_te},                         
+            // {settings.r_le},                        
+            // {settings.Beta},                         
+            // {0.0,xle},                                           
+            // {0.0,zn},                          
+            // {0.0,d_alpha}                        
+            // );
+            profile_name = "CST";
+        } else {
+            //WR
+            WING_RIGHT.add_wing_surface_naca(
+            100,                            
+            5,                              
+            settings.envergure,             
+            0, 
+            {settings.cr,settings.ct}, 
+            {settings.m},                   
+            {settings.p},                        
+            {settings.t},                     
+            {0.0,xle},                                           
+            {0.0,zn},                          
+            {0.0,d_alpha}                      
+            );
+
+            //WL
+            WING_LEFT.add_wing_surface_naca(
+            100,                            
+            5,                              
+            settings.envergure,             
+            0, 
+            {settings.cr,settings.ct}, 
+            {settings.m},                   
+            {settings.p},                        
+            {settings.t},                     
+            {0.0,xle},                                           
+            {0.0,zn},                          
+            {0.0,d_alpha}                     
+            );
+            profile_name = "NACA";
+        }
     }
 
     WING_LEFT.mirror_body(); 
@@ -106,24 +141,32 @@ void Geom::Geom_mesh(bool viscous) {
     std::vector<double> disc{100,150,200};
     std::vector<std::vector<std::vector<std::vector<double>>>> surfaces = WR_surfaces;
     file_name = {profile_name+"_coarse.msh",profile_name+"_normal.msh",profile_name+"_fine.msh"};
+
+    //std::cout<<"Surface size"<<std::endl;
+    std::cout<<"start mesh rans"<<std::endl;
+
     for (int i=0; i < surfaces.size(); i++){
+        gui.msg.push("[GEOM] test");
         for (int j=0; j<3; j++){
             generer(surfaces[i][0], surfaces[i][1], surfaces[i][2], surfaces[i][4], surfaces[i][5], disc[j], file_name[j], viscous);
         }
     }  
+    std::cout<<"end mesh rans"<<std::endl;
     gui.msg.push("[GEOM] Mesh for Euler/RANS solver generated");
 }
 
-// void Geom::fill_database(database::table &table){
-//         table.airfoils[profile_name]; // Créer le airfoil
-//         table.airfoils[profile_name].alpha = [0.0,5.0,10.0];    //Remplir le champs alpha 
+void Geom::fill_database(database::table &table){
+        std::cout<<"Nom du profil database :";
+        std::cout<<profile_name<<std::endl;
+        table.airfoils[profile_name]; // Créer le airfoil
+        table.airfoils[profile_name].alpha = {0.0,5.0,10.0};    //Remplir le champs alpha 
 
-//         table.sectionAirfoils[0];       //0 aile droit, 1 aile gauche
-//         table.sectionAirfoils[0] = [profile_name, profile_name];   
+        table.sectionAirfoils[0];       //0 aile droit, 1 aile gauche
+        table.sectionAirfoils[0] = {profile_name, profile_name};   
 
-//         table.sectionSpanLocs[0];
-//         table.sectionSpanLocs[0] = [0.0,1.0] //doit aller de 0 à 1
-// }
+        table.sectionSpanLocs[0];
+        table.sectionSpanLocs[0] = {0.0,1.0}; //doit aller de 0 à 1
+}
 
 void Settings::import_config_file(tiny::config &io) {
 	cr = io.get<double>("Geom-Wing", "Chord_root");

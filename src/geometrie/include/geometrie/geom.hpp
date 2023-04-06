@@ -87,7 +87,7 @@ public:
     Geom(GUIHandler &gui);
     void Geom_gen();
     void Geom_mesh(bool viscous);
-    //void fill_database(database::table &table);     //uncomment when problem resolved
+    void fill_database(database::table &table);     //uncomment when problem resolved
 
     std::vector<std::string> file_name;
     std::string profile_name;

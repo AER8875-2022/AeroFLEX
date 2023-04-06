@@ -8,6 +8,7 @@
 #include "Application.h"
 #include "FileDialog.hpp"
 
+#include <iostream>
 #include <string>
 #include <cstring>
 #include <future>
@@ -167,10 +168,14 @@ void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure& structure, geo
 	geom.Geom_gen();
 	geom.Geom_mesh(rans.settings.is_viscous());
 	if (!vlm.settings.sim.get_databaseFormat().compare("NONE")) {
-		//geom.fill_database(table);	//uncomment when problem resolved
-		table.airfoils["naca0012q"]; //delete
-		table.airfoils["naca0012q"].alpha = {1.0, 5.0, 10.0}; //delete
-
+		geom.fill_database(table);	//uncomment when problem resolved
+		//table.airfoils["naca0012q"]; //delete
+		//table.airfoils["naca0012q"].alpha = {1.0, 5.0, 10.0}; //delete
+		std::cout<<"Database check"<<std::endl;
+		std::cout<<"Angles";
+		std::cout<<table.airfoils["CST"].alpha[0]<<std::endl;
+		std::cout<<table.airfoils["CST"].alpha[1]<<std::endl;
+		std::cout<<table.airfoils["CST"].alpha[2]<<std::endl;
 		for (auto& [airfoil, db] : table.airfoils) {
 			rans.solve_airfoil(airfoil, db);
 		}
@@ -179,7 +184,7 @@ void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure& structure, geo
 		table.importAirfoils(vlm.settings.io.databaseFile);
 	}
 
-	vlm.database.importLocations(vlm.settings.io.locationFile); // Temporary
+	//vlm.database.importLocations(vlm.settings.io.locationFile); // Temporary
 	vlm.solve();
 
 	structure.input();
