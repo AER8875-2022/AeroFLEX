@@ -111,11 +111,11 @@ void generer(std::vector<std::vector<double>> xu, std::vector<std::vector<double
     gmsh::model::geo::addPlaneSurface({102, 101}, 1);
 
     // Physical curve
-    gmsh::model::addPhysicalGroup(1, lin_list, indx_phys,"Airfoil");          //physical curve, airfoil
+    gmsh::model::addPhysicalGroup(1, lin_list, indx_phys,"wall");          //physical curve, airfoil
     indx_phys++;
-    gmsh::model::addPhysicalGroup(1, {indx_line-1, indx_line-2}, indx_phys,"Farfield");          //physical curve, farfield
+    gmsh::model::addPhysicalGroup(1, {indx_line-1, indx_line-2}, indx_phys,"farfield");          //physical curve, farfield
     indx_phys++;
-    gmsh::model::addPhysicalGroup(2, {1}, indx_phys, "Internal");    //phyisical surface, airfoil
+    gmsh::model::addPhysicalGroup(2, {1}, indx_phys, "internal");    //phyisical surface, airfoil
     indx_phys++;
 
     // Boundary Layer for RANS solver
