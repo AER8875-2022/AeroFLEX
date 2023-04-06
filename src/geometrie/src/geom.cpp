@@ -159,13 +159,19 @@ void Geom::fill_database(database::table &table){
         std::cout<<"Nom du profil database :";
         std::cout<<profile_name<<std::endl;
         table.airfoils[profile_name]; // Créer le airfoil
-        table.airfoils[profile_name].alpha = {0.0,5.0,10.0};    //Remplir le champs alpha 
+        table.airfoils[profile_name].alpha = {0.0,2.0,5.0};    //Remplir le champs alpha 
 
         table.sectionAirfoils[0];       //0 aile droit, 1 aile gauche
         table.sectionAirfoils[0] = {profile_name, profile_name};   
 
         table.sectionSpanLocs[0];
         table.sectionSpanLocs[0] = {0.0,1.0}; //doit aller de 0 à 1
+
+        table.sectionAirfoils[1];       //0 aile droit, 1 aile gauche
+        table.sectionAirfoils[1] = {profile_name, profile_name};   
+
+        table.sectionSpanLocs[1];
+        table.sectionSpanLocs[1] = {0.0,1.0}; //doit aller de 0 à 1
 }
 
 void Settings::import_config_file(tiny::config &io) {
