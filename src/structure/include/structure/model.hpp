@@ -3,6 +3,7 @@
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
+#include <Eigen/SparseCholesky>
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -229,9 +230,15 @@ public:
 
     Eigen::VectorXd get_Solve(Eigen::VectorXd f)
     {   
+        Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
+        solver.compute(K_Final_sparse);
+        return solver.solve(f); 
+        
+        /*
         Eigen::SparseLU<Eigen::SparseMatrix<double>> Solver;
         Solver.compute(K_Final_sparse);
-        return Solver.solve(f); 
+        return Solver.solve(f);
+        */ 
     }
 
     Eigen::VectorXd get_Lin_Solve()

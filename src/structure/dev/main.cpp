@@ -25,7 +25,7 @@ int main(int argc, char **argv){
     GUIHandler gui;
     std::atomic<int> iters = 0;
     std::vector<double> residuals;
-    std::cout<<settings.Force_follower+0<<std::endl;
+    
 
     MODEL M1(settings.Mesh_file_path, gui, iters, residuals, settings.Force_follower);
     Eigen::VectorXd dep;
@@ -45,11 +45,10 @@ int main(int argc, char **argv){
     }
 
     std::string arg1 = settings.Mesh_file_path;
-    std::cout<<"Test"<<std::endl;
 
     int L_string = arg1.length();
     
-    std::string end = arg1.substr (L_string-9,L_string);
+    std::string end = arg1.substr (L_string-8,L_string);
     std::string File_name = "Result"+end;
 
     std::cout<<"Résultats écrit dans le fichier : "<< File_name<<std::endl; 
