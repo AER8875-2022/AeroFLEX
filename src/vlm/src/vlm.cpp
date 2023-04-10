@@ -9,11 +9,8 @@ using namespace vlm;
 VLM::VLM(GUIHandler &gui) : gui(gui){};
 
 void VLM::initialize() {
-  if (!is_initialized) {
-    auto mesh = vlm::input::importMeshFile(settings.io);
-    object.initialize(mesh, settings);
-    is_initialized = true;
-  }
+  auto mesh = vlm::input::importMeshFile(settings.io);
+  object.initialize(mesh, settings);
 };
 
 void VLM::solve() {
