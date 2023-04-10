@@ -193,11 +193,11 @@ void wingStation::computeForces(const input::simParam &sim) {
   }
 
   // Oriented in section's referential
-  cl_local = force.dot(liftAxis()) / (sim.dynamicPressure() * area);
+  cl_local = force.dot(this->liftAxis()) / (sim.dynamicPressure() * chord);
   // Oriented in inertial referential
-  cl = force.dot(sim.liftAxis()) / (sim.dynamicPressure() * area);
-  cy = force.dot(Vector3d::UnitY()) / (sim.dynamicPressure() * area);
-  cm = moment / (sim.dynamicPressure() * area * sim.cref);
+  cl = force.dot(sim.liftAxis()) / (sim.dynamicPressure() * chord);
+  cy = force.dot(Vector3d::UnitY()) / (sim.dynamicPressure() * chord);
+  cm = moment / (sim.dynamicPressure() * chord);
 }
 
 // ----------------------------
@@ -252,8 +252,10 @@ void wing::computeSpan() {
     auto &station = stations[stationID];
     Vector3d leadingEdge =
         station.vortices[station.vortexIDs.front()].leadingEdgeDl();
-    span += leadingEdge.norm();
-    station.spanLoc = span - 0.5 * leadingEdge.norm();
+    station.to_local(leadingEdge);
+    double spanLoc = std::abs(leadingEdge(1));
+    span += spanLoc;
+    station.spanLoc = span - 0.5 * spanLoc;
   }
 }
 
@@ -264,10 +266,10 @@ void wing::computeForces(const input::simParam &sim) {
 
   for (auto &stationID : stationIDs) {
     auto &station = stations[stationID];
-    cl += station.get_cl() * station.get_area() / area;
-    cy += station.get_cy() * station.get_area() / area;
-    cd += station.get_cd() * station.get_area() / area;
-    cm += station.get_cm() * station.get_area() / area * station.get_chord() /
+    cl += station.get_cl() * station.get_chord() / area;
+    cy += station.get_cy() * station.get_chord() / area;
+    cd += station.get_cd() * station.get_chord() / area;
+    cm += station.get_cm() * station.get_chord() / area * station.get_chord() /
           sim.cref;
   }
 }

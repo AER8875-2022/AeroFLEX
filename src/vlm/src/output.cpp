@@ -84,7 +84,7 @@ void output::exportSpanLoad(const model &object, const int it) {
   itStream << std::setfill('0') << std::setw(6) << it;
 
   for (auto &wing : object.wings) {
-    std::string output = "SPAN CL CD\n";
+    std::string output = "SPAN GAMMA CL CD\n";
     std::filesystem::create_directories(io.outDir + "spanloads/");
 
     std::stringstream surfaceStream;
@@ -93,12 +93,20 @@ void output::exportSpanLoad(const model &object, const int it) {
     for (auto &stationID : wing.get_stationIDs()) {
       auto &station = object.wingStations[stationID];
 
-      std::stringstream span, cl, cd;
+      double station_gamma = 0.0;
+      for (auto &vortexID : station.get_vortexIDs()) {
+        auto &vortex = object.vortexRings[vortexID];
+        station_gamma += vortex.get_gamma()*vortex.get_area();
+      }
+      station_gamma /= station.get_area();
+
+      std::stringstream span, gamma, cl, cd;
       span << std::setprecision(5) << std::fixed << station.get_spanLoc();
+      gamma << std::setprecision(8) << std::fixed << station_gamma;
       cl << std::scientific << std::setprecision(8) << std::fixed << station.get_cl();
       cd << std::scientific << std::setprecision(8) << std::fixed << station.get_cd();
 
-      output += span.str() + " " + cl.str() + " " + cd.str() + "\n";
+      output += span.str() + " " + gamma.str() + " " + cl.str() + " " + cd.str() + "\n";
     }
 
     // Output to file
