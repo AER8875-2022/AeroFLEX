@@ -266,10 +266,11 @@ void wing::computeForces(const input::simParam &sim) {
 
   for (auto &stationID : stationIDs) {
     auto &station = stations[stationID];
-    cl += station.get_cl() * station.get_chord() / area;
-    cy += station.get_cy() * station.get_chord() / area;
-    cd += station.get_cd() * station.get_chord() / area;
-    cm += station.get_cm() * station.get_chord() / area * station.get_chord() /
+    double dl = station.vortices[station.vortexIDs[0]].leadingEdgeDl().norm();
+    cl += station.get_cl() * station.get_chord() * dl / area;
+    cy += station.get_cy() * station.get_chord() * dl / area;
+    cd += station.get_cd() * station.get_chord() * dl / area;
+    cm += station.get_cm() * station.get_chord() * dl / area * station.get_chord() /
           sim.cref;
   }
 }
