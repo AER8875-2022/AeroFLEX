@@ -1339,8 +1339,9 @@ void implicitSolver::fillTurbRHS() {
 
     // Source terms
     #pragma omp parallel for
-    for (uint i=0; i<m.nRealCells; ++i) {
-        cell_handler this_cell(m, q, nu, edges_flux_functions, leastSquaresMatrices, second_order, i);
+    for (int i=0; i<m.nRealCells; ++i) {
+        uint i_u = (uint) i;
+        cell_handler this_cell(m, q, nu, edges_flux_functions, leastSquaresMatrices, second_order, i_u);
         TurbVector.coeffRef(i) += this_cell.sa_source() * m.cellsAreas[i];
     }
 

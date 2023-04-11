@@ -219,7 +219,7 @@ double flux::calc_sa_source(
     const double O_yy = 0.5*(gradv(1) - gradv(1));
 
     // Other terms
-    const double nu_L = g.mu_L / (q(0)/q(0) * nu_scale);
+    const double nu_L = g.mu_L / (nu_scale);
     const double nu_tilda = nu;
 
     const double X = nu_tilda / nu_L;
