@@ -2,6 +2,7 @@
 #ifndef __GEOM__
 #define __GEOM__
 
+#include <type_traits>
 #include <vector>
 #include <string>
 
