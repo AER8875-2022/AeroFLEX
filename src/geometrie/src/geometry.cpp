@@ -198,7 +198,7 @@ double NACAAirfoil::get_camber(double eps_val, double m_val, double p_val) {
     double yc_val;
     if (0 <= eps_val < p_val) {
         yc_val = (m_val / pow(p_val, 2)) * (2 * p_val * eps_val - pow(eps_val, 2));
-    } else if (p_val < eps_val <= 1) {
+    } else if (p_val < eps_val <= 1.) {
         yc_val = (m_val / pow(1 - p_val, 2)) * ((1 - 2 * p_val) + 2 * p_val * eps_val - pow(eps_val, 2));
     } else {
         yc_val = m_val;
@@ -211,7 +211,7 @@ double NACAAirfoil::get_theta(double eps_val, double m_val, double p_val) {
     double theta_val;
     if (0 <= eps_val < p_val) {
         dyc_dx = (2 * m_val / pow(p_val, 2)) * (p_val - eps_val);
-    } else if (p_val < eps_val <= 1) {
+    } else if (p_val < eps_val <= 1.) {
         dyc_dx = (2 * m_val / pow(1 - p_val, 2)) * (p_val - eps_val);
     } else {
         dyc_dx = 0;
@@ -294,6 +294,7 @@ CSTAirfoil cst_airfoil, NACAAirfoil naca_airfoil) {
 double Surface::get_B() {return this->B;};
 double Surface::get_D() {return this->D;};
 std::vector<double> Surface::get_C() {return this->C;};
+std::string Surface::get_id() {return this->ID;};
 
 void Surface::flip_on_xz_plane() {
     std::reverse(C.begin(),C.end());
@@ -596,7 +597,8 @@ std::vector<std::vector<std::vector<std::vector<double>>>> Body::get_body_surfac
     return all_surfaces;
 };
 
-
+std::vector<std::vector<int>> Body::get_associativity() {return this->associativity;};
+bool Body::get_is_flipped() {return this->is_flipped;};
 
 std::vector<double> linspace(double start, double end, int nb) {
     std::vector<double> res(nb, 0);

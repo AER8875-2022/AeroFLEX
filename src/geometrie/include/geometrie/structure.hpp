@@ -15,5 +15,5 @@ std::vector<std::vector<double>> get_center_point(std::vector<std::vector<double
 void vecteur_normal(std::array<double, 3> &normal, std::vector<double> &p1, std::vector<double> &p2);
 std::vector<std::vector<double>> get_propriete(std::vector<std::vector<double>> X, std::vector<std::vector<double>> Y, std::vector<std::vector<double>> Su, std::vector<std::vector<double>> Sl, double pos_corde);
 std::vector<std::vector<std::vector<std::vector<double>>>> get_geometry(class Body);
-std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> maillage_structure(class Body, double E, double G, double pos_corde);
+std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> maillage_structure(std::vector<std::vector<std::vector<std::vector<double>>>> surfaces, double E, double G, double pos_corde);
 #endif /* structure_hpp */

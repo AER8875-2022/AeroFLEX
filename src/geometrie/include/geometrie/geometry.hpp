@@ -105,6 +105,7 @@ public:
     double get_B();
     double get_D();
     std::vector<double> get_C();
+    std::string get_id();
 
     void flip_on_xz_plane();
     void change_distributions(std::string x_dist, std::string y_dist);
@@ -155,6 +156,8 @@ public:
 
     std::vector<std::vector<std::vector<std::vector<double>>>> get_paired_body_surfaces();
     std::vector<std::vector<std::vector<std::vector<double>>>> get_body_surfaces();
+    std::vector<std::vector<int>> get_associativity();
+    bool get_is_flipped();
 };
 
 

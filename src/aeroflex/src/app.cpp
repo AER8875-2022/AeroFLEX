@@ -351,8 +351,11 @@ void GeomLayer::OnUIRender() {
 		ImGui::Separator();
 		ImGui::Text("NACA 4 digits");
 		ImGui::InputDouble("m", &app.settings.geom.m, 0.01f, 0.01f, "%.4f");
+		ImGui::SameLine(); HelpMarker("Maximum camber - Must be an integer");
 		ImGui::InputDouble("p", &app.settings.geom.p, 0.01f, 0.01f, "%.4f");
+		ImGui::SameLine(); HelpMarker("Camber position - Must be an integer");
 		ImGui::InputDouble("t", &app.settings.geom.t, 0.01f, 0.01f, "%.4f");}
+		ImGui::SameLine(); HelpMarker("Maximum thickness - Must be an integer");
 
 	if (app.settings.geom.S_type == 1){
 		ImGui::Separator();
@@ -364,22 +367,29 @@ void GeomLayer::OnUIRender() {
 	ImGui::Separator();
 	ImGui::Text("Wing geometry");
 	ImGui::InputDouble("Span", &app.settings.geom.envergure, 0.01f, 0.01f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Total span of the wing");
 	ImGui::InputDouble("Chord root", &app.settings.geom.cr, 0.01f, 0.01f, "%.4f");
 	ImGui::InputDouble("Chord tip", &app.settings.geom.ct, 0.01f, 0.01f, "%.4f");
 	ImGui::InputDouble("Beam Position", &app.settings.geom.P_beam, 0.01f, 0.01f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Relative elastic axis postion on the chord (0.0 to 1.0)");
 	ImGui::InputDouble("Wing position", &app.settings.geom.P_aile, 0.01f, 0.01f, "%.4f");
 
 	ImGui::Separator();
 	ImGui::Text("Wing angles");
 	ImGui::InputDouble("Twist", &app.settings.geom.twist, 0.01f, 0.01f, "%.4f");
+	ImGui::SameLine(); HelpMarker("[Degrees]");
 	ImGui::InputDouble("Sweep", &app.settings.geom.fleche, 0.01f, 0.01f, "%.4f");
+	ImGui::SameLine(); HelpMarker("[Degrees]");
 	ImGui::InputDouble("Dihedral", &app.settings.geom.dihedre, 0.01f, 0.01f, "%.4f");
+	ImGui::SameLine(); HelpMarker("[Degrees]");
 
 
 	ImGui::Separator();
 	ImGui::Text("Material properties");
 	ImGui::InputDouble("Young modulus", &app.settings.geom.E, 0.01f, 0.01f, "%e");
+	ImGui::SameLine(); HelpMarker("[Pa]");
 	ImGui::InputDouble("Shear modulus", &app.settings.geom.G, 0.01f, 0.01f, "%e");
+	ImGui::SameLine(); HelpMarker("[Pa]");
 
 	ImGui::Separator();
 	ImGui::Text("Winglet options");

@@ -58,8 +58,8 @@ std::vector<std::vector<double>> get_propriete(std::vector<std::vector<double>> 
     }
     
     return propriete_section;
-
-void vecteur_normal(std::array<double, 3> &normal, std::vector<double> &p1, std::vector<double> &p2){
+}
+void vecteur_normal(std::array<double, 3> &normal, std::vector<double> &p1, std::vector<double> &p2) {
     double v1[3] = {0.};
     double v2[3] = {0.};
     for (int i=0; i < 3; i++) {
@@ -78,19 +78,21 @@ void vecteur_normal(std::array<double, 3> &normal, std::vector<double> &p1, std:
     normal[2] /= norme;
 }
 
-std::vector<std::vector<std::vector<std::vector<double>>>> get_geometry(Body wing){
-    std::vector<std::vector<std::vector<std::vector<double>>>> surfaces = wing.get_paired_body_surfaces();
-    return surfaces;
-}
+// std::vector<std::vector<std::vector<std::vector<double>>>> get_geometry(Body wing){
+//     std::vector<std::vector<std::vector<std::vector<double>>>> surfaces = wing.get_paired_body_surfaces();
+//     return surfaces;
+// }
 
-std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> maillage_structure(Body wing, double E, double G, double pos_corde){
+//std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> maillage_structure(Body wing, double E, double G, double pos_corde)
+std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> maillage_structure(std::vector<std::vector<std::vector<std::vector<double>>>> surfaces, double E, double G, double pos_corde)
+{
     std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> element;
     std::vector<double> pt_normal(3,0);
 
-    std::vector<std::vector<std::vector<std::vector<double>>>> surfaces = get_geometry(wing);
+    //std::vector<std::vector<std::vector<std::vector<double>>>> surfaces = get_geometry(wing);
 
     std::vector<std::vector<double>> X_U, X_L, Y_U, Y_L, SU, SL;
-    for (int m=0; m < surfaces[0][0].size()-1; m++){
+    for (int m=0; m < surfaces[0][0].size(); m++){
         X_U.push_back(surfaces[0][0][m]);
         X_L.push_back(surfaces[0][1][m]);
         Y_U.push_back(surfaces[0][2][m]);
@@ -136,7 +138,7 @@ std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<d
         myfile<<"$##### NOEUDS #####"<<std::endl;
         myfile<<std::setprecision(5)<<std::fixed;
         for(int i=0; i<=(centre.size()-1); i++){
-            myfile<<"GRID, "<<i+100<<", ,"<<std::setprecision(5)<<centre[i][0]<<", "<<std::setprecision(5)<<centre[i][0]<<", "<<std::setprecision(5)<<centre[i][2]<<", ,"<<"345"<<std::endl;
+            myfile<<"GRID, "<<i+100<<", ,"<<std::setprecision(5)<<centre[i][0]<<", "<<std::setprecision(5)<<centre[i][1]<<", "<<std::setprecision(5)<<centre[i][2]<<", ,"<<"345"<<std::endl;
         }
         myfile <<""<<std::endl;
         myfile <<"$##### Connectivity #####"<<std::endl;
@@ -167,7 +169,7 @@ std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<d
     myfile<<"SPC1, "<<"100, "<<"123456, "<<"100,"<<std::endl;
     myfile <<""<<std::endl;
     myfile<<"$##### Charges #####"<<std::endl;
-    myfile<<"MOMENT, "<<"103, "<<"112, "<<", "<<"3.E4, "<<"0.0, "<<"0.0, "<<"1.0"<<std::endl;
+    myfile<<"MOMENT, "<<"103, "<<"112, "<<", "<<"0.0, "<<"0.0, "<<"0.0, "<<"1.0"<<std::endl;
     myfile <<""<<std::endl;
     myfile<<"$"<<std::endl;
     myfile<<"ENDDATA "<<std::endl;
@@ -176,6 +178,4 @@ std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<d
 
     return element;
 }
-
-
 

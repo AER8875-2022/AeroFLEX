@@ -56,7 +56,7 @@ struct Settings {
     double dihedre = 0.0;     //diherdral angle
 
     // Wing position
-    double P_beam = 0;      //Wing structural beam position
+    double P_beam = 0.25;      //Wing structural beam position
     double P_aile = 0;      //Wing position on fuselage
 
     //NACA 4-digit

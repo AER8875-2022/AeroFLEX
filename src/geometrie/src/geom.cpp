@@ -36,7 +36,7 @@ void Geom::Geom_gen() {
             //#1
             WING_RIGHT.add_wing_surface_cst(
             100,                            
-            5,
+            10,
             settings.envergure,             
             0,                              
             {settings.cr,settings.ct},      
@@ -66,7 +66,7 @@ void Geom::Geom_gen() {
             //#1
             WING_LEFT.add_wing_surface_cst(
             100,                            
-            5,
+            10,
             settings.envergure,             
             0,                              
             {settings.cr,settings.ct},      
@@ -142,10 +142,6 @@ void Geom::Geom_gen() {
     WL_surfaces = WING_LEFT.get_paired_body_surfaces();
     gui.msg.push("[GEOM] Geometry generated");
     std::cout<<"Geometry generated"<<std::endl;
-
-    // Structure
-    std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> element = maillage_structure(WING_RIGHT, settings.E, settings.G);
-    gui.msg.push("[GEOM] Mesh for structure solver generated");
 }
 
 //RANS
@@ -165,14 +161,32 @@ void Geom::Geom_mesh(bool viscous) {
     }  
     std::cout<<"end mesh rans"<<std::endl;
     gui.msg.push("[GEOM] Mesh for Euler/RANS solver generated");
+
+        // Structure
+    std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> element = maillage_structure(surfaces, settings.E, settings.G, settings.P_beam);
+    gui.msg.push("[GEOM] Mesh for structural solver generated");
 }
 
 void Geom::fill_database(database::table &table){
         std::cout<<"Nom du profil database : ";
         std::cout<<profile_name[0]<<std::endl;
+
+        // //loop pour AoA
+        // double alpha_start = 0;
+        // double alpha_end = 4;
+        // double alpha_step = 2;
+        // std::vector<double> alpha;
+        // for (double i = alpha_start; i <= alpha_end; i += alpha_step) {
+        //     alpha.push_back(i);
+        // }
+        
+
+
         for (int i=0; i<profile_name.size(); i++) {
             table.airfoils[profile_name[i]];                            // Créer le airfoil
-            table.airfoils[profile_name[i]].alpha = {0.0,2.0,5.0};      //Remplir le champs alpha 
+            //DELETE
+            table.airfoils[profile_name[i]].alpha = {0.0,2.0,5.0};      //Remplir le champs alpha , 
+            //END DELETE
 
             table.sectionAirfoils[i];                                   //WR
             table.sectionAirfoils[i] = {profile_name[i], profile_name[i]};   
