@@ -12,7 +12,7 @@
 
 //Calcul du point centre
 //Centre placé au quart de corde
-std::vector<std::vector<double>> get_center_point(std::vector<std::vector<double>> X, std::vector<std::vector<double>> Y, std::vector<std::vector<double>> Su, std::vector<std::vector<double>> Sl){
+std::vector<std::vector<double>> get_center_point(std::vector<std::vector<double>> X, std::vector<std::vector<double>> Y, std::vector<std::vector<double>> Su, std::vector<std::vector<double>> Sl, double pos_corde){
     std::vector<std::vector<double>> center(X.size(), std::vector<double>(3,0));
 
     double dim = X[0].size()-1;
@@ -26,6 +26,38 @@ std::vector<std::vector<double>> get_center_point(std::vector<std::vector<double
     return center;
 
 }
+
+std::vector<std::vector<double>> get_propriete(std::vector<std::vector<double>> X, std::vector<std::vector<double>> Y, std::vector<std::vector<double>> Su, std::vector<std::vector<double>> Sl, double pos_corde){
+    std::vector<std::vector<double>> center(X.size(), std::vector<double>(3,0));
+    
+    double hauteur, base, air, I_y, I_x, I_z, b_section, h_section;
+    std::vector<std::vector<double>> propriete_section(X.size()-1,std::vector<double>(4,0));
+    
+    for (int i=0; i<X.size()-1; i++){
+        air=0;
+        b_section=0;
+        h_section=0;
+        I_y=0;
+        I_x=0;
+        I_z=0;
+        for (int j=0; j<X[0].size()-1; j++){
+            hauteur=(((Su[i][j]+Su[i][j+1])/2)-((Sl[i][j]+Sl[i][j+1])/2));
+            base=X[i][j+1]-X[i][j];
+            air+=base*hauteur;
+        }
+        propriete_section[i][0]=air;
+        
+        b_section=X[i][X[0].size()-1]-X[i][0];
+        h_section=air/b_section;
+        I_x=b_section*pow(h_section,3)/12;
+        I_z=h_section*pow(b_section,3)/12;
+        I_y=b_section*h_section*(pow(b_section,2)+pow(h_section,2))/12;
+        propriete_section[i][1]=I_x;
+        propriete_section[i][2]=I_z;
+        propriete_section[i][3]=I_y;
+    }
+    
+    return propriete_section;
 
 void vecteur_normal(std::array<double, 3> &normal, std::vector<double> &p1, std::vector<double> &p2){
     double v1[3] = {0.};
@@ -51,7 +83,7 @@ std::vector<std::vector<std::vector<std::vector<double>>>> get_geometry(Body win
     return surfaces;
 }
 
-std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> maillage_structure(Body wing, double E, double G){
+std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> maillage_structure(Body wing, double E, double G, double pos_corde){
     std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> element;
     std::vector<double> pt_normal(3,0);
 
@@ -87,7 +119,9 @@ std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<d
 
 
 
-    std::vector<std::vector<double>> centre = get_center_point(X_U, Y_U, SU, SL);
+    std::vector<std::vector<double>> centre = get_center_point(X_U, Y_U, SU, SL, pos_corde);
+    
+    std::vector<std::vector<double>> propriete_section= get_propriete(X_U, Y_U, SU, SL, pos_corde);
 
 
 
@@ -113,14 +147,20 @@ std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<d
             pt_normal[1]=centre[i][1]+normal[1];
             pt_normal[2]=centre[i][2]+normal[2];
             myfile<<std::setprecision(5)<<std::fixed;
-            myfile<<"CBAR, "<<i+1<<", "<<"10, "<<i+100<<", "<<i+101<<", "<<normal[0]<<", "<<normal[1]<<", "<<normal[2]<<std::endl;
+            myfile<<"CBAR, "<<i+1<<", "<<i+1<<", "<<i+100<<", "<<i+101<<", "<<normal[0]<<", "<<normal[1]<<", "<<normal[2]<<std::endl;
 
             element.push_back(std::make_tuple(i,centre[i],centre[i+1],pt_normal));
         }
 
     myfile<<""<<std::endl;
     myfile<<"$##### Propriétés de sections #####"<<std::endl;
-    myfile<<"PBAR, "<<"10, "<<"11, "<<"1.0, "<<"0.1, "<<"0.1, "<<"0.1"<<std::endl;
+    for(int i=0; i<=(centre.size()-2); i++){
+
+        myfile<<std::setprecision(10)<<std::fixed;
+        
+        
+        myfile<<"PBAR, "<<i+1<<", "<<"11, "<<propriete_section[i][0]<<", "<<propriete_section[i][1]<<", "<<propriete_section[i][2]<<", "<<propriete_section[i][3]<<std::endl;
+    }
     myfile<<"MAT1, "<<"11, "<<E<<", "<<G<<","<<std::endl;
     myfile <<""<<std::endl;
     myfile<<"$##### Contrainte #####"<<std::endl;
