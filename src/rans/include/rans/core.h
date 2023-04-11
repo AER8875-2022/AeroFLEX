@@ -186,7 +186,7 @@ struct Settings {
     double relaxation = 0.9;
     double tolerance = 1e-4;
     int rhs_iterations = 5;
-    int max_iterations = 30000;
+    int max_iterations = 300;
     double alpha_start = 1.0;
     double alpha_end = 7.0;
     double alpha_step = 3.0;
