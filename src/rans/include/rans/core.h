@@ -269,11 +269,6 @@ void Settings::import_config_file(tiny::config &io) {
     alpha_start = io.get<double>("rans-alphas", "alpha_start");
     alpha_end = io.get<double>("rans-alphas", "alpha_end");
     alpha_step = io.get<double>("rans-alphas", "alpha_step");
-
-
-	for (int i = 0; i < io.how_many("rans-mesh"); i++) {
-		meshes.push_back(io.get_i<std::string>("rans-mesh", "file", i));
-	}
 }
 
 void Settings::export_config_file(tiny::config &io) {
@@ -310,13 +305,6 @@ void Settings::export_config_file(tiny::config &io) {
     io.config["rans-alphas"]["alpha_start"] = std::to_string(alpha_start);
     io.config["rans-alphas"]["alpha_end"] = std::to_string(alpha_end);
     io.config["rans-alphas"]["alpha_step"] = std::to_string(alpha_step);
-
-	io.config_vec["rans-mesh"] = {};
-	for (auto &mesh : meshes) {
-		io.config_vec["rans-mesh"].push_back({
-			{"file", mesh},
-		});
-	};
 }
 
 }

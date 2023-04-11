@@ -224,11 +224,6 @@ App::App(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, GUIHa
 	settings.rans.bcs["farfield"].bc_type = "farfield";
 	settings.rans.bcs["wall"];
 	settings.rans.bcs["wall"].bc_type = "slip-wall";
-
-	// TEMPORARY !!!!
-	settings.rans.meshes.push_back("../../../../examples/rans/airfoil_API2_coarse.msh");
-	settings.rans.meshes.push_back("../../../../examples/rans/airfoil_API2_mid.msh");
-	settings.rans.meshes.push_back("../../../../examples/rans/airfoil_API2_fine.msh");
 }
 
 void App::solve_async() {
