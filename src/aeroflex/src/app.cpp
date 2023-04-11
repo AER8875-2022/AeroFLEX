@@ -154,26 +154,32 @@ struct DialogLayer : public FlexGUI::Layer {
 	DialogLayer(App &app) : app(app) {};
 };
 
-// SOLVE =================================================================================================
+/*
+  #####  ####### #       #     # #######
+ #     # #     # #       #     # #
+ #       #     # #       #     # #
+  #####  #     # #       #     # #####
+       # #     # #        #   #  #
+ #     # #     # #         # #   #
+  #####  ####### #######    #    #######
+*/
+// =================================================================================================
 
 void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure) {
-
-	database::table table;
-
+	rans.compute_alphas();
 	if (!vlm.settings.sim.get_databaseFormat().compare("NONE")) {
-		table.airfoils["naca0012q"];
-		table.airfoils["naca0012q"].alpha = {1.0, 5.0, 10.0};
+		vlm.database.airfoils["naca0012q"];
+		vlm.database.airfoils["naca0012q"].alpha = rans.alphas;
 
-		for (auto& [airfoil, db] : table.airfoils) {
+		for (auto& [airfoil, db] : vlm.database.airfoils) {
 			rans.solve_airfoil(airfoil, db);
 		}
 	}
 	else if (!vlm.settings.sim.get_databaseFormat().compare("FILE")) {
-		table.importAirfoils(vlm.settings.io.databaseFile);
+		vlm.database.importAirfoils(vlm.settings.io.databaseFile);
 	}
 
 	vlm.initialize();
-	vlm.database = table;
 	vlm.database.importLocations(vlm.settings.io.locationFile); // Temporary
 	vlm.solve();
 
@@ -218,11 +224,6 @@ App::App(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, GUIHa
 	settings.rans.bcs["farfield"].bc_type = "farfield";
 	settings.rans.bcs["wall"];
 	settings.rans.bcs["wall"].bc_type = "slip-wall";
-
-	// TEMPORARY !!!!
-	settings.rans.meshes.push_back("../../../../examples/rans/airfoil_API2_coarse.msh");
-	settings.rans.meshes.push_back("../../../../examples/rans/airfoil_API2_mid.msh");
-	settings.rans.meshes.push_back("../../../../examples/rans/airfoil_API2_fine.msh");
 }
 
 void App::solve_async() {
@@ -349,14 +350,25 @@ void RansLayer::OnUIRender() {
 	ImGui::Separator();
 	ImGui::Text("Gas");
 	ImGui::InputDouble("gamma", &app.settings.rans.g.gamma, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Ratio of specific heats");
 	ImGui::InputDouble("R", &app.settings.rans.g.R, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Specific gas constant");
 
 	ImGui::Separator();
 	ImGui::Text("Farfield");
 	ImGui::InputDouble("Mach", &app.settings.rans.bcs["farfield"].vars_far.mach, 0.01f, 1.0f, "%.4f");
-	ImGui::InputDouble("AoA", &app.settings.rans.bcs["farfield"].vars_far.angle, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Mach number");
 	ImGui::InputDouble("Temperature", &app.settings.rans.bcs["farfield"].vars_far.T, 0.01f, 1.0f, "%.4f");
 	ImGui::InputDouble("Pressure", &app.settings.rans.bcs["farfield"].vars_far.p, 0.01f, 1.0f, "%.4f");
+
+	ImGui::Separator();
+	ImGui::Text("Alphas");
+	ImGui::InputDouble("Alpha Start", &app.settings.rans.alpha_start, 0.1f, 1.0f, "%.1f");
+	ImGui::SameLine(); HelpMarker("Alpha linspace start");
+	ImGui::InputDouble("Alpha End", &app.settings.rans.alpha_end, 0.1f, 1.0f, "%.1f");
+	ImGui::SameLine(); HelpMarker("Alpha linspace end");
+	ImGui::InputDouble("Alpha Step", &app.settings.rans.alpha_step, 0.1f, 1.0f, "%.1f");
+	ImGui::SameLine(); HelpMarker("Alpha linspace step");
 
 	ImGui::Separator();
 	ImGui::Text("Solver");
@@ -372,8 +384,10 @@ void RansLayer::OnUIRender() {
 	ImGui::InputDouble("Start CFL", &app.settings.rans.start_cfl, 0.1f, 1.0f, "%.1f");
 	ImGui::InputDouble("Slope CFL", &app.settings.rans.slope_cfl, 0.1f, 1.0f, "%.1f");
 	ImGui::InputDouble("Limiter K", &app.settings.rans.limiter_k, 0.1f, 1.0f, "%.1f");
+	ImGui::SameLine(); HelpMarker("Venkatakrishnan limiter parameter");
 	ImGui::InputDouble("Max CFL", &app.settings.rans.max_cfl, 0.1f, 1.0f, "%.1f");
 	ImGui::SliderInt("RHS Iterations", &app.settings.rans.rhs_iterations, 1, 10);
+	ImGui::SameLine(); HelpMarker("Number of iterations for the RHS evaluation");
 	ImGui::InputInt("Max Iterations", &app.settings.rans.max_iterations);
 
 	ImGui::End();
