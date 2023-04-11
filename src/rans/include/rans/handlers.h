@@ -13,6 +13,7 @@ class cell_handler {
 
     mesh& m;
     Eigen::VectorXd& q;
+    Eigen::VectorXd& nu;
     std::vector<std::unique_ptr<flux>>& flux_functions;
     std::vector<Eigen::Matrix2d>& leastSquaresMatrices;
 
@@ -24,11 +25,12 @@ public:
     cell_handler(
         mesh& m, 
         Eigen::VectorXd& q, 
+        Eigen::VectorXd& nu, 
         std::vector<std::unique_ptr<flux>>& flux_functions, 
         std::vector<Eigen::Matrix2d>& leastSquaresMatrices, 
         bool second_order,
         uint& id
-    ) : m(m), q(q), flux_functions(flux_functions), leastSquaresMatrices(leastSquaresMatrices), second_order(second_order), id(id) 
+    ) : m(m), q(q), nu(nu), flux_functions(flux_functions), leastSquaresMatrices(leastSquaresMatrices), second_order(second_order), id(id) 
     {}
 
     uint size() {return m.cellsIsTriangle[id] ? 3 : 4;}
@@ -36,7 +38,12 @@ public:
 
     Eigen::MatrixXd gradients();
 
+    Eigen::VectorXd nu_gradient();
+
     Eigen::VectorXd limiters(const Eigen::MatrixXd& grad);
+
+
+    double sa_source();
 
 };
 
@@ -82,6 +89,43 @@ Eigen::MatrixXd cell_handler::gradients() {
         grads(k, 0) = grad_i(0);
         grads(k, 1) = grad_i(1);
     }
+
+    return grads;
+}
+
+
+Eigen::VectorXd cell_handler::nu_gradient() {
+    // For now, assume least squares gradient scheme
+    Eigen::VectorXd grads(2);
+
+    if (id >= m.nRealCells) return grads;
+
+    Eigen::MatrixXd d(size(), 2);
+    Eigen::Vector2d grad_i;
+
+    for (uint j=0; j<size(); ++j) {
+
+        const uint e = m.cellsEdges(id, j);
+
+        const uint cell_p = id;
+        const uint cell_n = m.edgesCells(e, 0) == id ? m.edgesCells(e, 1) : m.edgesCells(e, 0);
+
+        d(j, 0) = m.cellsCentersX[cell_n] - m.cellsCentersX[cell_p];
+        d(j, 1) = m.cellsCentersY[cell_n] - m.cellsCentersY[cell_p];
+    }
+
+    Eigen::VectorXd deltas(size());
+
+    for (uint j=0; j<size(); ++j) {
+        const uint e = m.cellsEdges(id, j);
+
+        const uint cell_p = id;
+        const uint cell_n = m.edgesCells(e, 0) == id ? m.edgesCells(e, 1) : m.edgesCells(e, 0);
+
+        deltas(j) = nu(cell_p) - nu(cell_n);
+    }
+
+    grads = leastSquaresMatrices[id] * d.transpose() * deltas;
 
     return grads;
 }
@@ -171,6 +215,21 @@ Eigen::VectorXd cell_handler::limiters(
 
 
 
+double cell_handler::sa_source() {
+
+    const uint e = m.cellsEdges(id, 0);
+
+    Eigen::VectorXd nu_g = nu_gradient();
+    Eigen::MatrixXd grads = gradients();
+
+    return flux_functions[e]->calc_sa_source(
+        q.segment(4*id, 4),
+        grads.block(0,0,4,1), grads.block(0,1,4,1),
+        nu(id), nu_g(0), nu_g(1), m.wall_dist[id]
+    );
+}
+
+
 
 
 
@@ -179,6 +238,7 @@ class edge_handler {
 
     mesh& m;
     Eigen::VectorXd& q;
+    Eigen::VectorXd& nu;
     std::vector<std::unique_ptr<flux>>& flux_functions;
     std::vector<Eigen::Matrix2d>& leastSquaresMatrices;
 
@@ -191,20 +251,28 @@ public:
     edge_handler(
         mesh& m, 
         Eigen::VectorXd& q, 
+        Eigen::VectorXd& nu, 
         std::vector<std::unique_ptr<flux>>& flux_functions, 
         std::vector<Eigen::Matrix2d>& leastSquaresMatrices, 
         bool& second_order,
         uint& id
-    ) : m(m), q(q), flux_functions(flux_functions), leastSquaresMatrices(leastSquaresMatrices), second_order(second_order), id(id) 
+    ) : m(m), q(q), nu(nu), flux_functions(flux_functions), leastSquaresMatrices(leastSquaresMatrices), second_order(second_order), id(id) 
     {}
 
     uint get_id() const {return id;}
 
     Eigen::MatrixXd average_gradients(const Eigen::MatrixXd& grad0, const Eigen::MatrixXd& grad1);
 
+    Eigen::VectorXd average_sa_gradients(const Eigen::VectorXd& grad0, const Eigen::VectorXd& grad1);
+
     Eigen::VectorXd get_flux();
 
     Eigen::MatrixXd jacobian();
+
+
+    double sa_flux();
+
+    Eigen::MatrixXd sa_jacobian();
 
 };
 
@@ -256,42 +324,60 @@ Eigen::MatrixXd edge_handler::average_gradients(const Eigen::MatrixXd& grad0, co
 }
 
 
+Eigen::VectorXd edge_handler::average_sa_gradients(const Eigen::VectorXd& grad0, const Eigen::VectorXd& grad1) {
+    Eigen::VectorXd grad(2);
+
+    uint cell0 = m.edgesCells(id, 0);
+    uint cell1 = m.edgesCells(id, 1);
+
+    if (cell0 == cell1) {
+        grad(0) = grad0(0);
+        grad(1) = grad0(1);
+        return grad;
+    }
+    
+    double tij[2];
+    tij[0] = m.cellsCentersX[cell1] - m.cellsCentersX[cell0];
+    tij[1] = m.cellsCentersY[cell1] - m.cellsCentersY[cell0];
+
+    const double lij = sqrt(tij[0]*tij[0] + tij[1]*tij[1]);
+
+    tij[0] /= lij;
+    tij[1] /= lij;
+
+    // Directional derivative
+    double grad_dir;
+    grad_dir = (nu(cell1) - nu(cell0))/lij;
+
+    // Arithmetic average gradient
+    double gradx_bar;
+    double grady_bar;
+    gradx_bar = (grad0(0) + grad1(0))*0.5;
+    grady_bar = (grad0(1) + grad1(1))*0.5;
+
+    // Corrected gradient
+    const double grad_dot = gradx_bar*tij[0] + grady_bar*tij[1];
+    grad(0) = gradx_bar - (grad_dot - grad_dir)*tij[0];
+    grad(1) = grady_bar - (grad_dot - grad_dir)*tij[1];
+
+    return grad;
+}
+
+
 Eigen::VectorXd edge_handler::get_flux() {
     uint cell0_id = m.edgesCells(id, 0);
     uint cell1_id = m.edgesCells(id, 1);
 
-    /**/
-    cell_handler cell0(m, q, flux_functions, leastSquaresMatrices, second_order, cell0_id);
-    cell_handler cell1(m, q, flux_functions, leastSquaresMatrices, second_order, cell1_id);
+    cell_handler cell0(m, q, nu, flux_functions, leastSquaresMatrices, second_order, cell0_id);
+    cell_handler cell1(m, q, nu, flux_functions, leastSquaresMatrices, second_order, cell1_id);
 
     Eigen::MatrixXd grad0 = cell0.gradients();
     Eigen::MatrixXd grad1 = cell1.gradients();
 
     Eigen::MatrixXd grads = average_gradients(grad0, grad1);
-    /**/
 
     Eigen::VectorXd q0 = q.segment(4*cell0_id, 4);
     Eigen::VectorXd q1 = q.segment(4*cell1_id, 4);
-
-    // Linear interpolate with limiters
-    /*
-    if (second_order) {
-        Eigen::VectorXd lim0 = cell0.limiters(grad0);
-        Eigen::VectorXd lim1 = cell1.limiters(grad1);
-        for (int i=0; i<4; ++i) {
-            {
-                const double dx = m.edgesCentersX[id] - m.cellsCentersX[cell0.get_id()];
-                const double dy = m.edgesCentersY[id] - m.cellsCentersY[cell0.get_id()];
-                q0(i) += lim0(i)*(grad0(i,0)*dx + grad0(i,1)*dy)*0.1;
-            }
-            {
-                const double dx = m.edgesCentersX[id] - m.cellsCentersX[cell1.get_id()];
-                const double dy = m.edgesCentersY[id] - m.cellsCentersY[cell1.get_id()];
-                q1(i) += lim1(i)*(grad1(i,0)*dx + grad1(i,1)*dy)*0.1;
-            }
-        }
-    }
-    /**/
 
     return flux_functions[id]->operator()(
         q0, q1,
@@ -328,6 +414,92 @@ Eigen::MatrixXd edge_handler::jacobian() {
             J.block(0, i+4, 4, 1) = (fp  - f)/update;
             J.block(4, i+4, 4, 1) = -J.block(0, i+4, 4, 1);
         }
+    }
+
+    return J;
+}
+
+
+
+double edge_handler::sa_flux() {
+    uint cell0_id = m.edgesCells(id, 0);
+    uint cell1_id = m.edgesCells(id, 1);
+
+    /**/
+    cell_handler cell0(m, q, nu, flux_functions, leastSquaresMatrices, second_order, cell0_id);
+    cell_handler cell1(m, q, nu, flux_functions, leastSquaresMatrices, second_order, cell1_id);
+
+    Eigen::MatrixXd grad0 = cell0.gradients();
+    Eigen::MatrixXd grad1 = cell1.gradients();
+
+    Eigen::MatrixXd grads = average_gradients(grad0, grad1);
+    /**/
+
+    Eigen::VectorXd q0 = q.segment(4*cell0_id, 4);
+    Eigen::VectorXd q1 = q.segment(4*cell1_id, 4);
+
+    Eigen::VectorXd nu_g = average_sa_gradients(cell0.nu_gradient(), cell1.nu_gradient());
+
+    return flux_functions[id]->calc_sa_flux(
+        q0, q1,
+        grads.block(0,0,4,1), grads.block(0,1,4,1),
+        nu(cell0_id), nu(cell1_id),
+        nu_g(0), nu_g(1),
+        (m.wall_dist[cell0_id] + m.wall_dist[cell1_id])*0.5
+    );
+}
+
+
+
+Eigen::MatrixXd edge_handler::sa_jacobian() {
+
+    Eigen::MatrixXd J(2,2);
+
+    uint cell0_id = m.edgesCells(id, 0);
+    uint cell1_id = m.edgesCells(id, 1);
+
+    // Flux part
+    double f = sa_flux() * m.edgesLengths[id];
+
+    {
+        const double update = std::max(1e-6, abs(nu(cell0_id))*1e-6);
+        nu(cell0_id) += update;
+        double fp = sa_flux() * m.edgesLengths[id];
+        nu(cell0_id) -= update;
+        J(0, 0) = (fp - f)/update;
+        J(1, 0) = -J(0, 0);
+    }
+    {
+        const double update = std::max(1e-6, abs(nu(cell1_id))*1e-6);
+        nu(cell1_id) += update;
+        double fp = sa_flux() * m.edgesLengths[id];
+        nu(cell1_id) -= update;
+        J(0, 1) = (fp - f)/update;
+        J(1, 1) = -J(0, 1);
+    }
+
+    // Source term part
+    {
+        cell_handler cell0(m, q, nu, flux_functions, leastSquaresMatrices, second_order, cell0_id);
+
+        double s = cell0.sa_source() * m.cellsAreas[cell0_id];
+        const double update = std::max(1e-6, abs(nu(cell0_id))*1e-6);
+        nu(cell0_id) += update;
+        double sp = cell0.sa_source() * m.cellsAreas[cell0_id];
+        nu(cell0_id) -= update;
+
+        J(0, 0) -= (sp - s)/update;
+    }
+    if (flux_functions[id]->two_sided) {
+        cell_handler cell1(m, q, nu, flux_functions, leastSquaresMatrices, second_order, cell1_id);
+
+        double s = cell1.sa_source() * m.cellsAreas[cell1_id];
+        const double update = std::max(1e-6, abs(nu(cell1_id))*1e-6);
+        nu(cell1_id) += update;
+        double sp = cell1.sa_source() * m.cellsAreas[cell1_id];
+        nu(cell1_id) -= update;
+
+        J(1, 1) -= (sp - s)/update;
     }
 
     return J;

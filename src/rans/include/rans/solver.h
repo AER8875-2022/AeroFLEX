@@ -162,6 +162,8 @@ public:
 
     solution get_solution();
 
+    double get_nu(int id) {return nu(id);}
+
     void set_second_order(const bool x=true){second_order = x;}
     bool get_second_order(const bool x=true) const {return second_order;}
 
@@ -314,6 +316,8 @@ void solver::refill_bcs() {
         q(4*cell1 + 1) = rhou;
         q(4*cell1 + 2) = rhov;
         q(4*cell1 + 3) = rhoe;
+
+        if (viscosity_model == "spalart-allmaras") nu(cell1) = 2.;
     }
 }
 
@@ -327,6 +331,7 @@ void solver::bcs_from_internal() {
         for (int k=0; k<4; ++k) {
             q(4*cell1 + k) = q(4*cell0 + k);
         }
+        if (viscosity_model == "spalart-allmaras") nu(cell1) = nu(cell0);
     }
 }
 
@@ -344,6 +349,8 @@ void solver::set_walls_from_internal(Eigen::VectorXd& q_) {
             for (int k=0; k<4; ++k) {
                 q_(4*cell1 + k) = q_(4*cell0 + k);
             }
+
+            nu(cell1) = nu(cell0);
         }
     }
 }
@@ -681,6 +688,13 @@ void solver::init() {
         q(4*i+2) = q_init.rhov;
         q(4*i+3) = q_init.rhoe;
     }
+
+    if (viscosity_model == "spalart-allmaras") {
+        #pragma omp parallel for
+        for (int i=0; i<N; ++i) {
+            nu(i) = 2.;
+        }
+    }
 }
 
 
@@ -912,6 +926,9 @@ class implicitSolver : public solver {
     void fillRhoLHS();
     void fillRhoRHS();
 
+    void fillTurbLHS();
+    void fillTurbRHS();
+
 
     #ifdef RANS_MATRIX_FREE
 
@@ -937,6 +954,7 @@ class implicitSolver : public solver {
                 Eigen::BiCGSTAB<Eigen::SparseMatrix<double, Eigen::RowMajor>, Eigen::IncompleteLUT<double>> rho_solver;
             #else
                 Eigen::GMRES<Eigen::SparseMatrix<double, Eigen::RowMajor>, Eigen::IncompleteLUT<double>> rho_solver;
+                Eigen::GMRES<Eigen::SparseMatrix<double, Eigen::RowMajor>, Eigen::IncompleteLUT<double>> nu_solver;
             #endif
         #endif
 
@@ -961,6 +979,11 @@ public:
                 rho_solver.preconditioner().setFillfactor(2);
                 rho_solver.preconditioner().setDroptol(1e-3);
                 rho_solver.setMaxIterations(500);
+
+                nu_solver.setTolerance(1e-2);
+                nu_solver.preconditioner().setFillfactor(2);
+                nu_solver.preconditioner().setDroptol(1e-3);
+                nu_solver.setMaxIterations(500);
             #else
                 rho_solver.setTolerance(1e-3);
                 rho_solver.setMaxIterations(1000);
@@ -983,9 +1006,11 @@ public:
         TurbMatrix.resize(N, N);
 
         RhoVector.resize(4*N);
+        TurbVector.resize(N);
 
 
         #ifndef RANS_MATRIX_FREE
+        {
             std::vector<Eigen::Triplet<double>> tripletList;
             tripletList.reserve(16*4*N);
 
@@ -1010,6 +1035,28 @@ public:
                 }
             }
             RhoMatrix.setFromTriplets(tripletList.begin(), tripletList.end());
+        }
+        {
+            std::vector<Eigen::Triplet<double>> tripletList;
+            tripletList.reserve(4*N);
+
+            // Internal field
+            for (int e=0; e<m.edgesCells.cols(); ++e) {
+                // Get this edges cells index
+                int cell0 = m.edgesCells(e, 0);
+                int cell1 = m.edgesCells(e, 1);
+
+                int k0 = cell0;
+                int k1 = cell1;
+
+                // Set Rho matrix elements to zero for this cell pair
+                tripletList.push_back(Eigen::Triplet<double>(k0, k0, 0));
+                tripletList.push_back(Eigen::Triplet<double>(k0, k1, 0));
+                tripletList.push_back(Eigen::Triplet<double>(k1, k0, 0));
+                tripletList.push_back(Eigen::Triplet<double>(k1, k1, 0));
+            }
+            TurbMatrix.setFromTriplets(tripletList.begin(), tripletList.end());
+        }
         #endif
     }
 
@@ -1026,6 +1073,10 @@ public:
 void implicitSolver::fill() {
     // Fill the jacobian matrix
     fillRhoLHS();
+
+    if (viscosity_model == "spalart-allmaras") {
+        fillTurbLHS();
+    }
 }
 
 
@@ -1080,22 +1131,8 @@ void implicitSolver::fillRhoLHS() {
 
             int k0 = 4*cell0;
             int k1 = 4*cell1;
-            /**/
 
-            /*
-            Eigen::VectorXd q_L = q.segment(k0, 4);
-            Eigen::VectorXd q_R = q.segment(k1, 4);
-
-            Eigen::VectorXd n(2);
-            n(0) = m.edgesNormalsX[e];
-            n(1) = m.edgesNormalsY[e];
-
-            Eigen::VectorXd gradx(4);
-            Eigen::VectorXd grady(4);
-            average_gradients(gradx, grady, cell0, cell1);
-            /**/
-
-            edge_handler this_edge(m, q, edges_flux_functions, leastSquaresMatrices, second_order, e);
+            edge_handler this_edge(m, q, nu, edges_flux_functions, leastSquaresMatrices, second_order, e);
 
             {
                 //const Eigen::MatrixXd Jacobian = calc_convective_jacobian(*edges_flux_functions[e], q_L, q_R, gradx, grady) * m.edgesLengths[e];
@@ -1127,6 +1164,68 @@ void implicitSolver::fillRhoLHS() {
                 }
                 RhoMatrix.coeffRef(k+i, k+i) = 1;
             }
+        }
+    #endif
+
+
+}
+
+
+void implicitSolver::fillTurbLHS() {
+
+    // Reset rho matrix to zero
+    #ifndef RANS_MATRIX_FREE
+        #pragma omp parallel for
+        for (int e=0; e<m.edgesCells.cols(); ++e) {
+
+            // Get this edges cells index
+            int cell0 = m.edgesCells(e, 0);
+            int cell1 = m.edgesCells(e, 1);
+
+            // Reset turb matrix elements to zero for this cell pair
+            TurbMatrix.coeffRef(cell0, cell0) = 0;
+            TurbMatrix.coeffRef(cell1, cell0) = 0;
+            TurbMatrix.coeffRef(cell0, cell1) = 0;
+            TurbMatrix.coeffRef(cell1, cell1) = 0;
+        }
+
+        // Fill internal matrix elements from time discretization
+        #pragma omp parallel for
+        for (int i=0; i<m.cellsAreas.size(); ++i) {
+            //int k = 4*i;
+            TurbMatrix.coeffRef(i, i) = m.cellsAreas[i]/dt(i);
+        }
+
+        // Fill internal matrix elements from flux jacobian
+        for (uint e=0; e<m.edgesCells.cols(); ++e) {
+
+            // Get this edge connected cells indices
+            /**/
+            int cell0 = m.edgesCells(e, 0);
+            int cell1 = m.edgesCells(e, 1);
+
+            edge_handler this_edge(m, q, nu, edges_flux_functions, leastSquaresMatrices, second_order, e);
+
+            {
+                //const Eigen::MatrixXd Jacobian = calc_convective_jacobian(*edges_flux_functions[e], q_L, q_R, gradx, grady) * m.edgesLengths[e];
+                //std::cout << "calc jacobian " << cell0 << " " << cell1 << std::endl;
+                const Eigen::MatrixXd Jacobian = this_edge.sa_jacobian();
+
+                // Set jacobian elements
+                TurbMatrix.coeffRef(cell0, cell0) += Jacobian(0, 0);
+                TurbMatrix.coeffRef(cell0, cell1) += Jacobian(0, 1);
+
+                if (edges_flux_functions[e]->two_sided) {
+                    TurbMatrix.coeffRef(cell1, cell0) += Jacobian(1, 0);
+                    TurbMatrix.coeffRef(cell1, cell1) += Jacobian(1, 1);
+                }
+            }
+        }
+
+        // Also fill bcs
+        #pragma omp parallel for
+        for (int ci=m.nRealCells; ci<m.cellsAreas.size(); ++ci) {
+            TurbMatrix.coeffRef(ci, ci) = 1;
         }
     #endif
 
@@ -1187,9 +1286,9 @@ void implicitSolver::fillRhoRHS() {
                 const Eigen::VectorXd q_L_o2 = q_L + ( gx.segment(k0,4)*d0x + gy.segment(k0,4)*d0y ).cwiseProduct(limiters.segment(k0,4));
                 const Eigen::VectorXd q_R_o2 = q_R + ( gx.segment(k1,4)*d1x + gy.segment(k1,4)*d1y ).cwiseProduct(limiters.segment(k1,4));
 
-                this_flux = (*edges_flux_functions[e])(q_L_o2, q_R_o2, gradx, grady) * m.edgesLengths[e];
+                this_flux = (*edges_flux_functions[e])(q_L_o2, q_R_o2, gradx, grady, nu(cell0), nu(cell1)) * m.edgesLengths[e];
             } else {
-                this_flux = (*edges_flux_functions[e])(q_L, q_R, gradx, grady) * m.edgesLengths[e];
+                this_flux = (*edges_flux_functions[e])(q_L, q_R, gradx, grady, nu(cell0), nu(cell1)) * m.edgesLengths[e];
             }
             for (int i=0; i<4; ++i) {
                 RhoVector(k0+i) -= this_flux(i);
@@ -1213,6 +1312,49 @@ void implicitSolver::fillRhoRHS() {
 
 
 
+void implicitSolver::fillTurbRHS() {
+
+    // Reset turb vector to zero
+    #pragma omp parallel for
+    for (int i=0; i<TurbVector.size(); ++i) {
+        TurbVector(i) = 0;
+    }
+
+    // Fill internal matrix elements from flux jacobian
+    for (uint e=0; e<m.edgesCells.cols(); ++e) {
+
+        // Get this edge connected cells indices
+        /**/
+        int cell0 = m.edgesCells(e, 0);
+        int cell1 = m.edgesCells(e, 1);
+
+        edge_handler this_edge(m, q, nu, edges_flux_functions, leastSquaresMatrices, second_order, e);
+
+        // Set flux elements
+        double f = this_edge.sa_flux() * m.edgesLengths[e];
+
+        TurbVector.coeffRef(cell0) -= f;
+        TurbVector.coeffRef(cell1) += f;
+    }
+
+    // Source terms
+    #pragma omp parallel for
+    for (uint i=0; i<m.nRealCells; ++i) {
+        cell_handler this_cell(m, q, nu, edges_flux_functions, leastSquaresMatrices, second_order, i);
+        TurbVector.coeffRef(i) += this_cell.sa_source() * m.cellsAreas[i];
+    }
+
+    // Also fill bcs, dirichlet null
+    #pragma omp parallel for
+    for (int ci=m.nRealCells; ci<m.cellsAreas.size(); ++ci) {
+        TurbVector.coeffRef(ci) = 0;
+    }
+
+
+}
+
+
+
 
 
 
@@ -1221,6 +1363,14 @@ int implicitSolver::compute() {
 
     if (rho_solver.info() != 0) {
         return -1;
+    }
+
+    if (viscosity_model == "spalart-allmaras") {
+        nu_solver.compute(TurbMatrix);
+        
+        if (nu_solver.info() != 0) {
+            return -1;
+        }
     }
     return 0;
 }
@@ -1233,8 +1383,11 @@ double implicitSolver::solve(
 ) {
     // Solve rho, rho_u, rho_v, rho_e
     fillRhoRHS();
+    if (viscosity_model == "spalart-allmaras") fillTurbRHS();
 
     double err = RhoVector.norm();
+    if (viscosity_model == "spalart-allmaras") err += TurbVector.norm();
+
     if (err < tol) return err;
     double err_ini = err;
 
@@ -1246,10 +1399,22 @@ double implicitSolver::solve(
         q += qW*relaxation;
     }
 
+    if (viscosity_model == "spalart-allmaras") {
+        nuW = nu_solver.solve(TurbVector);
+
+        if (nu_solver.info() != 0) {
+            return -1;
+        } else {
+            nu += nuW*relaxation;
+        }
+    }
+
     for (int i=0; i<rhs_iterations; ++i) {
         fillRhoRHS();
+        if (viscosity_model == "spalart-allmaras") fillTurbRHS();
 
         err = RhoVector.norm();
+        if (viscosity_model == "spalart-allmaras") err += TurbVector.norm();
         if (err < tol) return err;
         if (err > 10*err_ini) return err;
 
@@ -1258,6 +1423,16 @@ double implicitSolver::solve(
             return -1;
         } else {
             q += qW*relaxation;
+        }
+
+        if (viscosity_model == "spalart-allmaras") {
+            nuW = nu_solver.solve(TurbVector);
+
+            if (nu_solver.info() != 0) {
+                return -1;
+            } else {
+                nu += nuW*relaxation;
+            }
         }
     }
 
@@ -1268,7 +1443,10 @@ double implicitSolver::solve(
     #endif
 
     fillRhoRHS();
-    return RhoVector.norm();
+    if (viscosity_model == "spalart-allmaras") fillTurbRHS();
+    err = RhoVector.norm();
+    if (viscosity_model == "spalart-allmaras") err += TurbVector.norm();
+    return err;
 }
 
 

@@ -156,6 +156,14 @@ void save(
     }
     s += "        </DataArray>\n";
 
+    if (solv.get_viscosity_model() == "spalart-allmaras") {
+        s += "        <DataArray type=\"Float32\" Name=\"TurbulentViscosity\" Format=\"ascii\">\n";
+        for (int i=0; i<m.nRealCells; ++i) {
+            s += "          " + double2string(solv.get_nu(i), 16) + "\n";
+        }
+        s += "        </DataArray>\n";
+    }
+
     s += "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" Format=\"ascii\">\n";
     for (int i=0; i<m.nRealCells; ++i) {
         s += "          " + double2string(q.u(i), 16) + " ";

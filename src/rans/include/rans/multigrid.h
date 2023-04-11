@@ -275,8 +275,6 @@ int multigrid<implicitSolver>::run_solver(
 
         err /= err_0;
 
-
-        //cfl = std::max(settings.start_cfl, std::min(settings.max_cfl, cfl * err_last / err));
         cfl = std::min(settings.start_cfl + (i+1)*settings.slope_cfl, settings.max_cfl);
 
         if (i % s.get_print_interval() == 0) std::cout << " Residual = " << err << std::endl;

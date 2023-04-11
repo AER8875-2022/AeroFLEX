@@ -187,7 +187,7 @@ struct Settings {
     // Note: Cannot put those as const because std::optional doesnt like it
     std::vector<std::string> solver_options = {"explicit", "implicit"};
     std::vector<std::string> gradient_options = {"least-squares", "green-gauss"};
-    std::vector<std::string> viscosity_options = {"inviscid", "laminar", "spallart-allmaras"};
+    std::vector<std::string> viscosity_options = {"inviscid", "laminar", "spalart-allmaras"};
 
     int solver = 1;
     int gradient = 1;
@@ -232,7 +232,7 @@ struct Settings {
             viscosity = 0;
         } else if (viscosity_ == "laminar") {
             viscosity = 1;
-        } else if (viscosity_ == "spallart-allmaras") {
+        } else if (viscosity_ == "spalart-allmaras") {
             viscosity = 2;
         }
     };

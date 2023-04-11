@@ -795,7 +795,6 @@ void mesh::add_boundary_cells() {
 
 void mesh::compute_wall_dist(const std::map<std::string, boundary_condition> bcs) {
 
-
     // Compute the distance to the wall
     #pragma omp parallel for
     for (int i=0; i<cellsAreas.size(); ++i) {
@@ -807,8 +806,7 @@ void mesh::compute_wall_dist(const std::map<std::string, boundary_condition> bcs
         // Loop over all boundary cells
         for (uint j=0; j<boundaryEdges.size(); ++j) {
             if (
-                (bcs.at(boundaryEdgesPhysicals[j]).bc_type == "wall") |
-                (bcs.at(boundaryEdgesPhysicals[j]).bc_type == "slip-wall")
+                (bcs.at(boundaryEdgesPhysicals[j]).bc_type == "wall")
             ) {
                 const int& e = boundaryEdges[j];
 
