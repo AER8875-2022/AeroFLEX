@@ -158,7 +158,16 @@ struct DialogLayer : public FlexGUI::Layer {
 	DialogLayer(App &app) : app(app) {};
 };
 
-// SOLVE =================================================================================================
+/*
+  #####  ####### #       #     # #######
+ #     # #     # #       #     # #
+ #       #     # #       #     # #
+  #####  #     # #       #     # #####
+       # #     # #        #   #  #
+ #     # #     # #         # #   #
+  #####  ####### #######    #    #######
+*/
+// =================================================================================================
 
 void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure& structure, geom::Geom &geom) {
 
@@ -168,7 +177,11 @@ void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure& structure, geo
 
 	geom.Geom_gen();
 	geom.Geom_mesh(rans.settings.is_viscous());
+
+    rans.compute_alphas();
+
 	if (!vlm.settings.sim.get_databaseFormat().compare("NONE")) {
+        // TODO: À ajouter --> rans.alpha comme vecteur de alpha dans la database
 		geom.fill_database(table);	//uncomment when problem resolved
 		//table.airfoils["naca0012q"]; //delete
 		//table.airfoils["naca0012q"].alpha = {1.0, 5.0, 10.0}; //delete
@@ -422,16 +435,25 @@ void RansLayer::OnUIRender() {
 	ImGui::Separator();
 	ImGui::Text("Gas");
 	ImGui::InputDouble("gamma", &app.settings.rans.g.gamma, 0.01f, 1.0f, "%.4f");
-	ImGui::SameLine(); HelpMarker("Facteur d'expansion isentropique");
+	ImGui::SameLine(); HelpMarker("Ratio of specific heats");
 	ImGui::InputDouble("R", &app.settings.rans.g.R, 0.01f, 1.0f, "%.4f");
-	ImGui::SameLine(); HelpMarker("Constante du gaz");
+	ImGui::SameLine(); HelpMarker("Specific gas constant");
 
 	ImGui::Separator();
 	ImGui::Text("Farfield");
 	ImGui::InputDouble("Mach", &app.settings.rans.bcs["farfield"].vars_far.mach, 0.01f, 1.0f, "%.4f");
-	ImGui::InputDouble("AoA", &app.settings.rans.bcs["farfield"].vars_far.angle, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Mach number");
 	ImGui::InputDouble("Temperature", &app.settings.rans.bcs["farfield"].vars_far.T, 0.01f, 1.0f, "%.4f");
 	ImGui::InputDouble("Pressure", &app.settings.rans.bcs["farfield"].vars_far.p, 0.01f, 1.0f, "%.4f");
+
+	ImGui::Separator();
+	ImGui::Text("Alphas");
+	ImGui::InputDouble("Alpha Start", &app.settings.rans.alpha_start, 0.1f, 1.0f, "%.1f");
+	ImGui::SameLine(); HelpMarker("Alpha linspace start");
+	ImGui::InputDouble("Alpha End", &app.settings.rans.alpha_end, 0.1f, 1.0f, "%.1f");
+	ImGui::SameLine(); HelpMarker("Alpha linspace end");
+	ImGui::InputDouble("Alpha Step", &app.settings.rans.alpha_step, 0.1f, 1.0f, "%.1f");
+	ImGui::SameLine(); HelpMarker("Alpha linspace step");
 
 	ImGui::Separator();
 	ImGui::Text("Solver");
@@ -448,8 +470,10 @@ void RansLayer::OnUIRender() {
 	ImGui::InputDouble("Start CFL", &app.settings.rans.start_cfl, 0.1f, 1.0f, "%.1f");
 	ImGui::InputDouble("Slope CFL", &app.settings.rans.slope_cfl, 0.1f, 1.0f, "%.1f");
 	ImGui::InputDouble("Limiter K", &app.settings.rans.limiter_k, 0.1f, 1.0f, "%.1f");
+	ImGui::SameLine(); HelpMarker("Venkatakrishnan limiter parameter");
 	ImGui::InputDouble("Max CFL", &app.settings.rans.max_cfl, 0.1f, 1.0f, "%.1f");
 	ImGui::SliderInt("RHS Iterations", &app.settings.rans.rhs_iterations, 1, 10);
+	ImGui::SameLine(); HelpMarker("Number of iterations for the RHS evaluation");
 	ImGui::InputInt("Max Iterations", &app.settings.rans.max_iterations);
 
 	ImGui::End();

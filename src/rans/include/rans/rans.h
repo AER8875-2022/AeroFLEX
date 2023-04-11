@@ -33,6 +33,8 @@ class Rans {
     Settings settings;
 
     std::vector<mesh> ms;
+    std::vector<double> alphas;
+
     bool mesh_loaded = false;
 
     GUIHandler &gui;
@@ -42,10 +44,17 @@ class Rans {
     void input();
     void solve();
     void solve_airfoil(const std::string& airfoil, database::airfoil& db);
+    void compute_alphas();
 
     template<class T> void run();
     template<class T> void run_airfoil(const std::string& airfoil, database::airfoil& db);
 };
+
+void Rans::compute_alphas() {
+    for (double i = settings.alpha_start; i <= settings.alpha_end; i += settings.alpha_step) {
+        alphas.push_back(i);
+    }
+}
 
 void Rans::input() {
     if (!mesh_loaded) {
