@@ -51,9 +51,9 @@ void Aero::solve() {
 
     structure.FEM.set_Load_Vector_From_Vector(forcestruct);
     //print force
-    //for (int i=0; i<forcestruct.size(); i++){
-        //std::cout << "force: " << forcestruct[i] << std::endl;
-   // }
+    for (int i=0; i<forcestruct.size(); i++){
+        std::cout << "force: " << forcestruct[i] << std::endl;
+    }
 
     std::cout << "structure forces computed"  << std::endl;
     structure.solve();
@@ -63,6 +63,10 @@ void Aero::solve() {
 
     vlm.object.updateGeometry(computeVLMDispalecement(pos, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings,vlm.object.nodes, structure.Solutions));
     std::cout << "end first iter " << std::endl;
+    //print solutions
+    for (int i=0; i<structure.Solutions[0].size(); i++) {
+        std::cout << "solution: " << structure.Solutions[0][i] << std::endl;
+    }
     double tol = 0.01;
     do {
 
