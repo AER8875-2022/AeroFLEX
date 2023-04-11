@@ -182,7 +182,7 @@ struct Settings {
     bool second_order = true;
     double start_cfl = 40.;
     double slope_cfl = 50.;
-    double max_cfl = 200.;
+    double max_cfl = 100.;
     double relaxation = 0.9;
     double tolerance = 1e-4;
     int rhs_iterations = 5;
