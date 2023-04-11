@@ -191,25 +191,35 @@ namespace aero{
   {
        // Loading VLM forceacting Point
 
-       int n=wings.size(); // nombre de wingstations=size (wings)
-       int m=wings[0].get_stationIDs().size(); // nombre de vortexRings sur une wingstation
+       int n=wings[0].get_stationIDs().size(); // nombre de wingstations=size (wings)
+       std::cout<<"n: "<<n<<std::endl;
+       auto wstation= wingStations[wings[0].get_stationIDs()[0]];
+       int m=wstation.get_vortexIDs().size(); // nombre de vortexRings sur une wingstation
+       std::cout<<"m: "<<m<<std::endl;
        int i=0; // numéro du premier vortexring d une wingstation
 
-
-
-       for (int j=0; j<m; ++j)
+    
+    
+        std::cout<<"Force acting"<< std::endl;
+       for (int j=0; j<n; ++j)
        {
            auto wingstation = wingStations[wings[0].get_stationIDs()[j]];
 
            auto vortexring= vortexRings[wingstation.get_vortexIDs()[0]];
 
-           force.point_fa.push_back(vortexRings[i].forceActingPoint()[0]);
-           force.point_fa.push_back(vortexRings[i].forceActingPoint()[1]);
-           force.point_fa.push_back(vortexRings[i].forceActingPoint()[2]);
-        //    force.point_fa.push_back(vortexRings[i].forceActingPoint()[3]);
-        //    force.point_fa.push_back(vortexRings[i].forceActingPoint()[4]);
-        //    force.point_fa.push_back(vortexRings[i].forceActingPoint()[5]);
+           force.point_fa.push_back(vortexRings[i].forceActingPoint()(0));
+           force.point_fa.push_back(vortexRings[i].forceActingPoint()(1));
+           force.point_fa.push_back(vortexRings[i].forceActingPoint()(2));
+
+           i=i+2;
+           std::cout<< j<<": ";
+           std::cout<< force.point_fa[3*j]<<" ";
+           std::cout<< force.point_fa[3*j+1]<<" ";
+           std::cout<< force.point_fa[3*j+2]<<std::endl;
+         
        }
+       std::cout<<"Fin de lecture"<<endl;
+    
 
        //    Loading STRUCTURE connectivity
 
@@ -226,7 +236,7 @@ namespace aero{
             force.point_fs.push_back(nodeStruct[2]);
             num+=1;
        }
-
+std::cout<< "num= "<<num<<std::endl;
 
 
        // Projeter le point_fa sur la droite et calcul de la distance
@@ -239,15 +249,32 @@ namespace aero{
        u[1]= force.point_fs[1] - force.point_fs[4];
        u[2]= force.point_fs[2] - force.point_fs[5];
        double t;
+       std::cout<< "vecteur u: ";
+       std::cout<< u[0]<<" ";
+       std::cout<< u[1]<<" ";
+       std::cout<< u[2]<<std::endl;
 
-       for (int i=0; i<2; ++i){
+       std::cout<< "vecteur pointfs: ";
+       std::cout<< force.point_fs[0]<<" ";
+       std::cout<< force.point_fs[1]<<" ";
+       std::cout<< force.point_fs[2]<<std::endl;
+
+       std::cout<< "Point projection"<<endl;
+
+       for (int i=0; i<n; ++i){
 
            t= (u[0]*(force.point_fa[3*i]-force.point_fs[0]) + u[1]*(force.point_fa[3*i+1]-force.point_fs[1]) +
                   u[2]*(force.point_fa[3*i+2]-force.point_fs[2]))/pow(norme(u),2);
+           std::cout<<"t: "<<t<<std::endl;
 
            point_fp.push_back(force.point_fs[0] + t*u[0]);
            point_fp.push_back(force.point_fs[1] + t*u[1]);
            point_fp.push_back(force.point_fs[2] + t*u[2]);
+
+           
+           std::cout<< point_fp[3*i] << " ";
+           std::cout<< point_fp[3*i+1] << " ";
+           std::cout<< point_fp[3*i+2] << std::endl;
 
            v[0]= force.point_fa[3*i]   -   point_fp[3*i];
            v[1]= force.point_fa[3*i+1] -   point_fp[3*i+1];
@@ -255,6 +282,7 @@ namespace aero{
            dist[i]=norme(v);
 
        }
+       std::cout<< "Fin Point projection"<<endl;
 
        // Calcul des coefficients d'interpolation
        ///vector <vector> forces_s[m][6];
@@ -266,7 +294,7 @@ namespace aero{
 
 
 
-       for (int i=0; i<m; ++i){
+       for (int i=0; i<n; ++i){
 
 
            for (int j=0; j<num; ++j){
@@ -288,19 +316,27 @@ namespace aero{
 
                dist_2=norme(v);
 
-               if (dist_1<=dist_0 && j != num-1)
+               if (dist_1<=dist_0 )
                {
                    epsilon_l= dist_2/dist_0;
                    epsilon_r= dist_1/dist_0;
                    force.poids.push_back(j);
                    force.poids.push_back(epsilon_l);
                    force.poids.push_back(epsilon_r);
+                   std::cout<<j<<": ";
+                   std::cout<<epsilon_l<<" ";
+                   std::cout<<epsilon_r<<" "<<std::endl;
+                   break;
 
                }
                else if (j==num-1){
                    force.poids.push_back(j);
                    force.poids.push_back(1);
                    force.poids.push_back(0);
+                   std::cout<<j<<": ";
+                   std::cout<<epsilon_l<<" ";
+                   std::cout<<epsilon_r<<" "<<std::endl;
+                   break;
 
                }
            }

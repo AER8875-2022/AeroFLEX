@@ -42,12 +42,26 @@ void Aero::solve() {
     for(int i=0; i<vlm.object.wingStations.size(); i++){
         std::cout << "station: " << i << std::endl;
         for(int j=0; j<vlm.object.wingStations[i].get_forces().size(); j++) {
-            std::cout << vlm.object.wingStations[i].get_forces()[j] << std::endl;
-        }}
+            std::cout << vlm.object.wingStations[i].get_forces()[j] <<"  " ;
+        }
+        std::cout<<std::endl;
+        }
     Eigen::VectorXd forcestruct= ComputeStructureForces(force, vlm.object.wingStations);
     //forcestructsize
     std::cout << "forcestructsize: " << forcestruct.size() << std::endl;
+    int s=forcestruct.size()/6;
+    for (int i=0; i<s; i++)
+    {
+        std::cout<< i <<" :";
 
+        std::cout<< forcestruct[6*i];
+        std::cout<< forcestruct[6*i+1];
+        std::cout<< forcestruct[6*i+2];
+        std::cout<< forcestruct[6*i+3];
+        std::cout<< forcestruct[6*i+4];
+        std::cout<< forcestruct[6*i+5]<<std::endl;
+
+    }
 
     structure.FEM.set_Load_Vector_From_Vector(forcestruct);
     //print force
