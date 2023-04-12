@@ -12,8 +12,7 @@
 #include "geometrie/euler.hpp"
 #include "geometrie/geometry.hpp"
 #include "geometrie/structure.hpp"
-//#include "src/rans/include/rans/core.h", useless : delete
-
+#include "geometrie/mesh_vlm.hpp"
 
 namespace geom {
 
@@ -88,10 +87,12 @@ public:
     Geom(GUIHandler &gui);
     void Geom_gen();
     void Geom_mesh(bool viscous);
-    void fill_database(database::table &table);     //uncomment when problem resolved
+    void fill_database(database::table &table,std::vector<double> alphas);
 
     std::vector<std::string> file_name;
     std::vector<std::string> profile_name;
+    Body WING_RIGHT;
+    Body WING_LEFT;
     std::vector<std::vector<std::vector<std::vector<double>>>> WR_surfaces;
     std::vector<std::vector<std::vector<std::vector<double>>>> WL_surfaces;
 };

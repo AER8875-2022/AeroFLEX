@@ -1,9 +1,11 @@
 #include "geometrie/geom.hpp"
 #include <cmath>
 #include <iostream>
+#include <ostream>
 #include <string.h>
 #include <vector>
 #include <sstream>
+
 
 #ifndef M_PI
 #define M_PI 3.141592653589793115997963468544185161590576171875
@@ -11,7 +13,8 @@
 
 using namespace geom;
 
-Geom::Geom(GUIHandler &gui): gui(gui) {}
+//std::string body_type = "General";
+Geom::Geom(GUIHandler &gui): gui(gui), WING_RIGHT("General"), WING_LEFT("General") {}
 
 void Geom::Geom_gen() {
     // convertion angles - distances
@@ -25,10 +28,11 @@ void Geom::Geom_gen() {
     double d_alpha = settings.twist*(M_PI/180);
 
     //Define Geometry
-    std::string body_type = "General";
-    Body WING_RIGHT(body_type);
-    Body WING_LEFT(body_type);
-    int nb_profils = 1; //hardcoder
+    // std::string body_type = "General";
+    // Body WING_RIGHT(body_type);
+    // Body WING_LEFT(body_type);
+
+    int nb_profils = 1; //to be changed for future work
     //double perc_span = 1.0;
     for (int k=0; k<nb_profils; k++){
         if(settings.S_type == 1){
@@ -135,58 +139,70 @@ void Geom::Geom_gen() {
 
         }
     }
-
     WING_LEFT.mirror_body(); 
-    WING_RIGHT.change_all_distributions("partial", "cartesian");
-    WR_surfaces = WING_RIGHT.get_paired_body_surfaces();    
-    WL_surfaces = WING_LEFT.get_paired_body_surfaces();
     gui.msg.push("[GEOM] Geometry generated");
-    std::cout<<"Geometry generated"<<std::endl;
 }
 
-//RANS
+
 void Geom::Geom_mesh(bool viscous) {
+    //VLM -------------
+        // Initiate and build Mesh object
+    Mesh mesh = Mesh();
+    get_surface_mesh_tables(WING_RIGHT, mesh, "Structured", true);
+    get_surface_mesh_tables(WING_LEFT, mesh, "Structured", true);
+        // Cleanup Mesh
+    double tol = 1e-14;
+    int nb_subdivisions = 10;
+    mesh.stitch_used_vertices(tol, nb_subdivisions);
+    mesh.delete_unused_vertices();
+    mesh.cleanup_doublets();
+        // Export mesh object to .dat file
+    export_mesh("mesh_vlm.dat", mesh);
+    gui.msg.push("[GEOM] Mesh for VLM solver generated");
+    gui.msg.push("[GEOM] Mesh file : mesh_vlm.dat");
+
+    //Geometry changes for RANS & Structure
+    // WING_LEFT.mirror_body(); 
+    WING_RIGHT.change_all_distributions("partial", "cartesian");
+    std::vector<std::vector<std::vector<std::vector<double>>>> surfaces_R = WING_RIGHT.get_paired_body_surfaces();    
+    std::vector<std::vector<std::vector<std::vector<double>>>> surfaces_L = WING_LEFT.get_paired_body_surfaces();
+
+    //RANS/Euler-----------
+    
     std::vector<double> disc{100,150,200};
-    std::vector<std::vector<std::vector<std::vector<double>>>> surfaces = WR_surfaces;
+    //std::vector<std::vector<std::vector<std::vector<double>>>> surfaces_R = WR_surfaces;
+    //std::vector<std::vector<std::vector<std::vector<double>>>> surfaces_L = WL_surfaces;
+
 
     std::cout<<"Surface size"<<std::endl;
     std::cout<<"start mesh rans"<<std::endl;
 
-    for (int i=0; i < surfaces.size(); i++){
+    for (int i=0; i < surfaces_R.size(); i++){
         file_name = {profile_name[i]+"_coarse.msh",profile_name[i]+"_normal.msh",profile_name[i]+"_fine.msh"};
-        gui.msg.push("[GEOM] test");
         for (int j=0; j<3; j++){
-            generer(surfaces[i][0], surfaces[i][1], surfaces[i][2], surfaces[i][4], surfaces[i][5], disc[j], file_name[j], viscous);
+            generer(surfaces_R[i][0], surfaces_R[i][1], surfaces_R[i][2], surfaces_R[i][4], surfaces_R[i][5], disc[j], file_name[j], viscous);
         }
     }  
     std::cout<<"end mesh rans"<<std::endl;
     gui.msg.push("[GEOM] Mesh for Euler/RANS solver generated");
+    for(int i=0;i<file_name.size();i++){
+        gui.msg.push("[GEOM] Mesh file :" + file_name[i]);
+    }
 
-        // Structure
-    std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> element = maillage_structure(surfaces, settings.E, settings.G, settings.P_beam);
+    // Structure-------------
+    std::vector<std::tuple<int,std::vector<double>,std::vector<double>,std::vector<double>>> element = maillage_structure(surfaces_R, settings.E, settings.G, settings.P_beam);
     gui.msg.push("[GEOM] Mesh for structural solver generated");
+    gui.msg.push("[GEOM] Mesh file : Point_maillage_structure.txt");
 }
 
-void Geom::fill_database(database::table &table){
+void Geom::fill_database(database::table &table, std::vector<double> alphas){
         std::cout<<"Nom du profil database : ";
         std::cout<<profile_name[0]<<std::endl;
-
-        // //loop pour AoA
-        // double alpha_start = 0;
-        // double alpha_end = 4;
-        // double alpha_step = 2;
-        // std::vector<double> alpha;
-        // for (double i = alpha_start; i <= alpha_end; i += alpha_step) {
-        //     alpha.push_back(i);
-        // }
-        
 
 
         for (int i=0; i<profile_name.size(); i++) {
             table.airfoils[profile_name[i]];                            // Créer le airfoil
-            //DELETE
-            table.airfoils[profile_name[i]].alpha = {0.0,2.0,5.0};      //Remplir le champs alpha , 
-            //END DELETE
+            table.airfoils[profile_name[i]].alpha = {alphas};      //Remplir le champs alpha , 
 
             table.sectionAirfoils[i];                                   //WR
             table.sectionAirfoils[i] = {profile_name[i], profile_name[i]};   

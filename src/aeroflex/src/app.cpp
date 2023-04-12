@@ -181,22 +181,7 @@ void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure& structure, geo
     rans.compute_alphas();
 
 	if (!vlm.settings.sim.get_databaseFormat().compare("NONE")) {
-        // TODO: À ajouter --> rans.alpha comme vecteur de alpha dans la database
-		geom.fill_database(table);	//uncomment when problem resolved
-		//table.airfoils["naca0012q"]; //delete
-		//table.airfoils["naca0012q"].alpha = {1.0, 5.0, 10.0}; //delete
-		// std::cout<<"Database check start"<<std::endl;
-		// std::cout<<"Angles : "<<std::endl;
-		// std::cout<<table.airfoils["CST"].alpha[0]<<std::endl;
-		// std::cout<<table.airfoils["CST"].alpha[1]<<std::endl;
-		// std::cout<<table.airfoils["CST"].alpha[2]<<std::endl;
-		// std::cout<<"Profile Name : "<<std::endl;
-		// std::cout<<table.sectionAirfoils[0][0]<<std::endl;
-		// std::cout<<table.sectionAirfoils[0][1]<<std::endl;
-		// std::cout<<"Span locs : "<<std::endl;
-		// std::cout<<table.sectionSpanLocs[0][0]<<std::endl;
-		// std::cout<<table.sectionSpanLocs[0][1]<<std::endl;
-		// std::cout<<"Database check end"<<std::endl;
+		geom.fill_database(table, rans.alphas);	
 		for (auto& [airfoil, db] : table.airfoils) {
 			rans.solve_airfoil(airfoil, db);
 		}

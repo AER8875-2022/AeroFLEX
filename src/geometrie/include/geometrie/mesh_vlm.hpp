@@ -159,8 +159,6 @@ public:
 };
 
 void get_surface_mesh_tables(Body body, Mesh &mesh, std::string mode, bool is_vortex);
-
-
-
+void export_mesh(std::string filename, Mesh mesh);
 
 #endif /* mesh_vlm_hpp */
