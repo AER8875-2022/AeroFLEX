@@ -196,11 +196,14 @@ struct Settings {
     bool second_order = true;
     double start_cfl = 40.;
     double slope_cfl = 50.;
-    double max_cfl = 200.;
+    double max_cfl = 100.;
     double relaxation = 0.9;
     double tolerance = 1e-4;
     int rhs_iterations = 5;
-    int max_iterations = 30000;
+    int max_iterations = 300;
+    double alpha_start = 1.0;
+    double alpha_end = 7.0;
+    double alpha_step = 3.0;
 
     double limiter_k = 5.;
 
@@ -278,10 +281,9 @@ void Settings::import_config_file(tiny::config &io) {
 	rhs_iterations = io.get<int>("rans-solver", "rhs_iterations");
 	max_iterations = io.get<int>("rans-solver", "max_iterations");
 	limiter_k = io.get<double>("rans-solver", "limiter_k");
-
-	for (int i = 0; i < io.how_many("rans-mesh"); i++) {
-		meshes.push_back(io.get_i<std::string>("rans-mesh", "file", i));
-	}
+    alpha_start = io.get<double>("rans-alphas", "alpha_start");
+    alpha_end = io.get<double>("rans-alphas", "alpha_end");
+    alpha_step = io.get<double>("rans-alphas", "alpha_step");
 }
 
 void Settings::export_config_file(tiny::config &io) {
@@ -315,12 +317,9 @@ void Settings::export_config_file(tiny::config &io) {
 	io.config["rans-solver"]["max_iterations"] = std::to_string(max_iterations);
 	io.config["rans-solver"]["limiter_k"] = std::to_string(limiter_k);
 
-	io.config_vec["rans-mesh"] = {};
-	for (auto &mesh : meshes) {
-		io.config_vec["rans-mesh"].push_back({
-			{"file", mesh},
-		});
-	};
+    io.config["rans-alphas"]["alpha_start"] = std::to_string(alpha_start);
+    io.config["rans-alphas"]["alpha_end"] = std::to_string(alpha_end);
+    io.config["rans-alphas"]["alpha_step"] = std::to_string(alpha_step);
 }
 
 }

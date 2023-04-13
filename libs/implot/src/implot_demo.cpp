@@ -1900,12 +1900,12 @@ void Demo_CustomDataAndGetters() {
         ImGui::BulletText("C++ lambdas can be passed as function pointers as well!");
     ImGui::Unindent();
 
-    MyImPlot::Vector2f vec2_data[2] = { MyImPlot::Vector2f(0,0), MyImPlot::Vector2f(1,1) };
+    MyImPlot::Vector2f vec2_data[4] = { MyImPlot::Vector2f(0,0), MyImPlot::Vector2f(1,1), MyImPlot::Vector2f(0,-1), MyImPlot::Vector2f(1,0)};
 
     if (ImPlot::BeginPlot("##Custom Data")) {
 
         // custom structs using stride example:
-        ImPlot::PlotLine("Vector2f", &vec2_data[0].x, &vec2_data[0].y, 2, 0, 0, sizeof(MyImPlot::Vector2f) /* or sizeof(float) * 2 */);
+        ImPlot::PlotLine("Vector2f", &vec2_data[0].x, &vec2_data[0].y, 4, 0, 0, sizeof(float) * 2);
 
         // custom getter example 1:
         ImPlot::PlotLineG("Spiral", MyImPlot::Spiral, NULL, 1000);

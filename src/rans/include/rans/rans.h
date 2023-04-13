@@ -25,7 +25,7 @@ namespace rans {
 class Rans {
     public:
     // This is a mess because of no separation of IO and computation...
-    std::vector<double> residuals;
+    std::vector<double> residuals = {1.0};
     std::atomic<int> iters = 0;
 
     CpProfile profile;
@@ -33,6 +33,8 @@ class Rans {
     Settings settings;
 
     std::vector<mesh> ms;
+    std::vector<double> alphas;
+
     bool mesh_loaded = false;
 
     GUIHandler &gui;
@@ -42,10 +44,17 @@ class Rans {
     void input();
     void solve();
     void solve_airfoil(const std::string& airfoil, database::airfoil& db);
+    void compute_alphas();
 
     template<class T> void run();
     template<class T> void run_airfoil(const std::string& airfoil, database::airfoil& db);
 };
+
+void Rans::compute_alphas() {
+    for (double i = settings.alpha_start; i <= settings.alpha_end; i += settings.alpha_step) {
+        alphas.push_back(i);
+    }
+}
 
 void Rans::input() {
     if (!mesh_loaded) {
@@ -59,15 +68,12 @@ void Rans::input() {
 template<class T>
 void Rans::run() {
     multigrid<T> multi(ms, settings, gui, residuals, iters, profile);
-    gui.event.rans_preprocess = true;
 
     rans::solver& s = multi.run(true);
-    gui.event.rans_solve = true;
 
     settings.outfilename = "rans-test.vtu";
 
     save(settings.outfilename, s);
-    gui.event.rans_postprocess = true;
     std::cout << "Saved results to file " << settings.outfilename << "\n" << std::endl;
 }
 
@@ -77,13 +83,16 @@ void Rans::run_airfoil(const std::string& airfoil, database::airfoil& db) {
     ms.clear();
     // TODO: check with geom for the naming convention
     // For the moment we will only load 1 mesh
-    ms.push_back(mesh("../../../../examples/rans/" + airfoil + ".msh"));
+    ms.push_back(mesh("../../../../examples/rans/" + airfoil + "_coarse.msh"));
+    ms.push_back(mesh("../../../../examples/rans/" + airfoil + "_mid.msh"));
+    // ms.push_back(mesh("../../../../examples/rans/" + airfoil + "_fine.msh"));
+
     settings.bcs["farfield"].vars_far.angle = db.alpha[0] * 0.01745;
     multigrid<T> multi(ms, settings, gui, residuals, iters, profile);
     multi.solvers[0].init();
 
     for (auto& alpha: db.alpha) {
-        gui.msg.push("[RANS] Solving for alpha = " + std::to_string(alpha) + "°");
+        gui.msg.push("[RANS] Solving for alpha = " + std::to_string(alpha) + " deg.");
         settings.bcs["farfield"].vars_far.angle = alpha * 0.01745; // deg to rad
         for (auto& s: multi.solvers) {
             s.set_bcs(settings.bcs);

@@ -5,20 +5,23 @@
 #include <any>
 #include <chrono>
 #include <iomanip>
-#include <iostream>
-#include <omp.h>
+#include <ios>
+#include <sstream>
 #include <thread>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 using namespace vlm;
 using namespace solver;
 using namespace Eigen;
 
-linear::steady::steady(input::solverParam &solvP, std::atomic<int> &iter, std::vector<double> &residuals,
-                       GUIHandler &gui)
+linear::steady::steady(input::solverParam &solvP, std::atomic<int> &iter,
+                       std::vector<double> &residuals, GUIHandler &gui)
     : solvP(solvP), iter(iter), residuals(residuals), gui(gui) {}
 
-void linear::steady::initialize(
-                                const model &object, const database::table &) {
+void linear::steady::initialize(const model &object, const database::table &) {
   this->lhs =
       MatrixXd::Zero(object.vortexRings.size() + object.doubletPanels.size(),
                      object.vortexRings.size() + object.doubletPanels.size());
@@ -56,7 +59,11 @@ void linear::steady::solve(model &object) {
   // Exporting solution
   exportSolution(object);
 
-  std::cout << "\t Residual = " << system.error() << std::endl;
+  std::stringstream res;
+  res << std::scientific << system.error();
+  gui.msg.push("[VLM] Iteration " + std::to_string(iter) + "... "
+               + "Residual " + res.str());
+
   residuals.push_back(system.error());
   iter++;
 }
@@ -118,6 +125,7 @@ void linear::steady::computeForces(model &object) {
 
     wing.computeForces(object.sim);
     object.cl += wing.get_cl() * wing.get_area() / object.sim.sref;
+    object.cy += wing.get_cy() * wing.get_area() / object.sim.sref;
     object.cm += wing.get_cm() * wing.get_area() / object.sim.sref;
   }
 }
@@ -281,8 +289,7 @@ nonlinear::steady::steady(input::solverParam &solvP, std::atomic<int> &iter,
                           std::vector<double> &residuals, GUIHandler &gui)
     : linear::steady(solvP, iter, residuals, gui) {}
 
-void nonlinear::steady::initialize(
-                                   const model &object,
+void nonlinear::steady::initialize(const model &object,
                                    const database::table &database) {
   this->lhs =
       MatrixXd::Zero(object.vortexRings.size() + object.doubletPanels.size(),
@@ -304,7 +311,7 @@ void nonlinear::steady::buildRHS(const model &object) {
       auto &vortex = object.vortexRings[vortexID];
 
       rhs_VLM(vortex.get_globalIndex()) =
-          -object.sim.freeStream(vortex.local_aoa).dot(vortex.get_normal());
+          -vortex.inertial_stream().dot(vortex.get_normal());
     }
     // Building sources vector
 #pragma omp for
@@ -328,7 +335,9 @@ void nonlinear::steady::solve(model &object) {
   freeStream.normalize();
   object.initializeWake(100.0 * object.sim.cref);
 
-  if (gui.signal.stop) { return; }
+  if (gui.signal.stop) {
+    return;
+  }
 
   // Initializing linear solver
   BiCGSTAB<MatrixXd> system;
@@ -337,7 +346,8 @@ void nonlinear::steady::solve(model &object) {
   buildLHS(object);
   system.compute(lhs);
 
-  if (gui.signal.stop) { return; }
+  if (gui.signal.stop)
+    return;
 
   // Initializing iteration
   double residual;
@@ -345,6 +355,7 @@ void nonlinear::steady::solve(model &object) {
   do {
     while (gui.signal.pause)
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
     // Step 1 : Solving VLM
     buildRHS(object);
     VectorXd gamma = system.solve(rhs);
@@ -355,15 +366,18 @@ void nonlinear::steady::solve(model &object) {
     // Step 2: One iteration of aoa correction
     residual = iterate(object);
 
-    std::cout << "Iteration " << iter << std::endl;
-    std::cout << "\t Residual = " << residual << std::endl;
+    std::stringstream res;
+    res << std::scientific << residual;
+    gui.msg.push("[VLM] Iteration " + std::to_string(iter) + "... "
+                + "Residual " + res.str());
 
     residuals.push_back(residual);
     iter++;
   } while ((residual > solvP.tolerance) && (iter <= solvP.max_iter) &&
            (!gui.signal.stop));
 
-  if (gui.signal.stop) { return; }
+  if (gui.signal.stop)
+    return;
 
   // Compute viscous forces
   computeForces(object);
@@ -387,25 +401,19 @@ double nonlinear::steady::iterate(model &object) {
           object.wingStations[wing.get_stationIDs().front()].get_spanLoc();
 
       auto &station = object.wingStations[stationID];
-      double spanLoc = (station.spanLoc - root) / wing.get_span();
+      double spanLoc = (station.get_spanLoc() - root) / wing.get_span();
 
       // Step 3 : Effective angle of attack
-      double cl_inv = station.cl;
+      double cl_inv = station.cl_local;
       double aoa_eff =
           cl_inv / VLM_CL_ALPHA_DEG - station.local_aoa + object.sim.aoa;
 
       // Step 4 : Viscous lift interpolation
       double cl_visc = database.cl(aoa_eff, wing.get_globalIndex(), spanLoc);
 
-      // Print error if extrapolation is detected
-      if (std::abs(cl_visc) < 1e-15) {
-        std::cerr << "\033[1;31mERROR: Extrapolation detected\033[0m"
-                  << std::endl;
-      };
-
       // Step 5 : Applying aoa correction
       double dalpha = solvP.relaxation * (cl_visc - cl_inv) / VLM_CL_ALPHA_DEG;
-      station.updateLocalAoa(dalpha);
+      station.updateLocalStream(dalpha, object.sim);
 
       residual += (cl_visc - cl_inv) / cl_visc * (cl_visc - cl_inv) / cl_visc;
     }
@@ -419,7 +427,6 @@ void nonlinear::steady::iterateLift(model &object) {
 #pragma omp parallel for
   for (int stationID = 0; stationID < object.wingStations.size(); stationID++) {
     auto &station = object.wingStations[stationID];
-
     station.computeForces(object.sim);
   }
 }
@@ -442,22 +449,29 @@ void nonlinear::steady::computeForces(model &object) {
 
       double spanLoc = (station.spanLoc - root) / wing.get_span();
       // Computing effective aoa to interpolate
-      double aoa_eff =
-          station.cl / VLM_CL_ALPHA_DEG - station.local_aoa + object.sim.aoa;
+      double aoa_eff = station.cl_local / VLM_CL_ALPHA_DEG - station.local_aoa +
+                       object.sim.aoa;
 
       // Interpolating all coefficients at each station
       auto [cl, cd, cmy] =
           database.coefficients(aoa_eff, wing.get_globalIndex(), spanLoc);
+
       // Lever used to transfer to 2D moment to 3D moment at specified origin
       double lever = object.sim.origin()(0) - station.forceActingPoint()(0);
+
       // Updating station's force coefficients
-      station.cl = cl;
+      station.cl = cl * station.liftAxis().dot(object.sim.liftAxis());
+      station.cy = cl * station.liftAxis().dot(Vector3d::UnitY());
       station.cd = cd;
-      station.cm(1) = cmy + lever / station.chord * cl;
+
+      station.to_local(station.cm);
+      station.cm(1) = cmy + lever / station.chord * station.cl_local;
+      station.to_global(station.cm);
     }
     // Updating global forces
     wing.computeForces(object.sim);
     object.cl += wing.get_cl() * wing.get_area() / object.sim.sref;
+    object.cy += wing.get_cy() * wing.get_area() / object.sim.sref;
     object.cd += wing.get_cd() * wing.get_area() / object.sim.sref;
     object.cm += wing.get_cm() * wing.get_area() / object.sim.sref;
   }

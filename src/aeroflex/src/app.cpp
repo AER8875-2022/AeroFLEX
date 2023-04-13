@@ -3,6 +3,7 @@
 #include "imgui.h"
 #include "implot.h"
 #include "tinyconfig.hpp"
+#include "parser.hpp"
 
 #include "Application.h"
 #include "FileDialog.hpp"
@@ -11,6 +12,7 @@
 #include <cstring>
 #include <future>
 #include <thread>
+#include <mutex>
 #include <ctime>
 
 #include "common_aeroflex.hpp"
@@ -19,6 +21,7 @@
 
 #include <rans/rans.h>
 #include <vlm/vlm.hpp>
+#include <structure/structure.hpp>
 
 template <class T>
 bool is_future_done(std::future<T> const& f) {
@@ -41,6 +44,7 @@ static void HelpMarker(const char* desc)
 struct Settings {
 	rans::Settings rans;
 	vlm::Settings vlm;
+    structure::Settings structure;
 };
 
 enum class AppDialogAction {
@@ -48,6 +52,7 @@ enum class AppDialogAction {
 	ConfigOpen,
 	ConfigSave,
 	DatabaseOpen,
+	VlmMeshOpen,
 };
 
 class App {
@@ -62,6 +67,7 @@ class App {
 		// Modules
 		rans::Rans &rans;
 		vlm::VLM &vlm;
+        structure::Structure &structure;
 
 		Settings settings;
 
@@ -79,7 +85,19 @@ class App {
 		AppDialogAction dialog_action = AppDialogAction::None;
 		FlexGUI::FileDialog dialog;
 		char path_buf[256];
-		App(rans::Rans &rans, vlm::VLM &vlm, GUIHandler &gui);
+		App(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, GUIHandler &gui);
+};
+
+struct GeoLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	App &app;
+	GeoLayer(App &app) : app(app) {};
+};
+
+struct StructureLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	App &app;
+	StructureLayer(App &app) : app(app) {};
 };
 
 struct RansLayer : public FlexGUI::Layer {
@@ -106,6 +124,12 @@ struct RansGraphLayer : public FlexGUI::Layer {
 	RansGraphLayer(App &app) : app(app) {};
 };
 
+struct StructureGraphLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	App &app;
+	StructureGraphLayer(App &app) : app(app) {};
+};
+
 struct VlmGraphLayer : public FlexGUI::Layer {
 	virtual void OnUIRender() override;
 	App &app;
@@ -130,31 +154,37 @@ struct DialogLayer : public FlexGUI::Layer {
 	DialogLayer(App &app) : app(app) {};
 };
 
-// SOLVE =================================================================================================
+/*
+  #####  ####### #       #     # #######
+ #     # #     # #       #     # #
+ #       #     # #       #     # #
+  #####  #     # #       #     # #####
+       # #     # #        #   #  #
+ #     # #     # #         # #   #
+  #####  ####### #######    #    #######
+*/
+// =================================================================================================
 
-void solve(rans::Rans &rans, vlm::VLM &vlm) {
-
-	database::table table;
-
+void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure) {
+	rans.compute_alphas();
 	if (!vlm.settings.sim.get_databaseFormat().compare("NONE")) {
-		table.airfoils["airfoil_demo_fine"];
-		table.airfoils["airfoil_demo_fine"].alpha = {1.0, 5.0, 10.0};
+		vlm.database.airfoils["naca0012q"];
+		vlm.database.airfoils["naca0012q"].alpha = rans.alphas;
 
-		for (auto& [airfoil, db] : table.airfoils) {
+		for (auto& [airfoil, db] : vlm.database.airfoils) {
 			rans.solve_airfoil(airfoil, db);
 		}
 	}
 	else if (!vlm.settings.sim.get_databaseFormat().compare("FILE")) {
-		table.importAirfoils(vlm.settings.io.databaseFile);
+		vlm.database.importAirfoils(vlm.settings.io.databaseFile);
 	}
 
 	vlm.initialize();
-	vlm.database = table;
 	vlm.database.importLocations(vlm.settings.io.locationFile); // Temporary
 	vlm.solve();
 
-	// rans.input();
-	// rans.solve();
+	structure.input();
+	structure.solve();
 }
 
 // =================================================================================================
@@ -166,9 +196,9 @@ std::optional<Settings> config_open(const std::string &conf_path) {
 	bool success = io.read(conf_path);
 	if (!success) return std::nullopt;
 
-	// Parsing for vlm
 	settings.rans.import_config_file(io);
 	settings.vlm.import_config_file(io);
+	settings.structure.import_config_file(io);
 
 	return settings;
 }
@@ -183,34 +213,32 @@ bool config_save(const std::string &conf_path, Settings &settings) {
 	};
 
 	settings.rans.export_config_file(io);
-	// Exporting for VLM
 	settings.vlm.export_config_file(io);
+	settings.structure.export_config_file(io);
 
 	return io.write(conf_path);
 }
 
-App::App(rans::Rans &rans, vlm::VLM &vlm, GUIHandler &gui) : rans(rans), vlm(vlm), gui(gui) {
+App::App(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, GUIHandler &gui) : rans(rans), vlm(vlm), structure(structure), gui(gui) {
 	settings.rans.bcs["farfield"];
 	settings.rans.bcs["farfield"].bc_type = "farfield";
 	settings.rans.bcs["wall"];
 	settings.rans.bcs["wall"].bc_type = "slip-wall";
-
-	// TEMPORARY !!!!
-	settings.rans.meshes.push_back("../../../../examples/rans/airfoil_API2_coarse.msh");
-	settings.rans.meshes.push_back("../../../../examples/rans/airfoil_API2_mid.msh");
-	settings.rans.meshes.push_back("../../../../examples/rans/airfoil_API2_fine.msh");
 }
 
 void App::solve_async() {
 	signal_status_ready = false;
 	signal_status_busy = true;
 	gui.msg.push("-- Starting simulation --");
+
 	rans.settings = settings.rans;
 	vlm.settings = settings.vlm;
+	structure.settings = settings.structure;
+
 	future_solve = std::async(std::launch::async,
 	[&](){
 		try {
-			solve(rans, vlm);
+			solve(rans, vlm, structure);
 		} catch (std::exception &e) {
 			gui.msg.push(e.what());
 		}
@@ -296,20 +324,51 @@ inline void Combo(std::vector<std::string> &vec, int &index, const char* label) 
 	}
 }
 
+
+void StructureLayer::OnUIRender() {
+	ImGui::Begin("Structure");
+
+	ImGui::Separator();
+	ImGui::Text("Parameters");
+	ImGui::InputDouble("Tolerance:", &app.settings.structure.Tolerance, 0.01f, 1.0f, "%.2e");
+
+	ImGui::InputInt("N_step:", &app.settings.structure.N_step);
+
+	ImGui::InputDouble("Damping", &app.settings.structure.Damping, 0.01f, 1.0f, "%.4f");
+
+	ImGui::Separator();
+	ImGui::Text("Options");
+	if (ImGui::RadioButton("NONLINEAR", app.settings.structure.Solve_type == 0)) app.settings.structure.Solve_type = 0;
+	ImGui::SameLine();
+	if (ImGui::RadioButton("LINEAR", app.settings.structure.Solve_type == 1)) app.settings.structure.Solve_type = 1;
+	ImGui::End();
+}
+
 void RansLayer::OnUIRender() {
 	ImGui::Begin("RANS");
 
 	ImGui::Separator();
 	ImGui::Text("Gas");
 	ImGui::InputDouble("gamma", &app.settings.rans.g.gamma, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Ratio of specific heats");
 	ImGui::InputDouble("R", &app.settings.rans.g.R, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Specific gas constant");
 
 	ImGui::Separator();
 	ImGui::Text("Farfield");
 	ImGui::InputDouble("Mach", &app.settings.rans.bcs["farfield"].vars_far.mach, 0.01f, 1.0f, "%.4f");
-	ImGui::InputDouble("AoA", &app.settings.rans.bcs["farfield"].vars_far.angle, 0.01f, 1.0f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Mach number");
 	ImGui::InputDouble("Temperature", &app.settings.rans.bcs["farfield"].vars_far.T, 0.01f, 1.0f, "%.4f");
 	ImGui::InputDouble("Pressure", &app.settings.rans.bcs["farfield"].vars_far.p, 0.01f, 1.0f, "%.4f");
+
+	ImGui::Separator();
+	ImGui::Text("Alphas");
+	ImGui::InputDouble("Alpha Start", &app.settings.rans.alpha_start, 0.1f, 1.0f, "%.1f");
+	ImGui::SameLine(); HelpMarker("Alpha linspace start");
+	ImGui::InputDouble("Alpha End", &app.settings.rans.alpha_end, 0.1f, 1.0f, "%.1f");
+	ImGui::SameLine(); HelpMarker("Alpha linspace end");
+	ImGui::InputDouble("Alpha Step", &app.settings.rans.alpha_step, 0.1f, 1.0f, "%.1f");
+	ImGui::SameLine(); HelpMarker("Alpha linspace step");
 
 	ImGui::Separator();
 	ImGui::Text("Solver");
@@ -325,8 +384,10 @@ void RansLayer::OnUIRender() {
 	ImGui::InputDouble("Start CFL", &app.settings.rans.start_cfl, 0.1f, 1.0f, "%.1f");
 	ImGui::InputDouble("Slope CFL", &app.settings.rans.slope_cfl, 0.1f, 1.0f, "%.1f");
 	ImGui::InputDouble("Limiter K", &app.settings.rans.limiter_k, 0.1f, 1.0f, "%.1f");
+	ImGui::SameLine(); HelpMarker("Venkatakrishnan limiter parameter");
 	ImGui::InputDouble("Max CFL", &app.settings.rans.max_cfl, 0.1f, 1.0f, "%.1f");
 	ImGui::SliderInt("RHS Iterations", &app.settings.rans.rhs_iterations, 1, 10);
+	ImGui::SameLine(); HelpMarker("Number of iterations for the RHS evaluation");
 	ImGui::InputInt("Max Iterations", &app.settings.rans.max_iterations);
 
 	ImGui::End();
@@ -357,8 +418,8 @@ void VlmLayer::OnUIRender() {
 	ImGui::SameLine(); HelpMarker("Y component of origin to which the x and z moment are computed");
 	ImGui::InputDouble("Z ref", &app.settings.vlm.sim.z0, 0.01f, 1.0f, "%.4f");
 	ImGui::SameLine(); HelpMarker("Z component of origin to which the x and z moment are computed");
-	Combo(app.settings.vlm.sim.databaseFormat_options, app.settings.vlm.sim.databaseFormat, "Db Format");
 
+	Combo(app.settings.vlm.sim.databaseFormat_options, app.settings.vlm.sim.databaseFormat, "Db Format");
 	if (app.settings.vlm.sim.get_databaseFormat() == "FILE") {
 		ImGui::InputText("", app.settings.vlm.io.databaseFile.data(), app.settings.vlm.io.databaseFile.size(), ImGuiInputTextFlags_ReadOnly);
 		ImGui::SameLine();
@@ -367,6 +428,16 @@ void VlmLayer::OnUIRender() {
 			app.dialog.type = FlexGUI::FileDialogType::OpenFile;
 			app.dialog_action = AppDialogAction::DatabaseOpen;
 		}
+	}
+
+	ImGui::Separator();
+	ImGui::Text("Mesh");
+	ImGui::InputText("", app.settings.vlm.io.meshFile.data(), app.settings.vlm.io.meshFile.size(), ImGuiInputTextFlags_ReadOnly);
+	ImGui::SameLine();
+	if (ImGui::Button("...")) {
+		app.dialog.file_dialog_open = true;
+		app.dialog.type = FlexGUI::FileDialogType::OpenFile;
+		app.dialog_action = AppDialogAction::VlmMeshOpen;
 	}
 
 	ImGui::Separator();
@@ -392,6 +463,8 @@ void DialogLayer::OnUIRender() {
 			app.config_save_async(path);
 		} else if (app.dialog_action == AppDialogAction::DatabaseOpen) {
 			app.settings.vlm.io.databaseFile = path;
+		} else if (app.dialog_action == AppDialogAction::VlmMeshOpen) {
+			app.settings.vlm.io.meshFile = path;
 		}
 		strcpy(app.path_buf, "");
 	}
@@ -454,11 +527,11 @@ void ButtonLayer::OnUIRender() {
 void RansGraphLayer::OnUIRender() {
 	{
 		ImGui::Begin("Rans-Convergence");
+		ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0.0f, 0.0f));
 		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
 		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
-		const double xticks = 1;
 
-		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,400))) {
+		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,-1))) {
 			ImPlot::SetupAxes("Iterations","Residual",xflags,yflags);
 			ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, 0, app.rans.iters);
 			ImPlot::SetupAxisZoomConstraints(ImAxis_X1, 11.0, app.rans.iters);
@@ -475,14 +548,38 @@ void RansGraphLayer::OnUIRender() {
 	}
 };
 
+void StructureGraphLayer::OnUIRender() {
+	{
+		ImGui::Begin("Structure-Convergence");
+		ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0.0f, 0.0f));
+		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
+		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
+
+		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,-1))) {
+			ImPlot::SetupAxes("Iterations","Residual",xflags,yflags);
+			ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, 0, app.structure.iters);
+			ImPlot::SetupAxisZoomConstraints(ImAxis_X1, 11.0, app.structure.iters);
+			ImPlot::SetupAxisScale(ImAxis_Y1, ImPlotScale_Log10);
+
+			if (!app.signal_status_ready) {
+				ImPlot::SetupAxisLimits(ImAxis_X1, 0, app.vlm.iters, ImPlotCond_Always);
+			}
+			ImPlot::PlotLine("L2 residual", app.structure.residuals.data(), app.structure.iters);
+			ImPlot::EndPlot();
+		}
+
+		ImGui::End();
+	}
+}
+
 void VlmGraphLayer::OnUIRender() {
 	{
 		ImGui::Begin("Vlm-Convergence");
+		ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0.0f, 0.0f));
 		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
 		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit;
-		const double xticks = 1;
 
-		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,400))) {
+		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,-1))) {
 			ImPlot::SetupAxes("Iterations","Residual",xflags,yflags);
 			ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, 0, app.vlm.iters);
 			ImPlot::SetupAxisZoomConstraints(ImAxis_X1, 11.0, app.vlm.iters);
@@ -500,21 +597,44 @@ void VlmGraphLayer::OnUIRender() {
 };
 
 void CpLayer::OnUIRender() {
-	{
-		ImGui::Begin("Rans-Cp");
-		static ImPlotAxisFlags xflags = ImPlotAxisFlags_None;
-		static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_RangeFit|ImPlotAxisFlags_Invert;
-		const double xticks = 1;
+	ImGui::Begin("Rans-Cp");
+	auto size = ImGui::GetWindowSize();
+	ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0.2f, 0.2f));
+	static ImPlotAxisFlags xflag = ImPlotAxisFlags_AutoFit;
+	static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit|ImPlotAxisFlags_Invert;
 
-		if (ImPlot::BeginPlot("Convergence", ImVec2(-1,400))) {
-			ImPlot::SetupAxisLimits(ImAxis_X1, -0.1, 1.1, ImPlotCond_Always);
-			ImPlot::SetupAxes("x","Cp",xflags,yflags);
-			ImPlot::PlotLine("Cp", app.rans.profile.x.data(), app.rans.profile.cp.data(), app.rans.profile.x.size());
-			ImPlot::EndPlot();
-		}
-
-		ImGui::End();
+	if (ImPlot::BeginPlot("Cp Profile", ImVec2(-1, (int)(size.y / 2.2f)))) {
+		std::scoped_lock lock(app.rans.profile.m_mutex);
+		ImPlot::SetupAxes("x","Cp",xflag,yflags);
+		ImPlot::PlotLine("Cp", app.rans.profile.x.data(), app.rans.profile.cp.data(), app.rans.profile.x.size());
+		ImPlot::EndPlot();
 	}
+
+	if (ImPlot::BeginPlot("Cp Airfoil", ImVec2(-1, (int)(size.y / 2.2f)))) {
+		const double pad = 1.1;
+		std::scoped_lock lock(app.rans.profile.m_mutex);
+		ImPlot::SetupAxes("x","", ImPlotAxisFlags_None,ImPlotAxisFlags_None);
+		ImPlot::SetupAxisLimits(ImAxis_X1, app.rans.profile.xmin * pad, app.rans.profile.xmax * pad, ImPlotCond_Always);
+		ImPlot::SetupAxisLimits(ImAxis_Y1, app.rans.profile.ymin * pad, app.rans.profile.ymax * pad, ImPlotCond_Always);
+		ImPlot::PlotLine("Airfoil", app.rans.profile.x.data(), app.rans.profile.y.data(), app.rans.profile.x.size());
+
+		if (app.rans.profile.filled) {
+			ImPlot::PushPlotClipRect();
+			for (int i = 0; i < app.rans.profile.x.size(); i++) {
+				ImVec2 p1 = ImPlot::PlotToPixels(ImPlotPoint(app.rans.profile.x[i], app.rans.profile.y[i]));
+				ImVec2 p2 = ImPlot::PlotToPixels(ImPlotPoint(app.rans.profile.cp_airfoil_x[i], app.rans.profile.cp_airfoil_y[i]));
+				if (app.rans.profile.cp_positive[i] == 1) {
+					ImPlot::GetPlotDrawList()->AddLine(p1, p2, IM_COL32(0,255,0,255));
+				} else {
+					ImPlot::GetPlotDrawList()->AddLine(p1, p2, IM_COL32(255,0,0,255));
+				}
+			}
+			ImPlot::PopPlotClipRect();
+		}
+		ImPlot::EndPlot();
+	}
+
+	ImGui::End();
 };
 
 class ConsoleLog
@@ -631,10 +751,13 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, App& app)
 	spec.Height = 900;
 
 	FlexGUI::Application* application = new FlexGUI::Application(spec);
+	application->SetTheme(FlexGUI::Theme::Light);
 	application->PushLayer(std::make_shared<ButtonLayer>(app));
 	application->PushLayer(std::make_shared<RansGraphLayer>(app));
 	application->PushLayer(std::make_shared<VlmGraphLayer>(app));
+	application->PushLayer(std::make_shared<StructureGraphLayer>(app));
 	application->PushLayer(std::make_shared<CpLayer>(app));
+	application->PushLayer(std::make_shared<StructureLayer>(app));
 	application->PushLayer(std::make_shared<RansLayer>(app));
 	application->PushLayer(std::make_shared<VlmLayer>(app));
 	application->PushLayer(std::make_shared<ConsoleLayer>(app));
@@ -663,26 +786,73 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, App& app)
 			}
 			ImGui::EndMenu();
 		}
+		ImGui::SameLine(ImGui::GetWindowWidth() - 70);
+		ImGui::Text("FPS: %.0f", 1.0f / ImGui::GetIO().DeltaTime);
 	});
 	return application;
 }
 
+void cmdl_parser_configure(cmd_line_parser::parser& parser) {
+    parser.add("config",                 // name
+               "Configuration file",  // description
+               "-i",                   // shorthand
+               false,                   // required argument
+               false                   // is boolean option
+    );
+}
+
 namespace FlexGUI {
 	int Main(int argc, char** argv) {
+		cmd_line_parser::parser parser(argc, argv);
+		cmdl_parser_configure(parser);
+
+		bool success = parser.parse();
+		if (!success) return 1;
+		std::string config_file = parser.get<std::string>("config");
+
 		GUIHandler gui;
 
 		// Initialize modules with signal routing
 		rans::Rans rans(gui);
 		vlm::VLM vlm(gui);
+		structure::Structure structure(gui);
 
 		// Initialize main application with the modules
-		App app(rans, vlm, gui);
+		App app(rans, vlm, structure, gui);
 
-		while (g_ApplicationRunning) {
-			FlexGUI::Application* application = CreateApplication(argc, argv, app);
-			application->Run();
-			delete application;
+		if (config_file == "") {
+			while (g_ApplicationRunning) {
+				FlexGUI::Application* application = CreateApplication(argc, argv, app);
+				application->Run();
+				delete application;
+			}
+		} else {
+			std::cout << "CLI mode" << std::endl;
+			std::optional<Settings> settings_opt;
+			try {
+				settings_opt = config_open(parser.get<std::string>("config"));
+			} catch (std::exception &e) {
+				std::cout << e.what() << std::endl;
+				return 1;
+			}
+			if (!settings_opt.has_value()) return 1;
+			app.settings = settings_opt.value();
+			app.solve_async();
+			while (g_ApplicationRunning) {
+				if (is_future_done(app.future_solve)) {
+					app.solve_await();
+					g_ApplicationRunning = false;
+				};
+				auto txt = app.gui.msg.pop();
+				while (txt.has_value()) {
+					std::cout << txt.value() << std::endl;
+					txt = app.gui.msg.pop();
+				}
+
+				std::this_thread::sleep_for(std::chrono::milliseconds(200));
+			}
 		}
+
 		return 0;
 	}
 }
