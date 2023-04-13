@@ -189,8 +189,7 @@ namespace aero{
                 for (int p=0; p<vring.get_nodeIDs().size(); ++p)
                 {
                     auto node = nodes[vring.get_nodeIDs()[p]];
-                    std::cout<< "Point départ"<< std::endl;
-                    std::cout<< node << std::endl;
+
 
                     auto& last_sol = Solutions.back();
                     const vector<double> nodeStruct1(last_sol.begin() + pos.node[2*p]*6, last_sol.begin() + pos.node[2*p]*6 + 6);
@@ -247,8 +246,7 @@ namespace aero{
                     node[0]=rotated_z[0]+0.1;
                     node[1]=rotated_z[1]+0.01;
                     node[2]=rotated_z[2];
-                    std::cout<< "Point corrigés"<< std::endl;
-                    std::cout<< node << std::endl;
+
 
                     nodes[vring.get_nodeIDs()[p]]=node;
 
