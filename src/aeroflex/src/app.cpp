@@ -349,7 +349,7 @@ void GeomLayer::OnUIRender() {
 	if (app.settings.geom.S_type == 0){
 		ImGui::Separator();
 		ImGui::Text("NACA 4 digits");
-		ImGui::InputDouble("m", &app.settings.geom.m, 0.01f, 0.01f, "%.4f");
+		ImGui::InputDouble("c", &app.settings.geom.c, 0.01f, 0.01f, "%.4f");
 		ImGui::SameLine(); HelpMarker("Maximum camber - Must be an integer");
 		ImGui::InputDouble("p", &app.settings.geom.p, 0.01f, 0.01f, "%.4f");
 		ImGui::SameLine(); HelpMarker("Camber position - Must be an integer");
@@ -371,7 +371,7 @@ void GeomLayer::OnUIRender() {
 	ImGui::InputDouble("Chord tip", &app.settings.geom.ct, 0.01f, 0.01f, "%.4f");
 	ImGui::InputDouble("Beam Position", &app.settings.geom.P_beam, 0.01f, 0.01f, "%.4f");
 	ImGui::SameLine(); HelpMarker("Relative elastic axis postion on the chord (0.0 to 1.0)");
-	ImGui::InputDouble("Wing position", &app.settings.geom.P_aile, 0.01f, 0.01f, "%.4f");
+	//ImGui::InputDouble("Wing position", &app.settings.geom.P_aile, 0.01f, 0.01f, "%.4f");
 
 	ImGui::Separator();
 	ImGui::Text("Wing angles");

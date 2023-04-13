@@ -40,7 +40,7 @@ void Geom::Geom_gen() {
             //#1
             WING_RIGHT.add_wing_surface_cst(
             100,                            
-            10,
+            20,
             settings.envergure,             
             0,                              
             {settings.cr,settings.ct},      
@@ -70,7 +70,7 @@ void Geom::Geom_gen() {
             //#1
             WING_LEFT.add_wing_surface_cst(
             100,                            
-            10,
+            20,
             settings.envergure,             
             0,                              
             {settings.cr,settings.ct},      
@@ -100,11 +100,11 @@ void Geom::Geom_gen() {
             //WR
             WING_RIGHT.add_wing_surface_naca(
             100,                            
-            5,                              
+            20,                              
             settings.envergure,             
             0, 
             {settings.cr,settings.ct}, 
-            {settings.m},                   
+            {settings.c},                   
             {settings.p},                        
             {settings.t},                     
             {0.0,xle},                                           
@@ -115,11 +115,11 @@ void Geom::Geom_gen() {
             //WL
             WING_LEFT.add_wing_surface_naca(
             100,                            
-            5,                              
+            20,                              
             settings.envergure,             
             0, 
             {settings.cr,settings.ct}, 
-            {settings.m},                   
+            {settings.c},                   
             {settings.p},                        
             {settings.t},                     
             {0.0,xle},                                           
@@ -128,7 +128,7 @@ void Geom::Geom_gen() {
             );
 
             std::ostringstream ss1,ss2,ss3;
-            ss1 << settings.m;
+            ss1 << settings.c;
             ss2 << settings.p;
             ss3 << settings.t;
             ss1.precision(0);
@@ -145,7 +145,7 @@ void Geom::Geom_gen() {
 
 
 void Geom::Geom_mesh(bool viscous) {
-    //VLM -------------
+    //VLM ------------- //Needs to be ("cartesian", "cartesian")
         // Initiate and build Mesh object
     Mesh mesh = Mesh();
     get_surface_mesh_tables(WING_RIGHT, mesh, "Structured", true);
@@ -170,9 +170,6 @@ void Geom::Geom_mesh(bool viscous) {
     //RANS/Euler-----------
     
     std::vector<double> disc{100,150,200};
-    //std::vector<std::vector<std::vector<std::vector<double>>>> surfaces_R = WR_surfaces;
-    //std::vector<std::vector<std::vector<std::vector<double>>>> surfaces_L = WL_surfaces;
-
 
     std::cout<<"Surface size"<<std::endl;
     std::cout<<"start mesh rans"<<std::endl;
@@ -226,12 +223,12 @@ void Settings::import_config_file(tiny::config &io) {
 	fleche = io.get<double>("Geom-Wing", "Sweep_angle");
 	dihedre = io.get<double>("Geom-Wing", "Diherdral_angle");
     P_beam = io.get<double>("Geom-Wing", "Beam_position");
-	P_aile = io.get<double>("Geom-Wing", "Wing_position");
+	//P_aile = io.get<double>("Geom-Wing", "Wing_position");
 	Winglet = io.get<int>("Geom-Wing", "Winglet");
 	S_type = io.get<int>("Geom-Wing", "Airfoil_type");
 
     if (solver_type() == "NACA") {
-        m = io.get<double>("Geom-NACA", "m");
+        c = io.get<double>("Geom-NACA", "c");
         p = io.get<double>("Geom-NACA", "p");
         t = io.get<double>("Geom-NACA", "t");
     } else if (solver_type() == "CST") {
@@ -257,12 +254,12 @@ void Settings::export_config_file(tiny::config &io) {
 	io.config["Geom-Wing"]["Sweep_angle"] = std::to_string(fleche);
 	io.config["Geom-Wing"]["Diherdral_angle"] = std::to_string(dihedre);
 	io.config["Geom-Wing"]["Beam_position"] = std::to_string(P_beam);
-	io.config["Geom-Wing"]["Wing_position"] = std::to_string(P_aile);
+	//io.config["Geom-Wing"]["Wing_position"] = std::to_string(P_aile);
 	io.config["Geom-Wing"]["Winglet"] = std::to_string(Winglet);
 	io.config["Geom-Wing"]["Airfoil_type"] = std::to_string(S_type);
     
     if (solver_type() == "NACA") {
-        io.config["Geom-NACA"]["m"] = std::to_string(m);
+        io.config["Geom-NACA"]["m"] = std::to_string(c);
         io.config["Geom-NACA"]["p"] = std::to_string(p);
         io.config["Geom-NACA"]["t"] = std::to_string(t);
     } else if (solver_type() == "CST") {

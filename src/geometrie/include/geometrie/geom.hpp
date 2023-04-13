@@ -56,10 +56,10 @@ struct Settings {
 
     // Wing position
     double P_beam = 0.25;      //Wing structural beam position
-    double P_aile = 0;      //Wing position on fuselage
+    //double P_aile = 0;      //Wing position on fuselage
 
     //NACA 4-digit
-    double m = 0;
+    double c = 0;
     double p = 0;
     double t = 12;
 
@@ -93,8 +93,8 @@ public:
     std::vector<std::string> profile_name;
     Body WING_RIGHT;
     Body WING_LEFT;
-    std::vector<std::vector<std::vector<std::vector<double>>>> WR_surfaces;
-    std::vector<std::vector<std::vector<std::vector<double>>>> WL_surfaces;
+    //std::vector<std::vector<std::vector<std::vector<double>>>> WR_surfaces;
+    //std::vector<std::vector<std::vector<std::vector<double>>>> WL_surfaces;
 };
 
 }
