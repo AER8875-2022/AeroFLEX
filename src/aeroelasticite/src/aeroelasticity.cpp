@@ -103,5 +103,5 @@ void Aero::solve() {
         iter=iter+1;
     }while ( tol > settings.tolerance && !gui.signal.stop);
 
-    std::cout<<"Nombre d'itérations"<< iter << std::endl;
+    std::cout<<"Nombre d'itérations: "<< iter << std::endl;
 }

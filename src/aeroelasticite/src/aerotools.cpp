@@ -56,6 +56,8 @@ namespace aero{
 
         for (int k = 0; k <wings[0].get_stationIDs().size() ; ++k)
         {
+            //print the wingstation
+            std::cout << "wingStations[k] " << k<< std::endl;
 
 
             auto wstation= wingStations[wings[0].get_stationIDs()[k]];
@@ -65,6 +67,8 @@ namespace aero{
 
             for (int i = 0; i <wstation.get_vortexIDs().size() ; ++i)
             {
+                //print the vortexring
+                std::cout << "vortexRings[wstation.get_vortexIDs()[i]] " << i<< std::endl;
 
 
                 auto vring = vortexRings[wstation.get_vortexIDs()[i]];
@@ -76,6 +80,7 @@ namespace aero{
                 for (int p=0; p<vring.get_nodeIDs().size(); ++p)
                 {
                     auto node=nodes[vring.get_nodeIDs()[p]];
+<<<<<<< HEAD
                     
                     
 
@@ -146,6 +151,67 @@ namespace aero{
                         break;
 
                     }
+=======
+                    double bestDistance[2]={100000,-100000};
+                    double bestPoint[2]={100000,-100000};
+                    //compute the distance between the node on vlm and nodes on structure
+                    double pb1=0;
+
+                    for (auto s : mapStructni) {
+                        auto nodeStruct = mapStruct[s.first];
+                        double distance = node[1]-nodeStruct[1];
+                        if (distance < bestDistance[0] && distance >= 0) {
+
+
+                                bestDistance[0] = distance;
+                                bestPoint[0] = s.first;
+                        }else if (distance > bestDistance[1] && distance < 0){
+
+                                bestDistance[1] = distance;
+                                bestPoint[1] = s.first;
+                        }
+
+                    }
+                    if (bestPoint[1] == -100000){
+                        bestPoint[1] = bestPoint[0]-1;
+
+                    }
+                    if (bestPoint[0] == 100000){
+                        bestPoint[0] = bestPoint[1]+1;
+
+                    }
+
+                    //projection of the node on the structure
+                    auto nodeStruct1 = mapStruct[bestPoint[0]];
+                    auto nodeStruct2 = mapStruct[bestPoint[1]];
+                    /*std::cout << "nodeStruct1 " << nodeStruct1 << std::endl;
+                    std::cout << "nodeStruct2 " << nodeStruct2 << std::endl;*/
+
+                    pos.node.push_back(bestPoint[0]);
+                    pos.node.push_back(bestPoint[1]);
+
+                    double x1[3];
+                    double x2[3];
+                    for (int v=0; v<3; ++v) {
+                        x1[v] = nodeStruct2[v]-nodeStruct1[v];
+                        x2[v] = node[v]-nodeStruct1[v];
+                    }
+                    //print x1
+                    std::cout << "x1 " << x1[0] << " " << x1[1] << " " << x1[2] <<"nodes1"<<nodeStruct1[0]<<" "<<nodeStruct1[1]<<" "<<nodeStruct1[2]<<"nodes2"<<nodeStruct2[0]<<" "<<nodeStruct2[1]<<" "<<nodeStruct2[2]<< std::endl;
+                    std::cout << "x2 " << x2[0] << " " << x2[1] << " " << x2[2] << std::endl;
+                    double projection = (x1[0]*x2[0]+x1[1]*x2[1]+x1[2]*x2[2])/(x1[0]*x1[0]+x1[1]*x1[1]+x1[2]*x1[2]);
+                    std::cout << "projection " << projection << std::endl;
+                    if (projection < 0 ){
+                        projection = 0;
+                    }
+
+                    pos.weight.push_back(1-projection);
+                    pos.weight.push_back(projection);
+
+
+
+
+>>>>>>> 7693671b6747ffa26c0f3f750f3bc875e941b824
                 }
                 }
            }
