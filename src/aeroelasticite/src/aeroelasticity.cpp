@@ -65,22 +65,23 @@ void Aero::solve() {
 
     structure.FEM.set_Load_Vector_From_Vector(forcestruct);
     //print force
-    for (int i=0; i<forcestruct.size(); i++){
+   /* for (int i=0; i<forcestruct.size(); i++){
         std::cout << "force: " << forcestruct[i] << std::endl;
-    }
+    }*/
 
     std::cout << "structure forces computed"  << std::endl;
     structure.solve();
     std::cout << "structure solved"  << std::endl;
     double old_cl= vlm.object.wings[0].get_cl();
+    std::cout << "old_cl: " << old_cl << std::endl;
 
 
     vlm.object.updateGeometry(computeVLMDispalecement(pos, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings,vlm.object.nodes, structure.Solutions));
     std::cout << "end first iter " << std::endl;
     //print solutions
-    for (int i=0; i<structure.Solutions[0].size(); i++) {
+    /*for (int i=0; i<structure.Solutions[0].size(); i++) {
         std::cout << "solution: " << structure.Solutions[0][i] << std::endl;
-    }
+    }*/
     double tol = 0.01;
     do {
 
@@ -93,6 +94,8 @@ void Aero::solve() {
 
         vlm.object.updateGeometry(computeVLMDispalecement(pos, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings,vlm.object.nodes, structure.Solutions));
         double new_cl = vlm.object.wings[0].get_cl();
+        std::cout << "cl " << new_cl << std::endl;
+
         tol = std::abs(new_cl-old_cl);
         std::cout << "Aero tol: " << tol << std::endl;
         old_cl = new_cl;

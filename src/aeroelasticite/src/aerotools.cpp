@@ -135,9 +135,9 @@ namespace aero{
                     disp[0]=weight1*nodeStruct1[0]+weight2*nodeStruct2[0];
                     disp[1]=weight1*nodeStruct1[1]+weight2*nodeStruct2[1];
                     disp[2]=weight1*nodeStruct1[2]+weight2*nodeStruct2[2];
-                    node[0]=node[0]+disp[0];
-                    node[1]=node[1]+disp[1];
-                    node[2]=node[2]+disp[2];
+                    node[0]=node[0]+0.2*disp[0];
+                    node[1]=node[1]+0.2*disp[1];
+                    node[2]=node[2]+0.2*disp[2];
                     //prise en compte de la rotation
                     angle_x = weight1*nodeStruct1[3]+weight2*nodeStruct2[3];
                     angle_y = weight1*nodeStruct1[4]+weight2*nodeStruct2[4];
@@ -180,6 +180,7 @@ namespace aero{
                     node[0]=rotated_z[0];
                     node[1]=rotated_z[1];
                     node[2]=rotated_z[2];
+                    nodes[vring.get_nodeIDs()[p]]=node;
 
                 }
             }
