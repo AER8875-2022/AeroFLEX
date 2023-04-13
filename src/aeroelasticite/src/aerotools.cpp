@@ -94,6 +94,9 @@ namespace aero{
                         x2[i] = node[i]-nodeStruct1[i];
                     }
                     double projection = (x1[0]*x2[0]+x1[1]*x2[1]+x1[2]*x2[2])/pow(x1[0]*x1[0]+x1[1]*x1[1]+x1[2]*x1[2],0.5);
+                    if (projection < 0 ){
+                        projection = 0;
+                    }
 
                     pos.weight.push_back(1-projection);
                     pos.weight.push_back(projection);
