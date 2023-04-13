@@ -83,6 +83,7 @@ void Aero::solve() {
         std::cout << "solution: " << structure.Solutions[0][i] << std::endl;
     }*/
     double tol = 0.01;
+    int iter=1;
     do {
 
         while (gui.signal.pause) std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -99,5 +100,8 @@ void Aero::solve() {
         tol = std::abs(new_cl-old_cl);
         std::cout << "Aero tol: " << tol << std::endl;
         old_cl = new_cl;
+        iter=iter+1;
     }while ( tol > settings.tolerance && !gui.signal.stop);
+
+    std::cout<<"Nombre d'itérations"<< iter << std::endl;
 }

@@ -33,6 +33,27 @@ namespace aero{
         //std::cout << "DispInterpol beg" << std::endl;
         //wingstation size
         //std::cout << "wingStations.size() " << wings[0].get_stationIDs().size() << std::endl;
+
+       int num=0;
+       std::vector<double> point_fs;
+
+
+       for (auto s : mapStructni)
+       {
+            auto nodeStruct = mapStruct[s.first];
+            point_fs.push_back(nodeStruct[0]);
+            point_fs.push_back(nodeStruct[1]);
+            point_fs.push_back(nodeStruct[2]);
+            num+=1;
+       }
+
+        vector <double> u(3); // vecteur directeur de la poutre
+       u[0]= point_fs[0] - point_fs[3];
+       u[1]= point_fs[1] - point_fs[4];
+       u[2]= point_fs[2] - point_fs[5];
+       double t;
+       std::vector<double> v(3);
+
         for (int k = 0; k <wings[0].get_stationIDs().size() ; ++k)
         {
 
@@ -55,57 +76,91 @@ namespace aero{
                 for (int p=0; p<vring.get_nodeIDs().size(); ++p)
                 {
                     auto node=nodes[vring.get_nodeIDs()[p]];
-                    double bestDistance[2]={10000,10000};
-                    double bestPoint[2]={10000,10000};
-                    //compute the distance between the node on vlm and nodes on structure
+                    
+                    
 
-                    for (auto s : mapStructni) {
-                        auto nodeStruct = mapStruct[s.first];
-                        double distance = sqrt(
-                                pow(nodeStruct[0]-node[0], 2) + pow(nodeStruct[1]-node[1], 2) +
-                                pow(nodeStruct[2]-node[2], 2));
-                        if (distance < std::max(bestDistance[0], bestDistance[1])) {
-                            if (distance< bestDistance[0]) {
-                                bestDistance[1] = bestDistance[0];
-                                bestDistance[0] = distance;
-                                bestPoint[1] = bestPoint[0];
-                                bestPoint[0] = s.first;
-                            } else {
-                                bestDistance[1] = distance;
-                                bestPoint[1] = s.first;
-                            }
+                    t= (u[0]*(node[0]-point_fs[0]) + u[1]*(node[1]-point_fs[1]) +
+                            u[2]*(node[2]-point_fs[2]))/pow(norme(u),2);
+                    
+                    std::vector<double> point_fp(3);
+
+                    point_fp[0]=(point_fs[0] + t*u[0]);
+                    point_fp[1]=(point_fs[1] + t*u[1]);
+                    point_fp[2]=(point_fs[2] + t*u[2]);
+
+                    
+                    std::cout<< point_fp[0] << " ";
+                    std::cout<< point_fp[1] << " ";
+                    std::cout<< point_fp[2] << std::endl;
+
+                    double dist_0;
+                    double dist_1;
+                    double dist_2;
+                    double epsilon_l;
+                    double epsilon_r;
+
+                for (int j=0; j<num; ++j)
+                {
+                    v[0]= point_fs[3*j]   - point_fs[3*(j+1)];
+                    v[1]= point_fs[3*j+1] - point_fs[3*(j+1)+1];
+                    v[2]= point_fs[3*j+2] - point_fs[3*(j+1)+2];
+                    dist_0=norme(v);
+
+                    v[0]= point_fs[3*j]   - point_fp[0];
+                    v[1]= point_fs[3*j+1] - point_fp[1];
+                    v[2]= point_fs[3*j+2] - point_fp[2];
+                    dist_1=norme(v);
 
 
-                        }
+
+                    v[0]= point_fs[3*(j+1)]   - point_fp[0];
+                    v[1]= point_fs[3*(j+1)+1] - point_fp[1];
+                    v[2]= point_fs[3*(j+1)+2] - point_fp[2];
+
+                    dist_2=norme(v);
+
+                    if (dist_1<=dist_0 && j!=num-1)
+                    {
+                        epsilon_l= dist_2/dist_0;
+                        epsilon_r= dist_1/dist_0;
+                        pos.node.push_back(j);
+                        pos.node.push_back(j+1);
+                        pos.weight.push_back(epsilon_l);
+                        pos.weight.push_back(epsilon_r);
+
+                        std::cout<<j<<": ";
+                        std::cout<<epsilon_l<<" ";
+                        std::cout<<epsilon_r<<" "<<std::endl;
+                        break;
 
                     }
+                    else if (j==num-1){
 
-                    //projection of the node on the structure
-                    auto nodeStruct1 = mapStruct[bestPoint[0]];
-                    auto nodeStruct2 = mapStruct[bestPoint[1]];
+                        pos.node.push_back(j);
+                        pos.node.push_back(j+1);
+                        pos.weight.push_back(1);
+                        pos.weight.push_back(0);
+                        std::cout<<j<<": ";
+                        std::cout<<epsilon_l<<" ";
+                        std::cout<<epsilon_r<<" "<<std::endl;
+                        break;
 
-                    pos.node.push_back(bestPoint[0]);
-                    pos.node.push_back(bestPoint[1]);
-
-                    double x1[3];
-                    double x2[3];
-                    for (int i=0; i<3; ++i) {
-                        x1[i] = nodeStruct2[i]-nodeStruct1[i];
-                        x2[i] = node[i]-nodeStruct1[i];
                     }
-                    double projection = (x1[0]*x2[0]+x1[1]*x2[1]+x1[2]*x2[2])/pow(x1[0]*x1[0]+x1[1]*x1[1]+x1[2]*x1[2],0.5);
-                    if (projection < 0 ){
-                        projection = 0;
-                    }
-
-                    pos.weight.push_back(1-projection);
-                    pos.weight.push_back(projection);
-
-
-
-
                 }
-            }
+                }
+           }
+       
+                            
+
+
+                    
+                   
+
+
+
+
+                
+            
 
 
         }
@@ -128,6 +183,9 @@ namespace aero{
                 for (int p=0; p<vring.get_nodeIDs().size(); ++p)
                 {
                     auto node = nodes[vring.get_nodeIDs()[p]];
+                    std::cout<< "Point départ"<< std::endl;
+                    std::cout<< node << std::endl;
+
                     auto& last_sol = Solutions.back();
                     const vector<double> nodeStruct1(last_sol.begin() + pos.node[2*p]*6, last_sol.begin() + pos.node[2*p]*6 + 6);
                     const vector<double> nodeStruct2(last_sol.begin() + pos.node[2*p+1]*6, last_sol.begin() + pos.node[2*p+1]*6 + 6);
@@ -180,9 +238,12 @@ namespace aero{
 
 
 
-                    node[0]=rotated_z[0];
-                    node[1]=rotated_z[1];
+                    node[0]=rotated_z[0]+0.1;
+                    node[1]=rotated_z[1]+0.01;
                     node[2]=rotated_z[2];
+                    std::cout<< "Point corrigés"<< std::endl;
+                    std::cout<< node << std::endl;
+
                     nodes[vring.get_nodeIDs()[p]]=node;
 
                 }
@@ -231,6 +292,7 @@ namespace aero{
 
 
        int num=0;
+
 
        for (auto s : mapStructni)
        {
