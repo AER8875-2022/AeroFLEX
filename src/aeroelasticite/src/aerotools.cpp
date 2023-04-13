@@ -80,7 +80,7 @@ namespace aero{
                 for (int p=0; p<vring.get_nodeIDs().size(); ++p)
                 {
                     auto node=nodes[vring.get_nodeIDs()[p]];
-<<<<<<< HEAD
+
                     
                     
 
