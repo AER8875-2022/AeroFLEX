@@ -79,9 +79,7 @@ void Aero::solve() {
     vlm.object.updateGeometry(computeVLMDispalecement(pos, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings,vlm.object.nodes, structure.Solutions));
     std::cout << "end first iter " << std::endl;
     //print solutions
-    /*for (int i=0; i<structure.Solutions[0].size(); i++) {
-        std::cout << "solution: " << structure.Solutions[0][i] << std::endl;
-    }*/
+
     double tol = 0.01;
     int iter=1;
     do {
@@ -92,6 +90,7 @@ void Aero::solve() {
 
         structure.FEM.set_Load_Vector_From_Vector(ComputeStructureForces(force, vlm.object.wingStations));
         structure.solve();
+
 
         vlm.object.updateGeometry(computeVLMDispalecement(pos, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings,vlm.object.nodes, structure.Solutions));
         double new_cl = vlm.object.wings[0].get_cl();
@@ -104,4 +103,39 @@ void Aero::solve() {
     }while ( tol > settings.tolerance && !gui.signal.stop);
 
     std::cout<<"Nombre d'itérations: "<< iter << std::endl;
+
+
+ for (int i=0; i<structure.Solutions.size(); i++) {
+     std::cout<< "========================== " <<std::endl;
+
+
+     std::cout<< "Itération : " << i <<std::endl;
+
+     std::cout<< "========================== " <<std::endl;
+     for (int j=9; j<structure.Solutions[i].size()/6;j++)
+     {
+         //double d=99999;
+         if(i==0)
+         {
+         double x= structure.Solutions[i][6*j];
+         double y= structure.Solutions[i][6*j+1];
+         double z= structure.Solutions[i][6*j+2];
+        double d = std::sqrt(pow(x,2)+pow(y,2)+pow(z,2));
+        std::cout << "solution: " << d << std::endl;
+         }
+         else{
+             double x= structure.Solutions[i][6*j]-structure.Solutions[i-1][6*j];
+         double y= structure.Solutions[i][6*j+1]-structure.Solutions[i-1][6*j+1];
+         double z= structure.Solutions[i][6*j+2]-structure.Solutions[i-1][6*j+2];
+         double d = std::sqrt(pow(x,2)+pow(y,2)+pow(z,2));
+         std::cout << "solution: " << d << std::endl;
+
+         }
+
+        
+
+        
+     }
+
+    }
 }

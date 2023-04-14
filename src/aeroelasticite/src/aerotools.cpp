@@ -188,9 +188,10 @@ namespace aero{
 
                 for (int p=0; p<vring.get_nodeIDs().size(); ++p)
                 {
+                    if (Solutions.size()==1){
                     auto node = nodes[vring.get_nodeIDs()[p]];
-                    std::cout<< "Point départ"<< std::endl;
-                    std::cout<< node << std::endl;
+                    //std::cout<< "Point départ"<< std::endl;
+                    //std::cout<< node << std::endl;
 
                     auto& last_sol = Solutions.back();
                     const vector<double> nodeStruct1(last_sol.begin() + pos.node[2*p]*6, last_sol.begin() + pos.node[2*p]*6 + 6);
@@ -247,10 +248,80 @@ namespace aero{
                     node[0]=rotated_z[0];
                     node[1]=rotated_z[1];
                     node[2]=rotated_z[2];
-                    std::cout<< "Point corrigés"<< std::endl;
-                    std::cout<< node << std::endl;
+                    //std::cout<< "Point corrigés"<< std::endl;
+                    //std::cout<< node << std::endl;
 
                     nodes[vring.get_nodeIDs()[p]]=node;
+                    }
+                    else {
+                    auto node = nodes[vring.get_nodeIDs()[p]];
+                    //std::cout<< "Point départ"<< std::endl;
+                    //std::cout<< node << std::endl;
+
+                    auto& last_sol = Solutions.back();
+                    const vector<double> nodeStruct1(last_sol.begin() + pos.node[2*p]*6, last_sol.begin() + pos.node[2*p]*6 + 6);
+                    const vector<double> nodeStruct2(last_sol.begin() + pos.node[2*p+1]*6, last_sol.begin() + pos.node[2*p+1]*6 + 6);
+                    auto& last_sol1 = Solutions[Solutions.size()-2];
+                    const vector<double> nodeStruct11(last_sol1.begin() + pos.node[2*p]*6, last_sol1.begin() + pos.node[2*p]*6 + 6);
+                    const vector<double> nodeStruct22(last_sol1.begin() + pos.node[2*p+1]*6, last_sol1.begin() + pos.node[2*p+1]*6 + 6);
+                    auto weight1 = pos.weight[2*p];
+                    auto weight2 = pos.weight[2*p+1];
+
+                    Vector3d disp;
+                    disp[0]=weight1*(nodeStruct1[0]-nodeStruct11[0])+weight2*(nodeStruct2[0]-nodeStruct22[0]);
+                    disp[1]=weight1*(nodeStruct1[1]-nodeStruct11[1])+weight2*(nodeStruct2[1]-nodeStruct22[1]);
+                    disp[2]=weight1*(nodeStruct1[2]-nodeStruct11[2])+weight2*(nodeStruct2[2]-nodeStruct22[2]);
+                    node[0]=node[0]+0.2*disp[0];
+                    node[1]=node[1]+0.2*disp[1];
+                    node[2]=node[2]+0.2*disp[2];
+                    //prise en compte de la rotation
+                    angle_x = weight1*(nodeStruct1[3]-nodeStruct11[3])+weight2*(nodeStruct2[3]-nodeStruct22[3]);
+                    angle_y = weight1*(nodeStruct1[4]-nodeStruct11[4])+weight2*(nodeStruct2[4]-nodeStruct22[4]);
+                    angle_z = weight1*(nodeStruct1[5]-nodeStruct11[5])+weight2*(nodeStruct2[5]-nodeStruct22[5]);
+
+                        // around the X-axis
+                        double cos_angle_x = std::cos(angle_x);
+                        double sin_angle_x = std::sin(angle_x);
+                        std::vector<double> rotated_x = {
+                                node[0],
+                                node[1] * cos_angle_x - node[2] * sin_angle_x,
+                                node[1] * sin_angle_x + node[2] * cos_angle_x
+                        };
+
+                        // around the Y-axis
+                        double cos_angle_y = std::cos(angle_y);
+                        double sin_angle_y = std::sin(angle_y);
+                        std::vector<double> rotated_y = {
+                                rotated_x[0] * cos_angle_y + rotated_x[2] * sin_angle_y,
+                                rotated_x[1],
+                                -rotated_x[0] * sin_angle_y + rotated_x[2] * cos_angle_y
+                        };
+
+                        // around the Z-axis
+                        double cos_angle_z = std::cos(angle_z);
+                        double sin_angle_z = std::sin(angle_z);
+                        std::vector<double> rotated_z = {
+                                rotated_y[0] * cos_angle_z - rotated_y[1] * sin_angle_z,
+                                rotated_y[0] * sin_angle_z + rotated_y[1] * cos_angle_z,
+                                rotated_y[2]
+                        };
+
+
+
+
+
+
+
+
+                    node[0]=rotated_z[0];
+                    node[1]=rotated_z[1];
+                    node[2]=rotated_z[2];
+                    //std::cout<< "Point corrigés"<< std::endl;
+                    //std::cout<< node << std::endl;
+
+                    nodes[vring.get_nodeIDs()[p]]=node;
+
+                    }
 
                 }
             }
