@@ -72,6 +72,10 @@ struct Settings {
     double E = 1000000000.0;
     double G = 1000000.0;
 
+    //VLM Mesh choice
+    bool mesh_VLM = true; 
+    bool mesh_struct = true;
+
     //import
     void import_config_file(tiny::config &io);
     void export_config_file(tiny::config &io);

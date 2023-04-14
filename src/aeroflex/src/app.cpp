@@ -56,6 +56,7 @@ enum class AppDialogAction {
 	ConfigSave,
 	DatabaseOpen,
 	VlmMeshOpen,
+	StructureMeshOpen
 };
 
 class App {
@@ -170,13 +171,19 @@ struct DialogLayer : public FlexGUI::Layer {
 // =================================================================================================
 
 void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure& structure, geom::Geom &geom) {
+	geom.Geom_gen();
+	geom.Geom_mesh(rans.settings.is_viscous());
+
+	if (!geom.settings.mesh_VLM) {
+		vlm.settings.io.meshFile = "./mesh_vlm.dat";
+	}
+	if (!geom.settings.mesh_struct) {
+		structure.settings.Mesh_file_path = "./Point_maillage_structure.txt";
+	}
 
 	vlm.initialize();
 	vlm.database.clear();
 	auto &table = vlm.database;
-
-	geom.Geom_gen();
-	geom.Geom_mesh(rans.settings.is_viscous());
 
     rans.compute_alphas();
 
@@ -411,6 +418,20 @@ void StructureLayer::OnUIRender() {
 	if (ImGui::RadioButton("NONLINEAR", app.settings.structure.Solve_type == 0)) app.settings.structure.Solve_type = 0;
 	ImGui::SameLine();
 	if (ImGui::RadioButton("LINEAR", app.settings.structure.Solve_type == 1)) app.settings.structure.Solve_type = 1;
+
+	ImGui::Separator();
+	ImGui::Text("Mesh");
+	ImGui::Checkbox("Use custom mesh", &app.settings.geom.mesh_struct);
+	if (app.settings.geom.mesh_struct) {
+		ImGui::InputText("", app.settings.structure.Mesh_file_path.data(), app.settings.structure.Mesh_file_path.size(), ImGuiInputTextFlags_ReadOnly);
+		ImGui::SameLine();
+		if (ImGui::Button("...")) {
+			app.dialog.file_dialog_open = true;
+			app.dialog.type = FlexGUI::FileDialogType::OpenFile;
+			app.dialog_action = AppDialogAction::StructureMeshOpen;
+		}
+	}
+	
 	ImGui::End();
 }
 
@@ -500,15 +521,18 @@ void VlmLayer::OnUIRender() {
 			app.dialog_action = AppDialogAction::DatabaseOpen;
 		}
 	}
-
+	
 	ImGui::Separator();
 	ImGui::Text("Mesh");
-	ImGui::InputText("", app.settings.vlm.io.meshFile.data(), app.settings.vlm.io.meshFile.size(), ImGuiInputTextFlags_ReadOnly);
-	ImGui::SameLine();
-	if (ImGui::Button("...")) {
-		app.dialog.file_dialog_open = true;
-		app.dialog.type = FlexGUI::FileDialogType::OpenFile;
-		app.dialog_action = AppDialogAction::VlmMeshOpen;
+	ImGui::Checkbox("Use custom mesh", &app.settings.geom.mesh_VLM);
+	if (app.settings.geom.mesh_VLM) {
+		ImGui::InputText("", app.settings.vlm.io.meshFile.data(), app.settings.vlm.io.meshFile.size(), ImGuiInputTextFlags_ReadOnly);
+		ImGui::SameLine();
+		if (ImGui::Button("...")) {
+			app.dialog.file_dialog_open = true;
+			app.dialog.type = FlexGUI::FileDialogType::OpenFile;
+			app.dialog_action = AppDialogAction::VlmMeshOpen;
+		}
 	}
 
 	ImGui::Separator();
@@ -536,6 +560,8 @@ void DialogLayer::OnUIRender() {
 			app.settings.vlm.io.databaseFile = path;
 		} else if (app.dialog_action == AppDialogAction::VlmMeshOpen) {
 			app.settings.vlm.io.meshFile = path;
+		} else if (app.dialog_action == AppDialogAction::StructureMeshOpen) {
+			app.settings.structure.Mesh_file_path = path;
 		}
 		strcpy(app.path_buf, "");
 	}

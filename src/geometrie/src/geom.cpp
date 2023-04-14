@@ -239,6 +239,8 @@ void Settings::import_config_file(tiny::config &io) {
 
     E = io.get<double>("Geom-Meca", "E");
     G = io.get<double>("Geom-Meca", "G");
+    mesh_VLM = io.get<bool>("Geom-Mesh","mesh_VLM");
+    mesh_struct = io.get<bool>("Geom-Mesh","mesh_struct");
 }
 
 static const std::string bool_to_string(const bool b) {
@@ -270,5 +272,8 @@ void Settings::export_config_file(tiny::config &io) {
 
     io.config["Geom-Meca"]["E"] = std::to_string(E);
     io.config["Geom-Meca"]["G"] = std::to_string(G);
+    io.config["Geom-Mesh"]["mesh_VLM"] = bool_to_string (mesh_VLM);
+    io.config["Geom-Mesh"]["mesh_VLM"] = bool_to_string (mesh_struct);
+
 }
 
