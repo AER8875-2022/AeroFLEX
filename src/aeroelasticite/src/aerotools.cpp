@@ -203,9 +203,9 @@ namespace aero{
                     disp[0]=weight1*nodeStruct1[0]+weight2*nodeStruct2[0];
                     disp[1]=weight1*nodeStruct1[1]+weight2*nodeStruct2[1];
                     disp[2]=weight1*nodeStruct1[2]+weight2*nodeStruct2[2];
-                    node[0]=node[0]+0.2*disp[0];
-                    node[1]=node[1]+0.2*disp[1];
-                    node[2]=node[2]+0.2*disp[2];
+                    node[0]=node[0]+0.1*disp[0];
+                    node[1]=node[1]+0.1*disp[1];
+                    node[2]=node[2]+0.1*disp[2];
                     //prise en compte de la rotation
                     angle_x = weight1*nodeStruct1[3]+weight2*nodeStruct2[3];
                     angle_y = weight1*nodeStruct1[4]+weight2*nodeStruct2[4];
@@ -271,9 +271,9 @@ namespace aero{
                     disp[0]=weight1*(nodeStruct1[0]-nodeStruct11[0])+weight2*(nodeStruct2[0]-nodeStruct22[0]);
                     disp[1]=weight1*(nodeStruct1[1]-nodeStruct11[1])+weight2*(nodeStruct2[1]-nodeStruct22[1]);
                     disp[2]=weight1*(nodeStruct1[2]-nodeStruct11[2])+weight2*(nodeStruct2[2]-nodeStruct22[2]);
-                    node[0]=node[0]+0.2*disp[0];
-                    node[1]=node[1]+0.2*disp[1];
-                    node[2]=node[2]+0.2*disp[2];
+                    node[0]=node[0]+0.1*disp[0];
+                    node[1]=node[1]+0.1*disp[1];
+                    node[2]=node[2]+0.1*disp[2];
                     //prise en compte de la rotation
                     angle_x = weight1*(nodeStruct1[3]-nodeStruct11[3])+weight2*(nodeStruct2[3]-nodeStruct22[3]);
                     angle_y = weight1*(nodeStruct1[4]-nodeStruct11[4])+weight2*(nodeStruct2[4]-nodeStruct22[4]);
@@ -508,16 +508,16 @@ namespace aero{
 
                //std::cout << "for "  << std::endl;
                //std::cout << "forces_s[6*j] " << forces_s[6*j] << std::endl;
-               forces_s[6*j]   += force.poids[3*i+1] * forces[0];
-               forces_s[6*j+1] += force.poids[3*i+1] * forces[1];
-               forces_s[6*j+2] += force.poids[3*i+1] * forces[2];
+               forces_s[6*j]   += 0.1* force.poids[3*i+1] * forces[0];
+               forces_s[6*j+1] += 0.1*force.poids[3*i+1] * forces[1];
+               forces_s[6*j+2] += 0.1*force.poids[3*i+1] * forces[2];
 
                //std::cout << "forces_s[6*j] " << forces_s[6*j] << std::endl;
 
 
-               forces_s[6*(j+1)]   += force.poids[3*i+2] * forces[0];
-               forces_s[6*(j+1)+1] += force.poids[3*i+2] * forces[1];
-               forces_s[6*(j+1)+2] += force.poids[3*i+2] * forces[2];
+               forces_s[6*(j+1)]   += 0.1*force.poids[3*i+2] * forces[0];
+               forces_s[6*(j+1)+1] += 0.1*force.poids[3*i+2] * forces[1];
+               forces_s[6*(j+1)+2] += 0.1*force.poids[3*i+2] * forces[2];
 
                M[0]=forces[3];
                M[1]=forces[4];
@@ -529,9 +529,9 @@ namespace aero{
 
                M_s=crossProduct (r,M);
 
-               forces_s[6*j+3]   += force.poids[3*i+1] * (M_s[0] + forces[3]);
-               forces_s[6*j+4]   += force.poids[3*i+1] * (M_s[1] + forces[4]);
-               forces_s[6*j+5]   += force.poids[3*i+1] * (M_s[2] + forces[5]);
+               forces_s[6*j+3]   += 0.1*force.poids[3*i+1] * (M_s[0] + forces[3]);
+               forces_s[6*j+4]   += 0.1*force.poids[3*i+1] * (M_s[1] + forces[4]);
+               forces_s[6*j+5]   += 0.1*force.poids[3*i+1] * (M_s[2] + forces[5]);
 
                r[0]=force.point_fa[3*i] -   force.point_fs[3*(j+1)];
                r[1]=force.point_fa[3*i+1] - force.point_fs[3*(j+1)+1];
@@ -539,17 +539,17 @@ namespace aero{
 
                M_s=crossProduct (r,M);
 
-               forces_s[6*(j+1)+3]   += force.poids[3*i+2] * (M_s[0] + forces[3]);
-               forces_s[6*(j+1)+4]   += force.poids[3*i+2] * (M_s[1] + forces[4]);
-               forces_s[6*(j+1)+5]   += force.poids[3*i+2] * (M_s[2] + forces[5]);
+               forces_s[6*(j+1)+3]   += 0.1*force.poids[3*i+2] * (M_s[0] + forces[3]);
+               forces_s[6*(j+1)+4]   += 0.1*force.poids[3*i+2] * (M_s[1] + forces[4]);
+               forces_s[6*(j+1)+5]   += 0.1*force.poids[3*i+2] * (M_s[2] + forces[5]);
 
            }
 
            else if (j==m-1)
            {
-               forces_s[6*j]   += force.poids[3*i+1] * forces[0];
-               forces_s[6*j+1] += force.poids[3*i+1] * forces[1];
-               forces_s[6*j+2] += force.poids[3*i+1] * forces[2];
+               forces_s[6*j]   += 0.1*force.poids[3*i+1] * forces[0];
+               forces_s[6*j+1] += 0.1*force.poids[3*i+1] * forces[1];
+               forces_s[6*j+2] += 0.1*force.poids[3*i+1] * forces[2];
 
                M[0]=forces[3];
                M[1]=forces[4];
@@ -561,9 +561,9 @@ namespace aero{
 
                M_s=crossProduct (r,M);
 
-               forces_s[6*j+3]   += force.poids[3*i+1] * (M_s[0] + forces[3]);
-               forces_s[6*j+4]   += force.poids[3*i+1] * (M_s[1] + forces[4]);
-               forces_s[6*j+5]   += force.poids[3*i+1] * (M_s[2] + forces[5]);
+               forces_s[6*j+3]   +=0.1*force.poids[3*i+1] * (M_s[0] + forces[3]);
+               forces_s[6*j+4]   +=0.1*force.poids[3*i+1] * (M_s[1] + forces[4]);
+               forces_s[6*j+5]   +=0.1*force.poids[3*i+1] * (M_s[2] + forces[5]);
 
            }
 
