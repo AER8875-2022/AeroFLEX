@@ -174,6 +174,7 @@ namespace aero{
 
     std::vector<Vector3d> computeVLMDispalecement(interpolation pos,std::vector<vlm::surface::wingStation> wingStations,
                                  std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,std::vector<Eigen::VectorXd> Solutions) {
+        double relax=0.05;
         for (int k = 0; k<wings[0].get_stationIDs().size(); ++k) {
             auto wstation= wingStations[wings[0].get_stationIDs()[k]];
             for (int i = 0; i<wstation.get_vortexIDs().size(); ++i) {
@@ -203,9 +204,9 @@ namespace aero{
                     disp[0]=weight1*nodeStruct1[0]+weight2*nodeStruct2[0];
                     disp[1]=weight1*nodeStruct1[1]+weight2*nodeStruct2[1];
                     disp[2]=weight1*nodeStruct1[2]+weight2*nodeStruct2[2];
-                    node[0]=node[0]+0.1*disp[0];
-                    node[1]=node[1]+0.1*disp[1];
-                    node[2]=node[2]+0.1*disp[2];
+                    node[0]=node[0]+relax*disp[0];
+                    node[1]=node[1]+relax*disp[1];
+                    node[2]=node[2]+relax*disp[2];
                     //prise en compte de la rotation
                     angle_x = weight1*nodeStruct1[3]+weight2*nodeStruct2[3];
                     angle_y = weight1*nodeStruct1[4]+weight2*nodeStruct2[4];
@@ -493,6 +494,7 @@ namespace aero{
        vector <double> M(3);
        vector <double> r(3);
       vector <double> M_s(3);
+      double relaxation=0.05;
 
        for (int i=0; i<n; ++i)
        {
@@ -508,16 +510,16 @@ namespace aero{
 
                //std::cout << "for "  << std::endl;
                //std::cout << "forces_s[6*j] " << forces_s[6*j] << std::endl;
-               forces_s[6*j]   += 0.1* force.poids[3*i+1] * forces[0];
-               forces_s[6*j+1] += 0.1*force.poids[3*i+1] * forces[1];
-               forces_s[6*j+2] += 0.1*force.poids[3*i+1] * forces[2];
+               forces_s[6*j]   += relaxation* force.poids[3*i+1] * forces[0];
+               forces_s[6*j+1] += relaxation*force.poids[3*i+1] * forces[1];
+               forces_s[6*j+2] += relaxation*force.poids[3*i+1] * forces[2];
 
                //std::cout << "forces_s[6*j] " << forces_s[6*j] << std::endl;
 
 
-               forces_s[6*(j+1)]   += 0.1*force.poids[3*i+2] * forces[0];
-               forces_s[6*(j+1)+1] += 0.1*force.poids[3*i+2] * forces[1];
-               forces_s[6*(j+1)+2] += 0.1*force.poids[3*i+2] * forces[2];
+               forces_s[6*(j+1)]   += relaxation*force.poids[3*i+2] * forces[0];
+               forces_s[6*(j+1)+1] += relaxation*force.poids[3*i+2] * forces[1];
+               forces_s[6*(j+1)+2] += relaxation*force.poids[3*i+2] * forces[2];
 
                M[0]=forces[3];
                M[1]=forces[4];
@@ -529,9 +531,9 @@ namespace aero{
 
                M_s=crossProduct (r,M);
 
-               forces_s[6*j+3]   += 0.1*force.poids[3*i+1] * (M_s[0] + forces[3]);
-               forces_s[6*j+4]   += 0.1*force.poids[3*i+1] * (M_s[1] + forces[4]);
-               forces_s[6*j+5]   += 0.1*force.poids[3*i+1] * (M_s[2] + forces[5]);
+               forces_s[6*j+3]   += relaxation*force.poids[3*i+1] * (M_s[0] + forces[3]);
+               forces_s[6*j+4]   += relaxation*force.poids[3*i+1] * (M_s[1] + forces[4]);
+               forces_s[6*j+5]   += relaxation*force.poids[3*i+1] * (M_s[2] + forces[5]);
 
                r[0]=force.point_fa[3*i] -   force.point_fs[3*(j+1)];
                r[1]=force.point_fa[3*i+1] - force.point_fs[3*(j+1)+1];
@@ -539,17 +541,17 @@ namespace aero{
 
                M_s=crossProduct (r,M);
 
-               forces_s[6*(j+1)+3]   += 0.1*force.poids[3*i+2] * (M_s[0] + forces[3]);
-               forces_s[6*(j+1)+4]   += 0.1*force.poids[3*i+2] * (M_s[1] + forces[4]);
-               forces_s[6*(j+1)+5]   += 0.1*force.poids[3*i+2] * (M_s[2] + forces[5]);
+               forces_s[6*(j+1)+3]   += relaxation*force.poids[3*i+2] * (M_s[0] + forces[3]);
+               forces_s[6*(j+1)+4]   += relaxation*force.poids[3*i+2] * (M_s[1] + forces[4]);
+               forces_s[6*(j+1)+5]   += relaxation*force.poids[3*i+2] * (M_s[2] + forces[5]);
 
            }
 
            else if (j==m-1)
            {
-               forces_s[6*j]   += 0.1*force.poids[3*i+1] * forces[0];
-               forces_s[6*j+1] += 0.1*force.poids[3*i+1] * forces[1];
-               forces_s[6*j+2] += 0.1*force.poids[3*i+1] * forces[2];
+               forces_s[6*j]   += relaxation*force.poids[3*i+1] * forces[0];
+               forces_s[6*j+1] += relaxation*force.poids[3*i+1] * forces[1];
+               forces_s[6*j+2] += relaxation*force.poids[3*i+1] * forces[2];
 
                M[0]=forces[3];
                M[1]=forces[4];
@@ -561,9 +563,9 @@ namespace aero{
 
                M_s=crossProduct (r,M);
 
-               forces_s[6*j+3]   +=0.1*force.poids[3*i+1] * (M_s[0] + forces[3]);
-               forces_s[6*j+4]   +=0.1*force.poids[3*i+1] * (M_s[1] + forces[4]);
-               forces_s[6*j+5]   +=0.1*force.poids[3*i+1] * (M_s[2] + forces[5]);
+               forces_s[6*j+3]   +=relaxation*force.poids[3*i+1] * (M_s[0] + forces[3]);
+               forces_s[6*j+4]   +=relaxation*force.poids[3*i+1] * (M_s[1] + forces[4]);
+               forces_s[6*j+5]   +=relaxation*force.poids[3*i+1] * (M_s[2] + forces[5]);
 
            }
 
