@@ -24,7 +24,6 @@ public:
     Eigen::Vector3d r1;
     Eigen::Vector3d r2;
 
-    
     int N1_ID;                       //ID code du noeud 1
     int N2_ID;                       //ID code du noeud 2
 
@@ -45,6 +44,7 @@ public:
     Eigen::Quaterniond q_2_rot_prime;
 
     Eigen::Quaterniond q_e;          //Quaternion initiale de l'élément
+    Eigen::Quaterniond q_e_inv;      //Quaternion initiale de l'élément
 
     Eigen::MatrixXd K_elem_local;    //Matrice de rigidité dans le repère local
     Eigen::MatrixXd K_elem_global;   //Matrice de rigidité dans le repère global
@@ -207,6 +207,7 @@ public:
         }
         
         q_e = Eigen::Quaterniond(s,v_x,v_y,v_z);
+        q_e_inv = q_e.conjugate();
         q_1 = q_e;
         
         q_2 = q_e;
@@ -318,7 +319,7 @@ public:
         const Eigen::Vector3d theta_1_local = get_Euler_Angles_From_Local_Rotation(q_1_rot_prime);
         const Eigen::Vector3d theta_2_local = get_Euler_Angles_From_Local_Rotation(q_2_rot_prime);
         
-        const Eigen::Matrix3d R_ec          = get_Rotation_Matrix_From_Quaternion(q_mid*q_e.conjugate());              //R(q_mid)
+        const Eigen::Matrix3d R_ec          = get_Rotation_Matrix_From_Quaternion(q_mid*q_e_inv);              //R(q_mid)
         const Eigen::Vector3d dr_1          = R_ec*r1 - r1;                                                           //Déplacement induit par la rotation
         const Eigen::Vector3d dr_2          = R_ec*r2 - r2;                                                           //Déplacement induit par la rotation 
    
