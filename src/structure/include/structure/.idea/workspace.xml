@@ -13,12 +13,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="4cdcd19c-41cd-4724-be9a-2aba819abb7a" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/../../../.vscode/settings.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../../../examples/structure/Moment_0012.txt" beforeDir="false" afterPath="$PROJECT_DIR$/../../../../examples/structure/Moment_0012.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../dev/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../../dev/main.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/element.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/element.hpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/model.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/model.hpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/structure.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/structure.hpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -66,6 +61,7 @@
       <updated>1681653784773</updated>
       <workItem from="1681653785950" duration="383000" />
       <workItem from="1681654173494" duration="70000" />
+      <workItem from="1681654245384" duration="795000" />
     </task>
     <servers />
   </component>

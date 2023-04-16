@@ -107,9 +107,7 @@ public:
         } else {
             throw std::runtime_error("[STRUCTURE] wrong forces size");
         }
-        else{
-            throw std::runtime_error("Input force vector is not the right size.");
-        }
+
     }
 
     void set_K_global(){
