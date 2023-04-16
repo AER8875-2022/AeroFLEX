@@ -22,6 +22,8 @@
 #include <rans/rans.h>
 #include <vlm/vlm.hpp>
 #include <structure/structure.hpp>
+#include <aero/aeroelasticity.hpp>
+
 
 template <class T>
 bool is_future_done(std::future<T> const& f) {
@@ -45,6 +47,7 @@ struct Settings {
 	rans::Settings rans;
 	vlm::Settings vlm;
     structure::Settings structure;
+	aero::Settings aero;
 };
 
 enum class AppDialogAction {
@@ -68,6 +71,7 @@ class App {
 		rans::Rans &rans;
 		vlm::VLM &vlm;
         structure::Structure &structure;
+		aero::Aero &aero;
 
 		Settings settings;
 
@@ -85,7 +89,7 @@ class App {
 		AppDialogAction dialog_action = AppDialogAction::None;
 		FlexGUI::FileDialog dialog;
 		char path_buf[256];
-		App(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, GUIHandler &gui);
+		App(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, aero::Aero &aero, GUIHandler &gui);
 };
 
 struct GeoLayer : public FlexGUI::Layer {
@@ -136,6 +140,12 @@ struct VlmGraphLayer : public FlexGUI::Layer {
 	VlmGraphLayer(App &app) : app(app) {};
 };
 
+struct AeroLayer : public FlexGUI::Layer {
+	virtual void OnUIRender() override;
+	App &app;
+	AeroLayer(App &app) : app(app) {};
+};
+
 struct CpLayer : public FlexGUI::Layer {
 	virtual void OnUIRender() override;
 	App &app;
@@ -165,8 +175,13 @@ struct DialogLayer : public FlexGUI::Layer {
 */
 // =================================================================================================
 
-void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure) {
-	rans.compute_alphas();
+
+void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, aero::Aero &aero) {
+
+	database::table table;
+
+
+
 	if (!vlm.settings.sim.get_databaseFormat().compare("NONE")) {
 		vlm.database.airfoils["naca0012q"];
 		vlm.database.airfoils["naca0012q"].alpha = rans.alphas;
@@ -219,7 +234,7 @@ bool config_save(const std::string &conf_path, Settings &settings) {
 	return io.write(conf_path);
 }
 
-App::App(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, GUIHandler &gui) : rans(rans), vlm(vlm), structure(structure), gui(gui) {
+App::App(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, aero::Aero &aero, GUIHandler &gui) : rans(rans), vlm(vlm), structure(structure), aero(aero), gui(gui) {
 	settings.rans.bcs["farfield"];
 	settings.rans.bcs["farfield"].bc_type = "farfield";
 	settings.rans.bcs["wall"];
@@ -234,11 +249,12 @@ void App::solve_async() {
 	rans.settings = settings.rans;
 	vlm.settings = settings.vlm;
 	structure.settings = settings.structure;
+	aero.settings = settings.aero;
 
 	future_solve = std::async(std::launch::async,
 	[&](){
 		try {
-			solve(rans, vlm, structure);
+			solve(rans, vlm, structure, aero);
 		} catch (std::exception &e) {
 			gui.msg.push(e.what());
 		}
@@ -450,7 +466,14 @@ void VlmLayer::OnUIRender() {
 	ImGui::InputInt("Max Iterations", &app.settings.vlm.solver.max_iter);
 
 	ImGui::End();
-}
+};
+
+void AeroLayer::OnUIRender() {
+	ImGui::Begin("Aero");
+	ImGui::Separator();
+	ImGui::InputDouble("Tolerance", &app.settings.aero.tolerance, 0.01f, 1.0f, "%e");
+	ImGui::End();
+};
 
 void DialogLayer::OnUIRender() {
 	app.dialog.Show(app.path_buf);
@@ -760,6 +783,7 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, App& app)
 	application->PushLayer(std::make_shared<StructureLayer>(app));
 	application->PushLayer(std::make_shared<RansLayer>(app));
 	application->PushLayer(std::make_shared<VlmLayer>(app));
+	application->PushLayer(std::make_shared<AeroLayer>(app));
 	application->PushLayer(std::make_shared<ConsoleLayer>(app));
 	application->PushLayer(std::make_shared<DialogLayer>(app));
 
@@ -816,9 +840,11 @@ namespace FlexGUI {
 		rans::Rans rans(gui);
 		vlm::VLM vlm(gui);
 		structure::Structure structure(gui);
+		aero::Aero aero(gui, vlm, structure);
 
 		// Initialize main application with the modules
-		App app(rans, vlm, structure, gui);
+
+		App app(rans, vlm, structure, aero, gui);
 
 		if (config_file == "") {
 			while (g_ApplicationRunning) {

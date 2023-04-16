@@ -17,10 +17,11 @@ namespace structure {
 
 struct Settings {
 
-  std::string Mesh_file_path = "../../../../examples/structure/Moment.txt";
+  std::string Mesh_file_path = "../../../../examples/structure/smith.txt";
   double Tolerance = 1e-6;
   int N_step = 10;
   double Damping = 1.0;
+  bool Force_follower = false;
 
   std::vector<std::string> Solve_type_options = {"NONLINEAR", "LINEAR"};
   int Solve_type = 0;
@@ -42,6 +43,7 @@ struct Settings {
       N_step = config.get<int>("structure-solver", "n_steps");
       Damping = config.get<double>("structure-solver", "damping");
       set_solve_type(config.get<std::string>("structure-solver", "type"));
+      Force_follower = config.get<bool>("structure-solver", "force_follower");
   }
 
   void export_config_file(tiny::config &config) {
@@ -62,6 +64,7 @@ struct Settings {
     config.config["structure-solver"]["n_steps"] = std::to_string(N_step);
     config.config["structure-solver"]["damping"] = damping.str();
     config.config["structure-solver"]["type"] = get_solve_type();
+    config.config["structure-solver"]["force_follower"] = std::to_string(Force_follower);
   }
 };
 
@@ -80,9 +83,11 @@ public:
   void input()
   {
     FEM.read_data_file(settings.Mesh_file_path);
+    FEM.set_Force_Follower(settings.Force_follower);
     FEM.set_K_global();
     FEM.set_Load_Vector_From_Load_Objects();      
     FEM.set_K_Final_sparse();
+    FEM.set_Force_Follower(settings.Force_follower);
   }
    
   void solve() {
