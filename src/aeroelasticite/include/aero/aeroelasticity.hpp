@@ -9,7 +9,7 @@
 namespace aero {
 
 struct Settings {
-    double tolerance = 1e-8;
+    double tolerance = 1e-10;
 };
 
 class Aero {

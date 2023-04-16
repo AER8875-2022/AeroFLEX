@@ -174,7 +174,7 @@ namespace aero{
 
     std::vector<Vector3d> computeVLMDispalecement(interpolation pos,std::vector<vlm::surface::wingStation> wingStations,
                                  std::vector<vlm::surface::wing> wings,std::vector<vlm::element::vortexRing> vortexRings,std::vector<Vector3d> nodes,std::vector<Eigen::VectorXd> Solutions) {
-        double relax=0.05;
+        double relax=0.01;
         for (int k = 0; k<wings[0].get_stationIDs().size(); ++k) {
             auto wstation= wingStations[wings[0].get_stationIDs()[k]];
             for (int i = 0; i<wstation.get_vortexIDs().size(); ++i) {
@@ -486,15 +486,15 @@ namespace aero{
   {
        int n=force.point_fa.size()/3;
        int m=force.point_fs.size()/3;
-       std::cout << "m " << m << std::endl;
-       std::cout << "n " << n << std::endl;
+       //std::cout << "m " << m << std::endl;
+       //std::cout << "n " << n << std::endl;
 
        Eigen::VectorXd  forces_s(6*m);
        forces_s.setZero();
        vector <double> M(3);
        vector <double> r(3);
       vector <double> M_s(3);
-      double relaxation=0.05;
+      double relaxation=0.01;
 
        for (int i=0; i<n; ++i)
        {

@@ -94,10 +94,10 @@ void Aero::solve() {
 
         vlm.object.updateGeometry(computeVLMDispalecement(pos, vlm.object.wingStations, vlm.object.wings, vlm.object.vortexRings,vlm.object.nodes, structure.Solutions));
         double new_cl = vlm.object.wings[0].get_cl();
-        std::cout << "cl " << new_cl << std::endl;
+        //std::cout << "cl " << new_cl << std::endl;
 
         tol = std::abs(new_cl-old_cl);
-        std::cout << "Aero tol: " << tol << std::endl;
+        //std::cout << "Aero tol: " << tol << std::endl;
         old_cl = new_cl;
         iter=iter+1;
     }while ( tol > settings.tolerance && !gui.signal.stop);
