@@ -3,6 +3,7 @@
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
+#include<Eigen/IterativeLinearSolvers>
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -41,6 +42,8 @@ public:
     Eigen::SparseMatrix<double>      K_Final_sparse;
     Eigen::VectorXd                    Displacement;
 
+    bool                             Force_follower;
+
     // GUI Handlers
     GUIHandler &gui;
     std::atomic<int> &iters;
@@ -49,13 +52,14 @@ public:
     MODEL(GUIHandler &gui, std::atomic<int> &iters, std::vector<double> &residuals)
         : gui(gui), iters(iters), residuals(residuals) {};
 
-    MODEL(std::string namefile, GUIHandler &gui, std::atomic<int> &iters, std::vector<double> &residuals)
+    MODEL(std::string namefile, GUIHandler &gui, std::atomic<int> &iters, std::vector<double> &residuals, bool f_f)
         : gui(gui), iters(iters), residuals(residuals) {
 
         read_data_file(namefile);
         set_K_global();
         set_Load_Vector_From_Load_Objects();
         set_K_Final_sparse();
+        set_Force_Follower(f_f);
     };
 
     struct PBAR_param{
@@ -71,7 +75,6 @@ public:
         int             N1_user_ID;
         int             N2_user_ID;
         Eigen::Vector3d V;
-
     };
 
     struct SPC1_param{
@@ -91,19 +94,24 @@ public:
         Eigen::Vector3d Direction;
     };
 
+    void set_Force_Follower(bool f_f){
+        Force_follower = f_f;
+    }
+
     void set_Load_Vector_From_Vector(Eigen::VectorXd New_F)
-    {
+    {   
+        Forces.setZero(6*Nbr_Noeud);
         if(Forces.size() == New_F.size())
         {
             Forces = New_F;
         } else {
             throw std::runtime_error("[STRUCTURE] wrong forces size");
         }
+        else{
+            throw std::runtime_error("Input force vector is not the right size.");
+        }
     }
-
-
     void set_K_global(){
-
         K_Global_sparse = Eigen::SparseMatrix<double>( Nbr_Noeud * 6, Nbr_Noeud * 6 );
         for( auto& [cbar_id, elem] : CBAR_MAP)
         {
@@ -135,14 +143,12 @@ public:
     void set_Load_Vector_From_Load_Objects()
     {
         Forces.setZero(6*Nbr_Noeud);
-        // #pragma omp parallel for
         for(int i=0 ; i < FORCE_LIST.size();i++)
         {
             FORCE f_obj       = FORCE_LIST[i];
             Eigen::Vector3d f = f_obj.get_xyz_force();
             Forces.segment(f_obj.Node_ID *6,3) += f;
         };
-        // #pragma omp parallel for
         for(int i=0 ; i<MOMENT_LIST.size();i++)
         {
             MOMENT m_obj       = MOMENT_LIST[i];
@@ -202,8 +208,8 @@ public:
             Eigen::MatrixXd Rot   = Eigen::MatrixXd::Zero(6,6);
             Rot.block(0,0,3,3)    = diag;
             Rot.block(3,3,3,3)    = diag;
-
             Forces.segment(i*6,6) = Rot * Forces.segment(i*6,6);
+
         }
     }
 
@@ -225,12 +231,18 @@ public:
 
 
     Eigen::VectorXd get_Solve(Eigen::VectorXd f)
-    {
-        Eigen::SparseLU<Eigen::SparseMatrix<double>> Solver;
-        Eigen::SparseMatrix<double> Tempo = K_Final_sparse;
-        Solver.compute(Tempo);
 
+    {   
+        Eigen::BiCGSTAB<Eigen::SparseMatrix<double>,Eigen::IncompleteLUT<double>  > solver;
+        solver.compute(K_Final_sparse);
+        return solver.solve(f); 
+        
+        /*
+        Eigen::SparseLU<Eigen::SparseMatrix<double>> Solver;
+        Solver.compute(K_Final_sparse);
         return Solver.solve(f);
+        */ 
+
     }
 
     Eigen::VectorXd get_Lin_Solve()
@@ -246,7 +258,6 @@ public:
         Eigen::VectorXd Forces_diff(6 * Nbr_Noeud );
 
         //Dep.setZero();
-        Forces_int.setZero();
         Forces_int.setZero();
 
         std::vector<int> CBAR_keys;
@@ -284,6 +295,10 @@ public:
 
                 Dep += Delta_dep_amor;
                 set_Quaternion_Map(Delta_dep_amor);
+                if(Force_follower){
+                    Rotate_Ext_Loads();
+                }
+
 
                 #pragma omp parallel for
                 for (int i = 0; i < CBAR_keys.size(); ++i)
@@ -296,8 +311,8 @@ public:
                     n2 = value.N2_ID;
 
                     Eigen::VectorXd delta_dep1 = Delta_dep_amor.segment(n1*6,6);
-                    Eigen::VectorXd delta_dep2 = Delta_dep_amor.segment(n2*6,6);
 
+                                   
 
                     value.set_u_i(delta_dep1,delta_dep2);                                      //Set u_1 and u_2
                     value.set_q1_And_q2(QUATERNION_MAP[n1],QUATERNION_MAP[n2]);                //Set q_1 and q_2
@@ -313,7 +328,7 @@ public:
                 }
 
                 Forces_int = apply_SPC1_Forces(Forces_int);
-                Rotate_Ext_Loads();
+
                 Forces_diff = (Load_Step/Max_load_step)*(Forces) - Forces_int;
 
                 set_K_global();
