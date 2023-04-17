@@ -21,8 +21,6 @@ Aero::Aero(GUIHandler &gui, vlm::VLM &vlm, structure::Structure &structure)
 
 void Aero::input() {
     // TODO
-
-
     auto& mapStructni= structure.FEM.indexation_switch;
     auto& mapStruct= structure.FEM.Grid_MAP;
 
@@ -132,9 +130,9 @@ void Aero::solve() {
 
          }
 
-        
 
-        
+
+
      }
 
     }

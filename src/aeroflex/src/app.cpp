@@ -165,7 +165,7 @@ struct DialogLayer : public FlexGUI::Layer {
 
 // SOLVE =================================================================================================
 
-void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, aero::Aero &aero) {
+void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, aero::Aero &elast) {
 
 	database::table table;
 
@@ -184,10 +184,12 @@ void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, aer
 	vlm.initialize();
 	vlm.database = table;
 	vlm.database.importLocations(vlm.settings.io.locationFile); // Temporary
-	vlm.solve();
+	//vlm.solve();
 
-	structure.input();
-	structure.solve();
+	elast.structure.input();
+    //elast.vlm.initialize();
+    elast.input();
+    elast.solve();
 }
 
 // =================================================================================================
@@ -202,6 +204,7 @@ std::optional<Settings> config_open(const std::string &conf_path) {
 	settings.rans.import_config_file(io);
 	settings.vlm.import_config_file(io);
 	settings.structure.import_config_file(io);
+	//settings.aero.import_config_file(io);
 
 	return settings;
 }
