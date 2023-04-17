@@ -107,9 +107,7 @@ public:
         } else {
             throw std::runtime_error("[STRUCTURE] wrong forces size");
         }
-        else{
-            throw std::runtime_error("Input force vector is not the right size.");
-        }
+
     }
     void set_K_global(){
         K_Global_sparse = Eigen::SparseMatrix<double>( Nbr_Noeud * 6, Nbr_Noeud * 6 );
@@ -311,6 +309,7 @@ public:
                     n2 = value.N2_ID;
 
                     Eigen::VectorXd delta_dep1 = Delta_dep_amor.segment(n1*6,6);
+                    Eigen::VectorXd delta_dep2 = Delta_dep_amor.segment(n2*6,6);
 
                                    
 
