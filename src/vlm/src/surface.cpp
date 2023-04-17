@@ -300,62 +300,65 @@ void patch::Storing_nondirectPanel(std::vector<element::doubletPanel> &doublets)
 }
 
 void patch::computePressure(const input::simParam &sim,
-               std::vector<element::doubletPanel> &doublets) {
-  cp = 0.0; //remove in clean up
+               std::vector<element::doubletPanel> &doublets, std::vector<Vector3d> nodes) {
   const auto &vinf = sim.vinf;
   const Vector3d freestream = sim.freeStream();
   for (auto &doublet : doublets) {
     Vector3d sum = Vector3d::Zero();
+    double local_area = 0;
     auto neighbor = doublet.get_neighbor();
     auto edge_center = doublet.get_edge_center();
     auto edge = doublet.get_edges(); // getting the length of the edge from the mesh (not the co-planair panel) [possible mistake]
     auto area = doublet.get_area();
+    Vector3d node;
+    Vector3d cross1 = Vector3d::Zero();
+     Vector3d centerEdge = Vector3d::Zero(); //for the computation of the local_area
+    
+    //Computing the area
+    for (size_t i=0; i != doublet.get_nodeIDs().size(); i++){
+      node = doublet.ProjectingToLocal(nodes[doublet.get_nodeIDs()[i]]);
+      centerEdge = doublet.ProjectingToLocal(doublet.get_center()) - node;
+      cross1 = (doublet.ProjectingToLocal(edge[i].get_dl())).cross(centerEdge);
+      local_area += 0.5 * cross1.norm();
+    }
+
+    doublet.local_area = local_area; //storing local_area for troobleshooting
     //Computing Velocity using Green-Gauss
     //std::cout << "Panel number  " << doublet.get_globalIndex() << std::endl;
-    for (size_t i=0; i<neighbor.size(); i++){
+    for (size_t i=0; i!=neighbor.size(); i++){
       if (neighbor[i]!=-1){
         double f = (doublets[neighbor[i]].get_center() - edge_center[i]).norm() / (doublets[neighbor[i]].get_center() - doublet.get_center()).norm(); 
         double phi_f = (doublet.mu * f) + (doublets[neighbor[i]].mu * (1 - f));
-        //double phi_f = (12 * f) + (7 * (1 - f)); //for debugging
-        //doublet.get_normal()
-        
         Vector3d local_panel_normal = {0, 0, 1};
         Vector3d edge_vector_local = doublet.ProjectingToLocal(edge[i].get_dl());
-        //edge_vector_local[2] = 0;
         Vector3d segment_normal = (local_panel_normal).cross(edge_vector_local);
         
-        /*
-        std::cout << "segment_normal :" << std::endl;
-            for (int w=0 ; w<3; w++){
-            std::cout << segment_normal[w] << std::endl;
-          } 
-          std::cout << "phi_f :" << std::endl;
-          std::cout << phi_f << std::endl;
-        */
-
         if (i==0){
           doublet.segment_normal = segment_normal.normalized();
         }
-        /*
-        std::cout << "edge numero " << i << " :  " << std::endl;
-        std::cout << "center of the edge " << ":  " << std::endl;
-        std::cout << edge_center[i] << std::endl; 
-        std::cout << "weighing geometric factor (f) : ";
-        std::cout << f <<std::endl;
-        std::cout << "Value of MU taking account the geometry (Phi_f) : ";
-        std::cout << phi_f <<std::endl;
-        */
         sum += phi_f * segment_normal.normalized() * edge[i].get_dl().norm();
+        /*
+        if (doublet.get_globalIndex()>=10 && doublet.get_globalIndex()<=17){
+          std::cout << "Panel number  " << doublet.get_globalIndex() << std::endl;
+          std::cout<< neighbor[i] << std::endl;  
+        }
+        */
+      /*
+      std::cout << "sum :" << doublet.get_globalIndex() << std::endl;
+      for (int w=0 ; w<3; w++){
+        std::cout << sum[w] << std::endl;
+      } 
+      */
       }
     }
-      
-    //La mauvaise aire est utilisé ici. Il faut plutôt prendre l'aire du panneau co-planaire
-    Vector3d gradMU = (1 / area) * sum;
-    Vector3d localstream = doublet.ProjectingToLocal(freestream); //
+    
+    
+    Vector3d gradMU = (1/(local_area)) * sum;
+    Vector3d localstream = doublet.ProjectingToLocal(freestream);
     localstream[2]=0;
     doublet.localstream = localstream; //for troubleshooting
     gradMU+=localstream;
-
+    
     /*
     std::cout << "velocity :" << std::endl;
       for (int w=0 ; w<3; w++){
@@ -363,27 +366,22 @@ void patch::computePressure(const input::simParam &sim,
       } 
     */
     double V_k = sqrt(gradMU[0]*gradMU[0] + gradMU[1]*gradMU[1]);
-    if (doublet.get_globalIndex()>=110 && doublet.get_globalIndex()<=119){
 
-      //std::cout<< doublet.get_globalIndex() << std::endl;
-      std::cout<< V_k/vinf << std::endl;
-      //std::cout << doublet.get_center()[0] << std::endl;
-             
+    if (doublet.get_globalIndex()>=2500 && doublet.get_globalIndex()<=2599){
+      //(doublet.get_globalIndex()>=2100 && doublet.get_globalIndex()<=2199)
+      //std::cout<< doublet.get_center() << std::endl;
+      //std::cout<< 1 - (V_k*V_k)/(vinf*vinf) << std::endl;
+      std::cout << V_k/vinf << std::endl;
     }
-
     doublet.storing_velocity(gradMU, V_k/vinf);
-    //std::cout << "vitesse K :  " << V_k << std::endl; 
+
     doublet.cp = 1 - (V_k*V_k)/(vinf*vinf);
-    //std::cout << "coefficient de pression (Cp)  : ";
-    //std::cout << doublet.cp << std::endl;
   }      
 }
 
 double patch::get_globalIndex() const { return globalIndex; }
 
 double patch::get_area() const { return area; }
-
-double patch::get_cp() const { return cp; }
 
 std::vector<int> patch::get_doubletIDs() const { return doubletIDs; }
 

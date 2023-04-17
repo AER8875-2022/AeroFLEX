@@ -123,7 +123,7 @@ void linear::steady::computePressure(model &object){
   // Computing pression at each patch (non lifting surface)
  #pragma omp parallel for
   for (auto &patch : object.patches) {
-    patch.computePressure(object.sim, object.doubletPanels);
+    patch.computePressure(object.sim, object.doubletPanels, object.nodes);
   }
 }
 
@@ -279,7 +279,6 @@ void nonlinear::steady::buildRHS(model &object) {
     for (auto &doubs : object.doubletPanels) {
       sources(doubs.get_globalIndex()) =
           -doubs.get_normal().dot(object.sim.freeStream());
-      doubs.storing_sigma(-object.sim.freeStream().dot(doubs.get_normal()));
     }
   }
   //Creating influence matrix for the sources

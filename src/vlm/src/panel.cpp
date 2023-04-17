@@ -218,8 +218,8 @@ void doubletPanel::updateMu(const double mu) {
   for (auto &vortice : Doublets_vortices) {
     vortice.mu = mu;
   }
-    std::cout<< "panel number " << globalIndex << std::endl;
-    std::cout << "value of mu :" << mu << std::endl;
+    //std::cout<< "panel number " << globalIndex << std::endl;
+    //std::cout << "value of mu :" << mu << std::endl;
 }
 //not used yet
 void doubletPanel::updateNodes(const std::vector<Vector3d> &nodes) {
@@ -262,9 +262,9 @@ double doubletPanel::influence_patch(const Vector3d &collocationPoint,
   }
   //std::cout << C/(-4 * M_PI) << std::endl;
   Vector3d local_center_point = {panel.center.dot(panel.Localreference[0]), panel.center.dot(panel.Localreference[1]), panel.center.dot(panel.Localreference[2])};
-  if (std::abs((collocationPoint - local_center_point)[2]) < rlim){ //.dot(panel.Localreference[2])
+  if (std::abs(collocationPoint[2] - local_center_point[2]) < rlim){ //.dot(panel.Localreference[2])
     if (inside){
-      C = sign * 2 * M_PI; //necessite l'ajout du signe
+      C = sign * 2 * M_PI; 
     }
   }
   return C/(-4 * M_PI);
@@ -279,10 +279,9 @@ double doubletPanel::influence_sources(const Vector3d &collocationPoint,
     B +=
         Doublets_vortices[i].influence_sources(collocationPoint, nodes, panel.edges[i], panel.Localreference, panel.center, rlim);
   }
-
   //std::cout << "panel num" << globalIndex << std::endl; 
   //std::cout << "influence source :" << B << std::endl; 
-  return B/(-4 * M_PI);
+  return B/(4 * M_PI); // le négatif est sur appliquées aux sources
 }
 
 Vector3d doubletPanel::ProjectingToLocal(const Vector3d &vector) const{
@@ -293,10 +292,6 @@ Vector3d doubletPanel::ProjectingToLocal(const Vector3d &vector) const{
 void doubletPanel::storing_velocity(Vector3d velocity, double normalvelocity) {
   local_velocity = velocity;
   velocity_div_vinf = normalvelocity;
-  
-}
-void doubletPanel::storing_sigma(double sigma1){
-  sigma = sigma1;
 }
 
 double doubletPanel::get_area() const { return panel.area; }
@@ -323,10 +318,10 @@ int doubletPanel::get_globalIndex() const { return globalIndex; }
 
 std::array<Vector3d, 3> doubletPanel::get_LocalCoordinate() const { return panel.Localreference; }
 
+double doubletPanel::get_local_area() const {return local_area; }
+
 Vector3d doubletPanel::get_segment_normal() const { return segment_normal; } //for troubleshooting
 
 Vector3d doubletPanel::get_localstream() const { return localstream; } //for troubleshooting
-
-double doubletPanel::get_sigma() const { return sigma; } //inutile
 
 double doubletPanel::get_velocity_div_vinf() const { return velocity_div_vinf; } //for troubleshooting

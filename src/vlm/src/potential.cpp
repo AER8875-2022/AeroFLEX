@@ -63,11 +63,9 @@ std::tuple<double, bool, int> vortexLine::influence_patch(const Vector3d &colloc
                          const std::array<Vector3d, 3> &Localreference,
                          const Vector3d &center_point, const double &rlim, const int &globalIndex) const {
   
-  if (std::abs(nodes[edge.get_n2()][0]-nodes[edge.get_n1()][0])<=rlim &&
-      std::abs(nodes[edge.get_n2()][1]-nodes[edge.get_n1()][1])<=rlim  &&
-      std::abs(nodes[edge.get_n2()][3]-nodes[edge.get_n1()][3])<=rlim){
-    return {0.0, false, -1}; //not sure for the false
-  } else {
+  if ((nodes[edge.get_n1()] - nodes[edge.get_n2()]).norm() < rlim){
+    return {0.0, false, -1};
+  } else  {
   bool inside = true;
   int sign = 1;
   Vector3d nodes1 = {nodes[edge.get_n1()].dot(Localreference[0]), nodes[edge.get_n1()].dot(Localreference[1]), nodes[edge.get_n1()].dot(Localreference[2])};
@@ -120,9 +118,7 @@ double vortexLine::influence_sources(const Vector3d &collocationPoint,
                      const std::array<Vector3d, 3> &Localreference,
                      const Vector3d &center_point, const double &rlim) const {
   
-  if (std::abs(nodes[edge.get_n2()][0]-nodes[edge.get_n1()][0])<=rlim &&
-      std::abs(nodes[edge.get_n2()][1]-nodes[edge.get_n1()][1])<=rlim  &&
-      std::abs(nodes[edge.get_n2()][3]-nodes[edge.get_n1()][3])<=rlim){
+  if ((nodes[edge.get_n1()] - nodes[edge.get_n2()]).norm() < rlim){
     return 0;
   } 
   else {
@@ -143,7 +139,7 @@ double vortexLine::influence_sources(const Vector3d &collocationPoint,
     auto Al= AM*SL - AL*SM;
 
     auto Pjk = collocationPoint - local_center_point;
-    auto PN = Pjk[2];//.dot(Localreference[2]);
+    auto PN = Pjk[2]; //.dot(Localreference[2]);
     auto PA = (PN*PN) * SL + Al * AM;
     auto PB = (PN*PN) * SL + Al * BM;
 
@@ -163,8 +159,8 @@ double vortexLine::influence_sources(const Vector3d &collocationPoint,
     double GL;
     if (std::abs(A + B - edge.get_dl().norm()) < rlim){
       GL = 0;
-    } else{
-      auto GL = (1/edge.get_dl().norm()) * log(std::abs((A + B + edge.get_dl().norm())/(A + B - edge.get_dl().norm())));
+    } else {
+      GL = (1/edge.get_dl().norm()) * std::log(std::abs((A + B + edge.get_dl().norm())/(A + B - edge.get_dl().norm())));
     }
 
   //std::cout<< "new value" << std::endl;

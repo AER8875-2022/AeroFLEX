@@ -144,7 +144,7 @@ void output::exportSurfacesVTU(const model &object, const int it) {
     areas.push_back(vortex.get_area());
   }
   for (auto &doublet : object.doubletPanels) {
-    areas.push_back(doublet.get_area());
+    areas.push_back(doublet.get_local_area());
   }
   // CL
   std::vector<double> cl;
@@ -280,14 +280,6 @@ void output::exportSurfacesVTU(const model &object, const int it) {
     freestream.push_back(doublet.get_localstream()[1]);
     freestream.push_back(doublet.get_localstream()[2]);
   }
-  std::vector<double> sources;
-  sources.reserve(nPanels);
-  for (auto &vortex : object.vortexRings) {
-    sources.push_back(0.0);
-  }
-  for (auto &doublet : object.doubletPanels) {
-    sources.push_back(doublet.get_sigma());
-  }
   std::vector<double> velocity_div_vinf;
   velocity_div_vinf.reserve(nPanels);
   for (auto &vortex : object.vortexRings) {
@@ -304,7 +296,6 @@ void output::exportSurfacesVTU(const model &object, const int it) {
       {"cl", vtu11::DataSetType::CellData, 1},
       {"cd", vtu11::DataSetType::CellData, 1}, 
       {"cp", vtu11::DataSetType::CellData, 1},
-      {"sources", vtu11::DataSetType::CellData, 1},
       {"velocity_div_vinf", vtu11::DataSetType::CellData, 1},
       {"Local_velocity", vtu11::DataSetType::CellData, 3},
       {"normal", vtu11::DataSetType::CellData, 3},
@@ -319,7 +310,7 @@ void output::exportSurfacesVTU(const model &object, const int it) {
   // Writing file
   vtu11::writeVtu(
       io.outDir + io.baseName + "_surface_" + itStream.str() + ".vtu", mesh,
-      dataSetInfo, {strengths, areas, cl, cd, cp, sources, velocity_div_vinf, local_velocity, normal, FENormal, 
+      dataSetInfo, {strengths, areas, cl, cd, cp, velocity_div_vinf, local_velocity, normal, FENormal, 
                     edge_dl1, Localreference_m, Localreference_l, freestream, cm}, "RawBinary");
 }
 

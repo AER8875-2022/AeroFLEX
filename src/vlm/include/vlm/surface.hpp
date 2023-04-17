@@ -239,9 +239,6 @@ class patch {
   /** @brief Area of the current element */
   double area;
 
-  /** @brief Drag coefficient of the current surface */
-  double cp = 0.0;
-
 public:
   /** @param globalIndex Unique global index for the current element
    *  @param doubletIDs IDs of the wing stations forming the current element */
@@ -271,16 +268,13 @@ public:
    * @param doublets doubletPanel of the element
    * @param sim Simulation parameters */
   void computePressure(const input::simParam &sim,
-              std::vector<element::doubletPanel> &doublets);
+              std::vector<element::doubletPanel> &doublets, std::vector<Vector3d> nodes);
   
   /** @brief Getter method for the globalIndex */
   double get_globalIndex() const;
 
   /** @brief Getter method for the area */
   double get_area() const;
-
-  /** @brief Getter method for the pressure coefficient */
-  double get_cp() const;
 
   /** @brief Getter method for the doubletsIDs */
   std::vector<int> get_doubletIDs() const;

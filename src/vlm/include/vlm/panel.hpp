@@ -266,6 +266,8 @@ class doubletPanel {
   /** @brief Local pressure coefficient */
   double cp;
 
+  double local_area;
+
   std::vector<fil::vortexLine> Doublets_vortices;
 
   /** @brief Wrapper for geometric computations */
@@ -273,7 +275,6 @@ class doubletPanel {
 
   std::vector<Vector3d> ProjectedNodes;   // NOT USED (to be removed)
   std::vector<int> nondirectNeighbor_IDs; //not used  (to be removed)
-  double sigma; //remove during clean up
   Vector3d segment_normal; // only for toubleshooting
   Vector3d localstream;  // only for toubleshooting
   double velocity_div_vinf; //only for troobleshooting
@@ -326,7 +327,6 @@ public:
   Vector3d ProjectingToLocal(const Vector3d &vector) const;
 
   void storing_velocity(Vector3d velocity, double normalvelocity); // for troobleshooting
-  void storing_sigma(double sigma1); //for troobleshooting
 
   /** @brief Saves and updates the strength of the current doublets
    *  @param mu Strength to be saved to the current element */
@@ -367,6 +367,9 @@ public:
   
   /** @brief Getter method for mu */
   double get_mu() const;
+
+  /** @brief Getter method for local_area */
+  double get_local_area() const;
 
 Vector3d get_segment_normal() const; //only for troubleshooting
 Vector3d get_localstream() const; //only for troubleshooting
