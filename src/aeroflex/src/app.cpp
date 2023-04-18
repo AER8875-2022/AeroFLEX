@@ -8,6 +8,7 @@
 #include "Application.h"
 #include "FileDialog.hpp"
 
+#include <iostream>
 #include <string>
 #include <cstring>
 #include <future>
@@ -21,6 +22,7 @@
 
 #include <rans/rans.h>
 #include <vlm/vlm.hpp>
+#include <geometrie/geom.hpp>
 #include <structure/structure.hpp>
 
 template <class T>
@@ -44,7 +46,8 @@ static void HelpMarker(const char* desc)
 struct Settings {
 	rans::Settings rans;
 	vlm::Settings vlm;
-    structure::Settings structure;
+	geom::Settings geom;
+  structure::Settings structure;
 };
 
 enum class AppDialogAction {
@@ -53,6 +56,7 @@ enum class AppDialogAction {
 	ConfigSave,
 	DatabaseOpen,
 	VlmMeshOpen,
+	StructureMeshOpen
 };
 
 class App {
@@ -67,7 +71,8 @@ class App {
 		// Modules
 		rans::Rans &rans;
 		vlm::VLM &vlm;
-        structure::Structure &structure;
+		geom::Geom &geom;
+    	structure::Structure &structure;
 
 		Settings settings;
 
@@ -85,13 +90,13 @@ class App {
 		AppDialogAction dialog_action = AppDialogAction::None;
 		FlexGUI::FileDialog dialog;
 		char path_buf[256];
-		App(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, GUIHandler &gui);
+		App(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, geom::Geom &geom, GUIHandler &gui);
 };
 
-struct GeoLayer : public FlexGUI::Layer {
+struct GeomLayer : public FlexGUI::Layer {
 	virtual void OnUIRender() override;
 	App &app;
-	GeoLayer(App &app) : app(app) {};
+	GeomLayer(App &app) : app(app) {};
 };
 
 struct StructureLayer : public FlexGUI::Layer {
@@ -165,22 +170,34 @@ struct DialogLayer : public FlexGUI::Layer {
 */
 // =================================================================================================
 
-void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure) {
-	rans.compute_alphas();
-	if (!vlm.settings.sim.get_databaseFormat().compare("NONE")) {
-		vlm.database.airfoils["naca0012q"];
-		vlm.database.airfoils["naca0012q"].alpha = rans.alphas;
+void solve(rans::Rans &rans, vlm::VLM &vlm, structure::Structure& structure, geom::Geom &geom) {
+	geom.Geom_gen();
+	geom.Geom_mesh(rans.settings.is_viscous());
 
-		for (auto& [airfoil, db] : vlm.database.airfoils) {
+	if (!geom.settings.mesh_VLM) {
+		vlm.settings.io.meshFile = "./mesh_vlm.dat";
+	}
+	if (!geom.settings.mesh_struct) {
+		structure.settings.Mesh_file_path = "./Point_maillage_structure.txt";
+	}
+
+	vlm.initialize();
+	vlm.database.clear();
+	auto &table = vlm.database;
+
+    rans.compute_alphas();
+
+	if (!vlm.settings.sim.get_databaseFormat().compare("NONE")) {
+		geom.fill_database(table, rans.alphas);	
+		for (auto& [airfoil, db] : table.airfoils) {
 			rans.solve_airfoil(airfoil, db);
 		}
 	}
 	else if (!vlm.settings.sim.get_databaseFormat().compare("FILE")) {
-		vlm.database.importAirfoils(vlm.settings.io.databaseFile);
+		table.importAirfoils(vlm.settings.io.databaseFile);
 	}
 
-	vlm.initialize();
-	vlm.database.importLocations(vlm.settings.io.locationFile); // Temporary
+	//vlm.database.importLocations(vlm.settings.io.locationFile); // Temporary
 	vlm.solve();
 
 	structure.input();
@@ -198,6 +215,7 @@ std::optional<Settings> config_open(const std::string &conf_path) {
 
 	settings.rans.import_config_file(io);
 	settings.vlm.import_config_file(io);
+	settings.geom.import_config_file(io);
 	settings.structure.import_config_file(io);
 
 	return settings;
@@ -214,13 +232,16 @@ bool config_save(const std::string &conf_path, Settings &settings) {
 
 	settings.rans.export_config_file(io);
 	settings.vlm.export_config_file(io);
+	settings.geom.export_config_file(io);
 	settings.structure.export_config_file(io);
 
 	return io.write(conf_path);
 }
 
-App::App(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, GUIHandler &gui) : rans(rans), vlm(vlm), structure(structure), gui(gui) {
-	settings.rans.bcs["farfield"];
+
+App::App(rans::Rans &rans, vlm::VLM &vlm, structure::Structure &structure, geom::Geom &geom, GUIHandler &gui) : rans(rans), vlm(vlm), structure(structure), geom(geom), gui(gui) {
+
+settings.rans.bcs["farfield"];
 	settings.rans.bcs["farfield"].bc_type = "farfield";
 	settings.rans.bcs["wall"];
 	settings.rans.bcs["wall"].bc_type = "slip-wall";
@@ -234,11 +255,12 @@ void App::solve_async() {
 	rans.settings = settings.rans;
 	vlm.settings = settings.vlm;
 	structure.settings = settings.structure;
+	geom.settings = settings.geom;
 
 	future_solve = std::async(std::launch::async,
 	[&](){
 		try {
-			solve(rans, vlm, structure);
+			solve(rans, vlm, structure, geom);
 		} catch (std::exception &e) {
 			gui.msg.push(e.what());
 		}
@@ -324,6 +346,61 @@ inline void Combo(std::vector<std::string> &vec, int &index, const char* label) 
 	}
 }
 
+void GeomLayer::OnUIRender() {
+
+	ImGui::Begin("Géométrie");
+
+	Combo(app.settings.geom.solver_options, app.settings.geom.S_type, "Type");
+
+	ImGui::Text("Paramètres");
+	if (app.settings.geom.S_type == 0){
+		ImGui::Separator();
+		ImGui::Text("NACA 4 digits");
+		ImGui::InputDouble("c", &app.settings.geom.c, 0.01f, 0.01f, "%.4f");
+		ImGui::SameLine(); HelpMarker("Maximum camber - Must be an integer");
+		ImGui::InputDouble("p", &app.settings.geom.p, 0.01f, 0.01f, "%.4f");
+		ImGui::SameLine(); HelpMarker("Camber position - Must be an integer");
+		ImGui::InputDouble("t", &app.settings.geom.t, 0.01f, 0.01f, "%.4f");}
+		ImGui::SameLine(); HelpMarker("Maximum thickness - Must be an integer");
+
+	if (app.settings.geom.S_type == 1){
+		ImGui::Separator();
+		ImGui::Text("CST parametres");
+		ImGui::InputDouble("z_te", &app.settings.geom.z_te, 0.01f, 0.01f, "%.4f");
+		ImGui::InputDouble("r_le", &app.settings.geom.r_le, 0.01f, 0.01f, "%.4f");
+		ImGui::InputDouble("Beta", &app.settings.geom.Beta, 0.01f, 0.01f, "%.4f");}
+
+	ImGui::Separator();
+	ImGui::Text("Wing geometry");
+	ImGui::InputDouble("Span", &app.settings.geom.envergure, 0.01f, 0.01f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Total span of the wing");
+	ImGui::InputDouble("Chord root", &app.settings.geom.cr, 0.01f, 0.01f, "%.4f");
+	ImGui::InputDouble("Chord tip", &app.settings.geom.ct, 0.01f, 0.01f, "%.4f");
+	ImGui::InputDouble("Beam Position", &app.settings.geom.P_beam, 0.01f, 0.01f, "%.4f");
+	ImGui::SameLine(); HelpMarker("Relative elastic axis postion on the chord (0.0 to 1.0)");
+	//ImGui::InputDouble("Wing position", &app.settings.geom.P_aile, 0.01f, 0.01f, "%.4f");
+
+	ImGui::Separator();
+	ImGui::Text("Wing angles");
+	ImGui::InputDouble("Twist", &app.settings.geom.twist, 0.01f, 0.01f, "%.4f");
+	ImGui::SameLine(); HelpMarker("[Degrees]");
+	ImGui::InputDouble("Sweep", &app.settings.geom.fleche, 0.01f, 0.01f, "%.4f");
+	ImGui::SameLine(); HelpMarker("[Degrees]");
+	ImGui::InputDouble("Dihedral", &app.settings.geom.dihedre, 0.01f, 0.01f, "%.4f");
+	ImGui::SameLine(); HelpMarker("[Degrees]");
+
+
+	ImGui::Separator();
+	ImGui::Text("Material properties");
+	ImGui::InputDouble("Young modulus", &app.settings.geom.E, 0.01f, 0.01f, "%e");
+	ImGui::SameLine(); HelpMarker("[Pa]");
+	ImGui::InputDouble("Shear modulus", &app.settings.geom.G, 0.01f, 0.01f, "%e");
+	ImGui::SameLine(); HelpMarker("[Pa]");
+
+	ImGui::Separator();
+	ImGui::Text("Winglet options");
+	Combo(app.settings.geom.Winglet_options, app.settings.geom.Winglet, "Winglet");
+}
 
 void StructureLayer::OnUIRender() {
 	ImGui::Begin("Structure");
@@ -341,6 +418,20 @@ void StructureLayer::OnUIRender() {
 	if (ImGui::RadioButton("NONLINEAR", app.settings.structure.Solve_type == 0)) app.settings.structure.Solve_type = 0;
 	ImGui::SameLine();
 	if (ImGui::RadioButton("LINEAR", app.settings.structure.Solve_type == 1)) app.settings.structure.Solve_type = 1;
+
+	ImGui::Separator();
+	ImGui::Text("Mesh");
+	ImGui::Checkbox("Use custom mesh", &app.settings.geom.mesh_struct);
+	if (app.settings.geom.mesh_struct) {
+		ImGui::InputText("", app.settings.structure.Mesh_file_path.data(), app.settings.structure.Mesh_file_path.size(), ImGuiInputTextFlags_ReadOnly);
+		ImGui::SameLine();
+		if (ImGui::Button("...")) {
+			app.dialog.file_dialog_open = true;
+			app.dialog.type = FlexGUI::FileDialogType::OpenFile;
+			app.dialog_action = AppDialogAction::StructureMeshOpen;
+		}
+	}
+	
 	ImGui::End();
 }
 
@@ -380,6 +471,7 @@ void RansLayer::OnUIRender() {
 	Combo(app.settings.rans.viscosity_options, app.settings.rans.viscosity, "Viscosity");
 
 	ImGui::InputDouble("Relaxation", &app.settings.rans.relaxation, 0.1f, 1.0f, "%.2f");
+	ImGui::SameLine(); HelpMarker("Facteur de relaxation");
 	ImGui::InputDouble("Tolerance", &app.settings.rans.tolerance, 0.0f, 0.0f, "%e");
 	ImGui::InputDouble("Start CFL", &app.settings.rans.start_cfl, 0.1f, 1.0f, "%.1f");
 	ImGui::InputDouble("Slope CFL", &app.settings.rans.slope_cfl, 0.1f, 1.0f, "%.1f");
@@ -429,15 +521,18 @@ void VlmLayer::OnUIRender() {
 			app.dialog_action = AppDialogAction::DatabaseOpen;
 		}
 	}
-
+	
 	ImGui::Separator();
 	ImGui::Text("Mesh");
-	ImGui::InputText("", app.settings.vlm.io.meshFile.data(), app.settings.vlm.io.meshFile.size(), ImGuiInputTextFlags_ReadOnly);
-	ImGui::SameLine();
-	if (ImGui::Button("...")) {
-		app.dialog.file_dialog_open = true;
-		app.dialog.type = FlexGUI::FileDialogType::OpenFile;
-		app.dialog_action = AppDialogAction::VlmMeshOpen;
+	ImGui::Checkbox("Use custom mesh", &app.settings.geom.mesh_VLM);
+	if (app.settings.geom.mesh_VLM) {
+		ImGui::InputText("", app.settings.vlm.io.meshFile.data(), app.settings.vlm.io.meshFile.size(), ImGuiInputTextFlags_ReadOnly);
+		ImGui::SameLine();
+		if (ImGui::Button("...")) {
+			app.dialog.file_dialog_open = true;
+			app.dialog.type = FlexGUI::FileDialogType::OpenFile;
+			app.dialog_action = AppDialogAction::VlmMeshOpen;
+		}
 	}
 
 	ImGui::Separator();
@@ -465,6 +560,8 @@ void DialogLayer::OnUIRender() {
 			app.settings.vlm.io.databaseFile = path;
 		} else if (app.dialog_action == AppDialogAction::VlmMeshOpen) {
 			app.settings.vlm.io.meshFile = path;
+		} else if (app.dialog_action == AppDialogAction::StructureMeshOpen) {
+			app.settings.structure.Mesh_file_path = path;
 		}
 		strcpy(app.path_buf, "");
 	}
@@ -757,6 +854,7 @@ FlexGUI::Application* CreateApplication(int argc, char** argv, App& app)
 	application->PushLayer(std::make_shared<VlmGraphLayer>(app));
 	application->PushLayer(std::make_shared<StructureGraphLayer>(app));
 	application->PushLayer(std::make_shared<CpLayer>(app));
+	application->PushLayer(std::make_shared<GeomLayer>(app));
 	application->PushLayer(std::make_shared<StructureLayer>(app));
 	application->PushLayer(std::make_shared<RansLayer>(app));
 	application->PushLayer(std::make_shared<VlmLayer>(app));
@@ -815,10 +913,11 @@ namespace FlexGUI {
 		// Initialize modules with signal routing
 		rans::Rans rans(gui);
 		vlm::VLM vlm(gui);
+		geom::Geom geom(gui);
 		structure::Structure structure(gui);
 
 		// Initialize main application with the modules
-		App app(rans, vlm, structure, gui);
+		App app(rans, vlm, structure, geom, gui);
 
 		if (config_file == "") {
 			while (g_ApplicationRunning) {

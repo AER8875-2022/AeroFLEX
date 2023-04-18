@@ -188,6 +188,12 @@ bool database::table::check() {
   return pass;
 }
 
+void database::table::clear() {
+  airfoils.clear();
+  sectionAirfoils.clear();
+  sectionSpanLocs.clear();
+}
+
 std::tuple<double, double, double>
 database::table::coefficients(const double alpha, const int surfaceID,
                               const double spanLoc) {

@@ -81,6 +81,9 @@ struct table {
    *  @return true -> no airfoil missing | false -> at least one airfoil missing */
   bool check();
 
+  /** @brief Clears database of all airfoils */
+  void clear();
+
   /** @brief Interpolates the 3 viscous coefficients at specified angle of
    * attack, surface and spanwise location
    *  @param alpha Angle of attack at which the forces are interpolated

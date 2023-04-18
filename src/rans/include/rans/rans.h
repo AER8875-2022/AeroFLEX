@@ -51,6 +51,7 @@ class Rans {
 };
 
 void Rans::compute_alphas() {
+    alphas.clear();
     for (double i = settings.alpha_start; i <= settings.alpha_end; i += settings.alpha_step) {
         alphas.push_back(i);
     }
@@ -81,9 +82,12 @@ void Rans::run_airfoil(const std::string& airfoil, database::airfoil& db) {
     ms.clear();
     // TODO: check with geom for the naming convention
     // For the moment we will only load 1 mesh
-    ms.push_back(mesh("../../../../examples/rans/" + airfoil + "_coarse.msh"));
-    ms.push_back(mesh("../../../../examples/rans/" + airfoil + "_mid.msh"));
-    // ms.push_back(mesh("../../../../examples/rans/" + airfoil + "_fine.msh"));
+    std::cout<<"Nom du profil RANS :";
+    std::cout<<airfoil<<std::endl;
+    
+    ms.push_back(mesh("./"+airfoil+"_coarse.msh"));
+    ms.push_back(mesh("./"+airfoil+"_normal.msh"));
+    ms.push_back(mesh("./"+airfoil+"_fine.msh"));
 
     settings.bcs["farfield"].vars_far.angle = db.alpha[0] * 0.01745;
     multigrid<T> multi(ms, settings, gui, residuals, iters, profile);
