@@ -101,6 +101,8 @@ void Aero::solve() {
     }while ( tol > settings.tolerance && !gui.signal.stop);
 
     std::cout<<"Nombre d'itérations: "<< iter << std::endl;
+    std::cout << "cl " << old_cl << std::endl;
+    std::cout << "Aero tol: " << tol << std::endl;
 
 
  for (int i=0; i<structure.Solutions.size(); i++) {
