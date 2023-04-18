@@ -51,6 +51,7 @@ class Rans {
 };
 
 void Rans::compute_alphas() {
+    alphas.clear();
     for (double i = settings.alpha_start; i <= settings.alpha_end; i += settings.alpha_step) {
         alphas.push_back(i);
     }

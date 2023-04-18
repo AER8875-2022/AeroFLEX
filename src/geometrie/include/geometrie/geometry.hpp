@@ -124,7 +124,7 @@ private:
 
 public:
     Body(std::string body_type);
-
+    void clear();
     std::vector<Surface> get_surfaces();
     void set_to_general_solid();
     void set_to_revolution_solid();

@@ -7,7 +7,7 @@ void generer(std::vector<std::vector<double>> xu, std::vector<std::vector<double
     gmsh::initialize();
     gmsh::option::setNumber("General.Terminal",0); //Mute GMSH on terminal
 
-  gmsh::model::add("Euler");
+    gmsh::model::add("Euler");
 
     // initialization
     int indx=0;               // slice selection

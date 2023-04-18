@@ -34,6 +34,8 @@ void Geom::Geom_gen() {
 
     int nb_profils = 1; //to be changed for future work
     //double perc_span = 1.0;
+    WING_RIGHT.clear();
+    WING_LEFT.clear();
     for (int k=0; k<nb_profils; k++){
         if(settings.S_type == 1){
             //WR
@@ -199,7 +201,7 @@ void Geom::fill_database(database::table &table, std::vector<double> alphas){
 
         for (int i=0; i<profile_name.size(); i++) {
             table.airfoils[profile_name[i]];                            // Créer le airfoil
-            table.airfoils[profile_name[i]].alpha = {alphas};      //Remplir le champs alpha , 
+            table.airfoils[profile_name[i]].alpha = {alphas};      //Remplir le champs alpha ,
 
             table.sectionAirfoils[i];                                   //WR
             table.sectionAirfoils[i] = {profile_name[i], profile_name[i]};   

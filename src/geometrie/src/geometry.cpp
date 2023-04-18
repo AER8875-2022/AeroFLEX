@@ -487,6 +487,12 @@ Body::Body(std::string body_type) {
 
 std::vector<Surface> Body::get_surfaces() {return this->surfaces;};
 
+void Body::clear() {
+this->surfaces.clear();
+this->associativity.clear();
+this->is_flipped = false;
+};
+
 void Body::set_to_general_solid() {this->type = "General";};
 void Body::set_to_revolution_solid() {this->type = "Revolution";};
 
